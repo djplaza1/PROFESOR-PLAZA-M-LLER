@@ -2066,8 +2066,8 @@
             }
         }, 500);
 
-        // ========== MÓDULO DE ARTÍCULOS ==========
-const extractArticlesFromGuion = (guionData, scriptTitle) => {
+// ========== MÓDULO DE ARTÍCULOS (VERSIÓN SIN CONFLICTOS) ==========
+const extractArticlesFromGuionV2 = (guionData, scriptTitle) => {
     if (!guionData || !Array.isArray(guionData)) return [];
     try {
         const existing = JSON.parse(localStorage.getItem('muller_extracted_articles') || '[]');
@@ -2111,7 +2111,7 @@ const extractArticlesFromGuion = (guionData, scriptTitle) => {
     } catch (e) { return []; }
 };
 
-const ArticlePractice = () => {
+const ArticlePracticeV2 = () => {
     const [articles, setArticles] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answer, setAnswer] = useState(null);
@@ -2262,7 +2262,7 @@ const ArticlePractice = () => {
     );
 };
 
-const AdvancedPracticePanel = () => {
+const AdvancedPracticePanelV2 = () => {
     const [activeTab, setActiveTab] = useState('articles');
     return (
         <div className="fixed inset-0 z-50 bg-black/95 overflow-y-auto" style={{top: '60px'}}>
@@ -2278,14 +2278,14 @@ const AdvancedPracticePanel = () => {
                     <button disabled className="px-4 py-2 rounded-t-lg font-bold bg-gray-800 text-gray-500 cursor-not-allowed">📍 Preposiciones (próximo)</button>
                 </div>
                 <div className="bg-gray-800 p-6 rounded-2xl">
-                    {activeTab === 'articles' && <ArticlePractice />}
+                    {activeTab === 'articles' && <ArticlePracticeV2 />}
                 </div>
             </div>
         </div>
     );
 };
 
-const AdvancedModalController = () => {
+const AdvancedModalControllerV2 = () => {
     const [showModal, setShowModal] = useState(false);
     useEffect(() => {
         const openHandler = () => setShowModal(true);
@@ -2298,36 +2298,36 @@ const AdvancedModalController = () => {
         };
     }, []);
     if (!showModal) return null;
-    return <AdvancedPracticePanel />;
+    return <AdvancedPracticePanelV2 />;
 };
 
-// Análisis inicial y configuración
+// Análisis inicial con la nueva función
 setTimeout(() => {
     try {
         const scripts = JSON.parse(localStorage.getItem('mullerScripts') || '[]');
         scripts.forEach(script => {
             try {
                 const guion = JSON.parse(script.data);
-                extractArticlesFromGuion(guion, script.title);
+                extractArticlesFromGuionV2(guion, script.title);
             } catch(e) {}
         });
         if (window.__DEFAULT_GUION__) {
-            extractArticlesFromGuion(window.__DEFAULT_GUION__, 'Lektion 17: Kunst');
+            extractArticlesFromGuionV2(window.__DEFAULT_GUION__, 'Lektion 17: Kunst');
         }
         window.dispatchEvent(new Event('extractedDataUpdated'));
     } catch(e) {}
 }, 1000);
 
-const originalSetItem = localStorage.setItem;
+const originalSetItemV2 = localStorage.setItem;
 localStorage.setItem = function(key, value) {
-    originalSetItem.apply(this, arguments);
+    originalSetItemV2.apply(this, arguments);
     if (key === 'mullerScripts') {
         try {
             const scripts = JSON.parse(value);
             scripts.forEach(script => {
                 try { 
                     const guion = JSON.parse(script.data);
-                    extractArticlesFromGuion(guion, script.title);
+                    extractArticlesFromGuionV2(guion, script.title);
                 } catch(e) {}
             });
             window.dispatchEvent(new Event('extractedDataUpdated'));
@@ -2341,7 +2341,7 @@ setTimeout(() => {
         modalRoot.id = 'advanced-modal-root';
         document.getElementById('root').appendChild(modalRoot);
         const modalRootRender = ReactDOM.createRoot(modalRoot);
-        modalRootRender.render(<AdvancedModalController />);
+        modalRootRender.render(<AdvancedModalControllerV2 />);
     }
 }, 500);
         // ========== INYECCIÓN DE BOTONES EN BARRA INFERIOR ==========
