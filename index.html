@@ -2066,9 +2066,23 @@
             }
         }, 500);
 
-// ========== MÓDULO COMPLETO DE PRÁCTICA (VERSIÓN FINAL FUNCIONAL) ==========
+// ========== MÓDULO COMPLETO DE PRÁCTICA (VERSIÓN FINAL CORREGIDA V6) ==========
+// Incluye: Artículos con diccionario externo, Plurales, Verbos+Prep, Preposiciones
 
-// --- BASES DE DATOS INICIALES ---
+// --- 1. CARGA DE DICCIONARIO EXTERNO (GÉNEROS) ---
+const loadGenderDict = async () => {
+    if (localStorage.getItem('muller_gender_dict')) return;
+    try {
+        const res = await fetch('https://raw.githubusercontent.com/enz/german-nouns-gender/master/data/nouns.json');
+        const data = await res.json();
+        localStorage.setItem('muller_gender_dict', JSON.stringify(data));
+        console.log('✅ Diccionario de géneros cargado');
+    } catch (e) {
+        console.warn('⚠️ No se pudo cargar el diccionario externo, se usarán reglas locales.');
+    }
+};
+
+// --- 2. BASES DE DATOS LOCALES ---
 const PLURAL_DATABASE = [
     { singular: "der Tisch", plural: "die Tische", regla: "+e" },
     { singular: "der Stuhl", plural: "die Stühle", regla: "¨+e" },
@@ -2113,84 +2127,87 @@ const PREPOSITION_DATABASE = [
     { preposicion: "auf", caso: "Wechsel", ejemplo: "Das Buch liegt auf dem Tisch. / Ich lege das Buch auf den Tisch." }
 ];
 
-// --- REGLAS DE TERMINACIONES PARA INFERIR GÉNERO (si no está en diccionario personal) ---
+// --- 3. REGLAS DE TERMINACIÓN (FALLBACK) ---
 const GENDER_RULES = {
     der: ["-er", "-el", "-en", "-ig", "-ling", "-ismus", "-or"],
     die: ["-heit", "-keit", "-ung", "-schaft", "-tion", "-tät", "-e", "-in"],
     das: ["-chen", "-lein", "-ment", "-um", "-tum", "-nis"]
 };
 
-// --- EXTRACTOR DE ARTÍCULOS MEJORADO (SOLO NOMINATIVO) ---
-const extractArticlesFromGuionV5 = (guionData, scriptTitle) => {
+// --- 4. EXTRACTOR DE ARTÍCULOS V6 (con diccionario externo y contexto nominativo) ---
+const extractArticlesFromGuionV6 = (guionData, scriptTitle) => {
     if (!guionData || !Array.isArray(guionData)) return [];
-    try {
-        const existing = JSON.parse(localStorage.getItem('muller_extracted_articles') || '[]');
-        const personalCorrections = JSON.parse(localStorage.getItem('muller_article_corrections') || '{}');
-        
-        guionData.forEach(scene => {
-            const text = scene.text || '';
-            // Buscar patrón: [Der/Die/Das/Ein/Eine] + [sustantivo] + [verbo conjugado] (sujeto típico)
-            const nomRegex = /\b(Der|Die|Das|Ein|Eine)\s+([A-ZÄÖÜ][a-zäöüß]+)\s+(ist|sind|hat|haben|kann|muss|will|möchte|kommt|geht|steht|liegt|sitzt|arbeitet|spricht|denkt|findet|glaubt|weiß|sieht|hört|fährt|läuft|bringt|nimmt|gibt|hilft|trifft|schläft|wäscht|trägt|verliert|schreibt|liest|kennt|nennt)\b/g;
-            let match;
-            while ((match = nomRegex.exec(text)) !== null) {
-                let articleRaw = match[1].toLowerCase();
-                const noun = match[2];
-                let article = articleRaw;
-                if (article === 'ein') article = 'der';
-                else if (article === 'eine') article = 'die';
-                
-                // 1. ¿Tenemos corrección personal para esta palabra?
-                if (personalCorrections[noun]) {
-                    article = personalCorrections[noun];
-                } 
-                // 2. Si no, ¿está ya en nuestra base con otro género? (mantenemos el más frecuente)
-                else {
-                    const found = existing.find(item => item.word === noun);
-                    if (found) article = found.article;
-                    else {
-                        // 3. Aplicar reglas de terminación como pista (pero marcamos como inferido)
-                        const lowerNoun = noun.toLowerCase();
-                        let inferred = null;
-                        for (const [gender, suffixes] of Object.entries(GENDER_RULES)) {
-                            if (suffixes.some(suf => lowerNoun.endsWith(suf))) {
-                                inferred = gender;
-                                break;
-                            }
-                        }
-                        // Solo usamos la inferencia si no hay conflicto con otra regla
-                        if (inferred && article !== inferred) {
-                            // La marcamos como inferida pero guardamos el género de la regla
-                            article = inferred;
-                        }
-                    }
-                }
-                
-                if (article === 'der' || article === 'die' || article === 'das') {
-                    const found = existing.find(item => item.word === noun);
-                    if (!found) {
-                        existing.push({
-                            word: noun, article: article,
-                            examples: [text],
-                            translation: scene.translation || '',
-                            scriptTitle: scriptTitle,
-                            dateAdded: new Date().toISOString(),
-                            inferred: !personalCorrections[noun] && !existing.some(e => e.word === noun)
-                        });
-                    } else {
-                        if (!found.examples.includes(text)) {
-                            found.examples.push(text);
-                            if (found.examples.length > 3) found.examples.shift();
-                        }
+    const genderDict = JSON.parse(localStorage.getItem('muller_gender_dict') || '{}');
+    const personalCorrections = JSON.parse(localStorage.getItem('muller_article_corrections') || '{}');
+    let existing = JSON.parse(localStorage.getItem('muller_extracted_articles') || '[]');
+    
+    // Regex mejorada: captura sujeto en nominativo + verbo conjugado
+    const nomRegex = /\b(Der|Die|Das|Ein|Eine)\s+([A-ZÄÖÜ][a-zäöüß]+)\s+(?:sehr |ganz |nicht )?(ist|sind|hat|haben|kann|muss|will|möchte|kommt|geht|steht|liegt|sitzt|arbeitet|spricht|denkt|findet|glaubt|weiß|sieht|hört|fährt|läuft|bringt|nimmt|gibt|hilft|trifft|schläft|wäscht|trägt|verliert|schreibt|liest|kennt|nennt)\b/gi;
+    
+    guionData.forEach(scene => {
+        const text = scene.text || '';
+        let match;
+        while ((match = nomRegex.exec(text)) !== null) {
+            const articleRaw = match[1].toLowerCase();
+            const noun = match[2];
+            let finalArticle = null;
+            const lowerNoun = noun.toLowerCase();
+            
+            // 1. Corrección manual del usuario (máxima prioridad)
+            if (personalCorrections[lowerNoun]) {
+                finalArticle = personalCorrections[lowerNoun];
+            }
+            // 2. Diccionario externo (4000+ palabras)
+            else if (genderDict[lowerNoun]) {
+                finalArticle = genderDict[lowerNoun];
+            }
+            // 3. Reglas de terminación
+            else {
+                for (const [gender, suffixes] of Object.entries(GENDER_RULES)) {
+                    if (suffixes.some(suf => lowerNoun.endsWith(suf))) {
+                        finalArticle = gender;
+                        break;
                     }
                 }
             }
-        });
-        localStorage.setItem('muller_extracted_articles', JSON.stringify(existing));
-        return existing;
-    } catch (e) { console.warn(e); return []; }
+            // 4. Si nada funciona, inferir del artículo original (poco fiable)
+            if (!finalArticle) {
+                if (articleRaw === 'ein' || articleRaw === 'einen' || articleRaw === 'einem') finalArticle = 'der';
+                else if (articleRaw === 'eine' || articleRaw === 'einer') finalArticle = 'die';
+                else if (articleRaw === 'ein') finalArticle = 'das';
+                else finalArticle = articleRaw;
+            }
+            
+            if (finalArticle && noun.length > 1) {
+                const existingEntry = existing.find(item => item.word === noun);
+                if (!existingEntry) {
+                    existing.push({
+                        word: noun,
+                        article: finalArticle,
+                        examples: [text],
+                        translation: scene.translation || '',
+                        scriptTitle: scriptTitle,
+                        dateAdded: new Date().toISOString(),
+                        inferred: !personalCorrections[lowerNoun] && !genderDict[lowerNoun]
+                    });
+                } else {
+                    // Si el diccionario externo tiene un género y el guardado es diferente, actualizar
+                    if (!personalCorrections[lowerNoun] && genderDict[lowerNoun] && existingEntry.article !== genderDict[lowerNoun]) {
+                        existingEntry.article = genderDict[lowerNoun];
+                    }
+                    if (!existingEntry.examples.includes(text)) {
+                        existingEntry.examples.push(text);
+                        if (existingEntry.examples.length > 3) existingEntry.examples.shift();
+                    }
+                }
+            }
+        }
+    });
+    localStorage.setItem('muller_extracted_articles', JSON.stringify(existing));
+    return existing;
 };
 
-// --- EXTRACTORES PARA LAS DEMÁS CATEGORÍAS (versiones funcionales) ---
+// --- 5. EXTRACTORES PARA PLURALES, VERB+PREP, PREPOSICIONES ---
 const extractPluralsFromGuion = (guionData, scriptTitle) => {
     let plurals = JSON.parse(localStorage.getItem('muller_extracted_plurals') || '[]');
     guionData.forEach(scene => {
@@ -2255,8 +2272,8 @@ const extractPrepositionsFromGuion = (guionData, scriptTitle) => {
     return preps;
 };
 
-// --- COMPONENTES DE PRÁCTICA (TODOS FUNCIONALES) ---
-const ArticlePracticeV5 = () => {
+// --- 6. COMPONENTE DE PRÁCTICA: ARTÍCULOS V6 (con corrección manual) ---
+const ArticlePracticeV6 = () => {
     const [articles, setArticles] = useState([]);
     const [index, setIndex] = useState(0);
     const [answer, setAnswer] = useState(null);
@@ -2277,15 +2294,16 @@ const ArticlePracticeV5 = () => {
         loadArticles();
         window.addEventListener('extractedDataUpdated', loadArticles);
         return () => window.removeEventListener('extractedDataUpdated', loadArticles);
-    }, []);
+    }, [loadArticles]);
     
     const current = articles[index];
+    
     const handleAdd = () => {
         if (!newWord.trim()) return;
         const wordObj = {
             word: newWord.trim(), article: newArticle,
             examples: [], translation: newTrans.trim() || '(sin traducción)',
-            scriptTitle: 'Manual', dateAdded: new Date().toISOString()
+            scriptTitle: 'Manual', dateAdded: new Date().toISOString(), inferred: false
         };
         const updated = [...articles, wordObj];
         localStorage.setItem('muller_extracted_articles', JSON.stringify(updated));
@@ -2300,13 +2318,13 @@ const ArticlePracticeV5 = () => {
     const check = (sel) => {
         if (!current) return;
         const correct = current.article === sel;
-        setFeedback(correct ? `✅ ${current.article} ${current.word}` : `❌ Es ${current.article} ${current.word}`);
+        setFeedback(correct ? `✅ ¡Correcto! ${current.article} ${current.word}` : `❌ Incorrecto. Es: ${current.article} ${current.word}`);
         setAnswer(sel);
     };
     
     const next = () => {
         if (index < articles.length - 1) { setIndex(index+1); setAnswer(null); setFeedback(''); }
-        else setFeedback('🎉 Completado');
+        else setFeedback('🎉 ¡Has completado todas las tarjetas!');
     };
     
     const correctManually = (correctGender) => {
@@ -2317,14 +2335,14 @@ const ArticlePracticeV5 = () => {
         const corrections = JSON.parse(localStorage.getItem('muller_article_corrections') || '{}');
         corrections[current.word] = correctGender;
         localStorage.setItem('muller_article_corrections', JSON.stringify(corrections));
-        setFeedback(`✅ Corregido: ${correctGender} ${current.word}`);
+        setFeedback(`✅ Corregido manualmente: ${correctGender} ${current.word}`);
         setAnswer(correctGender);
     };
     
     if (articles.length === 0) {
         return (
             <div className="text-center py-8">
-                <p className="text-gray-400 mb-4">No hay sustantivos. Carga una historia o añade manualmente.</p>
+                <p className="text-gray-400 mb-4">Aún no hay sustantivos. Carga una historia o añade manualmente.</p>
                 <button onClick={() => setShowAddForm(true)} className="bg-purple-600 px-4 py-2 rounded-lg">➕ Añadir manualmente</button>
                 {showAddForm && (
                     <div className="mt-4 bg-gray-700 p-4 rounded-lg">
@@ -2381,7 +2399,7 @@ const ArticlePracticeV5 = () => {
                     <p className="text-xl mb-4">{feedback}</p>
                     {current.examples?.length > 0 && (
                         <div className="bg-black/40 p-4 rounded-lg text-left">
-                            <p className="text-amber-400 text-sm mb-1">📖 Ejemplo:</p>
+                            <p className="text-amber-400 text-sm mb-1">📖 Ejemplo de tu historia:</p>
                             <p className="text-gray-300 italic">"{current.examples[0]}"</p>
                         </div>
                     )}
@@ -2392,6 +2410,7 @@ const ArticlePracticeV5 = () => {
     );
 };
 
+// --- 7. COMPONENTES DE PRÁCTICA (Plurales, Verbos+Prep, Preposiciones) ---
 const PluralPracticeV3 = () => {
     const [items, setItems] = useState([]);
     const [index, setIndex] = useState(0);
@@ -2509,8 +2528,8 @@ const PrepositionPracticeV3 = () => {
     );
 };
 
-// --- PANEL PRINCIPAL (4 PESTAÑAS 100% ACTIVAS) ---
-const AdvancedPracticePanelV5 = () => {
+// --- 8. PANEL PRINCIPAL (4 PESTAÑAS COMPLETAMENTE ACTIVAS) ---
+const AdvancedPracticePanelV6 = () => {
     const [activeTab, setActiveTab] = useState('articles');
     return (
         <div className="fixed inset-0 z-50 bg-black/95 overflow-y-auto" style={{top: '60px'}}>
@@ -2526,7 +2545,7 @@ const AdvancedPracticePanelV5 = () => {
                     <button onClick={() => setActiveTab('prepositions')} className={`px-4 py-2 rounded-t-lg font-bold ${activeTab === 'prepositions' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}>📍 Preposiciones</button>
                 </div>
                 <div className="bg-gray-800 p-6 rounded-2xl">
-                    {activeTab === 'articles' && <ArticlePracticeV5 />}
+                    {activeTab === 'articles' && <ArticlePracticeV6 />}
                     {activeTab === 'plurals' && <PluralPracticeV3 />}
                     {activeTab === 'verbprep' && <VerbPrepPracticeV3 />}
                     {activeTab === 'prepositions' && <PrepositionPracticeV3 />}
@@ -2536,8 +2555,8 @@ const AdvancedPracticePanelV5 = () => {
     );
 };
 
-// --- CONTROLADOR MODAL ---
-const AdvancedModalControllerV5 = () => {
+// --- 9. CONTROLADOR MODAL ---
+const AdvancedModalControllerV6 = () => {
     const [show, setShow] = useState(false);
     useEffect(() => {
         const open = () => setShow(true);
@@ -2550,13 +2569,14 @@ const AdvancedModalControllerV5 = () => {
         };
     }, []);
     if (!show) return null;
-    return <AdvancedPracticePanelV5 />;
+    return <AdvancedPracticePanelV6 />;
 };
 
-// --- ANÁLISIS INICIAL E INTERCEPTORES ---
+// --- 10. ANÁLISIS INICIAL CON CARGA DE DICCIONARIO EXTERNO ---
 setTimeout(() => {
+    loadGenderDict(); // Cargar diccionario de géneros desde GitHub
     const run = (g, t) => {
-        extractArticlesFromGuionV5(g, t);
+        extractArticlesFromGuionV6(g, t);
         extractPluralsFromGuion(g, t);
         extractVerbPrepsFromGuion(g, t);
         extractPrepositionsFromGuion(g, t);
@@ -2569,6 +2589,7 @@ setTimeout(() => {
     } catch(e) {}
 }, 1000);
 
+// --- 11. INTERCEPTAR localStorage PARA NUEVOS GUIONES ---
 const origSet = localStorage.setItem;
 localStorage.setItem = function(key, val) {
     origSet.apply(this, arguments);
@@ -2578,7 +2599,7 @@ localStorage.setItem = function(key, val) {
             scripts.forEach(s => {
                 try {
                     const g = JSON.parse(s.data);
-                    extractArticlesFromGuionV5(g, s.title);
+                    extractArticlesFromGuionV6(g, s.title);
                     extractPluralsFromGuion(g, s.title);
                     extractVerbPrepsFromGuion(g, s.title);
                     extractPrepositionsFromGuion(g, s.title);
@@ -2589,13 +2610,43 @@ localStorage.setItem = function(key, val) {
     }
 };
 
+// --- 12. RENDERIZAR EL MODAL EN UN ROOT SEPARADO ---
 setTimeout(() => {
     if (!document.getElementById('advanced-modal-root')) {
         const mr = document.createElement('div');
         mr.id = 'advanced-modal-root';
         document.getElementById('root').appendChild(mr);
-        ReactDOM.createRoot(mr).render(<AdvancedModalControllerV5 />);
+        ReactDOM.createRoot(mr).render(<AdvancedModalControllerV6 />);
     }
+}, 500);
+
+// --- 13. INYECCIÓN DE BOTONES EN LA BARRA INFERIOR (MORADO 🎓 Y FUTURO AUDIOLIBRO) ---
+setTimeout(() => {
+    const injectButtons = () => {
+        const bar = document.querySelector('.bg-gray-950.p-3.md\\:p-6.flex.flex-col.sm\\:flex-row');
+        if (!bar) return false;
+        if (document.getElementById('injected-advanced-btn')) return true;
+        const container = document.createElement('div');
+        container.className = 'flex items-center gap-2 mr-3';
+        container.id = 'injected-advanced-btn';
+        const btn1 = document.createElement('button');
+        btn1.className = 'bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-full shadow-md transition';
+        btn1.innerHTML = '<i data-lucide="graduation-cap" class="w-5 h-5"></i>';
+        btn1.title = 'Entrenamiento Avanzado (Artículos, Plurales, Verbos+Prep, Preposiciones)';
+        btn1.onclick = () => window.dispatchEvent(new Event('toggleAdvancedModal'));
+        const btn2 = document.createElement('button');
+        btn2.className = 'bg-amber-600 hover:bg-amber-500 text-white p-2 rounded-full shadow-md transition';
+        btn2.innerHTML = '<i data-lucide="headphones" class="w-5 h-5"></i>';
+        btn2.title = '🎧 Modo Audiolibro (próximamente)';
+        btn2.onclick = () => alert('🎧 Modo Audiolibro en desarrollo. Estará disponible en la próxima actualización.');
+        container.appendChild(btn1);
+        container.appendChild(btn2);
+        bar.insertBefore(container, bar.firstChild);
+        if (window.lucide) window.lucide.createIcons();
+        return true;
+    };
+    const tryInject = () => { if (!injectButtons()) setTimeout(tryInject, 1000); };
+    tryInject();
 }, 500);
         // ========== INYECCIÓN DE BOTONES EN BARRA INFERIOR ==========
         setTimeout(() => {
