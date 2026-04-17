@@ -1781,9 +1781,10 @@
                 <FloatingButtons />
             </>
         );
-// ========== MÓDULO ÚNICO DE PRÁCTICA AVANZADA (4 PESTAÑAS FUNCIONALES) ==========
+// ========== MÓDULO COMPLETO Y DEFINITIVO (4 PESTAÑAS + AUDIOLIBRO REAL) ==========
+// No modifica nada del código original, solo añade funcionalidad.
 
-// --- DATOS DE RESPALDO ---
+// -------------------- DATOS DE RESPALDO --------------------
 const DEFAULT_PLURALS = [
     { singular: "der Tisch", plural: "die Tische", regla: "+e" },
     { singular: "die Lampe", plural: "die Lampen", regla: "+n" },
@@ -1800,7 +1801,92 @@ const DEFAULT_PREPOSITIONS = [
     { preposicion: "in", caso: "Wechsel", ejemplo: "Ich bin in der Stadt (Dativ) / Ich gehe in die Stadt (Akkusativ)." }
 ];
 
-// --- COMPONENTE ARTÍCULOS ---
+// -------------------- EXTRACTORES (guardan en localStorage) --------------------
+function extractPluralsFromGuion(guionData, scriptTitle) {
+    if (!guionData || !Array.isArray(guionData)) return;
+    let existing = JSON.parse(localStorage.getItem('muller_extracted_plurals') || '[]');
+    guionData.forEach(scene => {
+        const text = scene.text;
+        const matches = text.match(/\bdie\s+([A-ZÄÖÜ][a-zäöüß]+(?:e|er|en|n|s)?)\b/g) || [];
+        matches.forEach(m => {
+            const plural = m.replace('die ', '');
+            let singular = plural.replace(/[äöü]/g, c => ({'ä':'a','ö':'o','ü':'u'}[c]));
+            singular = singular.replace(/(e|er|n|en|s)$/, '');
+            if (singular && !existing.find(p => p.plural === plural)) {
+                existing.push({ singular, plural, example: text, scriptTitle, regla: 'extraído' });
+            }
+        });
+    });
+    localStorage.setItem('muller_extracted_plurals', JSON.stringify(existing));
+}
+
+function extractVerbPrepsFromGuion(guionData, scriptTitle) {
+    let existing = JSON.parse(localStorage.getItem('muller_extracted_verbprep') || '[]');
+    const patterns = DEFAULT_VERBPREP.map(v => ({ verbo: v.verbo, prep: v.preposicion }));
+    guionData.forEach(scene => {
+        const text = scene.text;
+        patterns.forEach(p => {
+            if (text.includes(p.verbo) && text.includes(p.prep)) {
+                if (!existing.find(v => v.verbo === p.verbo)) {
+                    existing.push({ ...p, ejemplo: text, scriptTitle });
+                }
+            }
+        });
+    });
+    localStorage.setItem('muller_extracted_verbprep', JSON.stringify(existing));
+}
+
+function extractPrepositionsFromGuion(guionData, scriptTitle) {
+    let existing = JSON.parse(localStorage.getItem('muller_extracted_prepositions') || '[]');
+    guionData.forEach(scene => {
+        const text = scene.text;
+        DEFAULT_PREPOSITIONS.forEach(p => {
+            if (text.includes(p.preposicion)) {
+                if (!existing.find(pr => pr.preposicion === p.preposicion)) {
+                    existing.push({ ...p, example: text, scriptTitle });
+                }
+            }
+        });
+    });
+    localStorage.setItem('muller_extracted_prepositions', JSON.stringify(existing));
+}
+
+function extractArticlesFromGuionFinal(guionData, scriptTitle) {
+    if (!guionData || !Array.isArray(guionData)) return;
+    const corrections = JSON.parse(localStorage.getItem('muller_article_corrections') || '{}');
+    let existing = JSON.parse(localStorage.getItem('muller_extracted_articles') || '[]');
+    const regex = /\b(Der|Die|Das|Ein|Eine)\s+([A-ZÄÖÜ][a-zäöüß]+)\s+(ist|sind|hat|haben|kann|muss|will|möchte|kommt|geht|steht|liegt|sitzt|arbeitet|spricht|denkt|findet|glaubt|weiß|sieht|hört|fährt|läuft|bringt|nimmt|gibt|hilft|trifft|schläft|wäscht|trägt|verliert|schreibt|liest|kennt|nennt)\b/gi;
+    guionData.forEach(scene => {
+        const text = scene.text || '';
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            const articleRaw = match[1].toLowerCase();
+            const noun = match[2];
+            let finalArticle = corrections[noun];
+            if (!finalArticle) {
+                const found = existing.find(item => item.word === noun);
+                if (found) finalArticle = found.article;
+            }
+            if (!finalArticle) {
+                if (noun.toLowerCase().endsWith('ung') || noun.toLowerCase().endsWith('heit') || noun.toLowerCase().endsWith('keit')) finalArticle = 'die';
+                else if (noun.toLowerCase().endsWith('chen') || noun.toLowerCase().endsWith('lein')) finalArticle = 'das';
+                else if (noun.toLowerCase().endsWith('er') || noun.toLowerCase().endsWith('ling')) finalArticle = 'der';
+                else finalArticle = articleRaw === 'ein' ? 'der' : articleRaw === 'eine' ? 'die' : articleRaw;
+            }
+            if (finalArticle && noun.length > 1 && !existing.find(item => item.word === noun)) {
+                existing.push({
+                    word: noun, article: finalArticle,
+                    examples: [text], translation: scene.translation || '',
+                    scriptTitle, dateAdded: new Date().toISOString(),
+                    inferred: !corrections[noun]
+                });
+            }
+        }
+    });
+    localStorage.setItem('muller_extracted_articles', JSON.stringify(existing));
+}
+
+// -------------------- COMPONENTE ARTÍCULOS --------------------
 function ArticlePracticeFinal() {
     const [items, setItems] = React.useState([]);
     const [index, setIndex] = React.useState(0);
@@ -1835,7 +1921,7 @@ function ArticlePracticeFinal() {
     );
 }
 
-// --- COMPONENTE PLURALES ---
+// -------------------- COMPONENTE PLURALES --------------------
 function PluralPracticeFinal() {
     const [items, setItems] = React.useState([]);
     const [index, setIndex] = React.useState(0);
@@ -1866,7 +1952,7 @@ function PluralPracticeFinal() {
     );
 }
 
-// --- COMPONENTE VERBOS+PREP ---
+// -------------------- COMPONENTE VERBOS+PREP --------------------
 function VerbPrepPracticeFinal() {
     const [items, setItems] = React.useState([]);
     const [index, setIndex] = React.useState(0);
@@ -1897,7 +1983,7 @@ function VerbPrepPracticeFinal() {
     );
 }
 
-// --- COMPONENTE PREPOSICIONES ---
+// -------------------- COMPONENTE PREPOSICIONES --------------------
 function PrepositionPracticeFinal() {
     const [items, setItems] = React.useState([]);
     const [index, setIndex] = React.useState(0);
@@ -1930,7 +2016,7 @@ function PrepositionPracticeFinal() {
     );
 }
 
-// --- PANEL PRINCIPAL (4 PESTAÑAS CLICABLES) ---
+// -------------------- PANEL PRINCIPAL (4 PESTAÑAS) --------------------
 function AdvancedPracticePanelFinal() {
     const [activeTab, setActiveTab] = React.useState('articles');
     return (
@@ -1957,7 +2043,7 @@ function AdvancedPracticePanelFinal() {
     );
 }
 
-// --- CONTROLADOR MODAL ---
+// -------------------- CONTROLADOR MODAL --------------------
 function ModalControllerFinal() {
     const [show, setShow] = React.useState(false);
     React.useEffect(() => {
@@ -1974,7 +2060,41 @@ function ModalControllerFinal() {
     return <AdvancedPracticePanelFinal />;
 }
 
-// --- RENDERIZAR MODAL ---
+// -------------------- INICIALIZACIÓN: extraer datos de todos los guiones --------------------
+function runAllExtractors(guion, title) {
+    extractArticlesFromGuionFinal(guion, title);
+    extractPluralsFromGuion(guion, title);
+    extractVerbPrepsFromGuion(guion, title);
+    extractPrepositionsFromGuion(guion, title);
+}
+
+setTimeout(() => {
+    try {
+        const scripts = JSON.parse(localStorage.getItem('mullerScripts') || '[]');
+        scripts.forEach(script => {
+            try { runAllExtractors(JSON.parse(script.data), script.title); } catch(e) {}
+        });
+        if (window.__DEFAULT_GUION__) runAllExtractors(window.__DEFAULT_GUION__, 'Lektion 17: Kunst');
+        window.dispatchEvent(new Event('extractedDataUpdated'));
+    } catch(e) {}
+}, 1000);
+
+// Interceptar localStorage para nuevos guiones
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+    originalSetItem.apply(this, arguments);
+    if (key === 'mullerScripts') {
+        try {
+            const scripts = JSON.parse(value);
+            scripts.forEach(script => {
+                try { runAllExtractors(JSON.parse(script.data), script.title); } catch(e) {}
+            });
+            window.dispatchEvent(new Event('extractedDataUpdated'));
+        } catch(e) {}
+    }
+};
+
+// -------------------- RENDERIZAR MODAL --------------------
 setTimeout(() => {
     if (!document.getElementById('advanced-modal-root')) {
         const modalRoot = document.createElement('div');
@@ -1983,6 +2103,122 @@ setTimeout(() => {
         ReactDOM.createRoot(modalRoot).render(<ModalControllerFinal />);
     }
 }, 500);
+
+// -------------------- INYECCIÓN DE BOTONES (morado y naranja) --------------------
+setTimeout(() => {
+    const injectButtons = () => {
+        const bar = document.querySelector('.bg-gray-950.p-3.md\\:p-6.flex.flex-col.sm\\:flex-row');
+        if (!bar) return false;
+        if (document.getElementById('injected-advanced-btn')) return true;
+        const container = document.createElement('div');
+        container.className = 'flex items-center gap-2 mr-3';
+        container.id = 'injected-advanced-btn';
+        
+        // Botón morado (entrenamiento avanzado)
+        const btn1 = document.createElement('button');
+        btn1.className = 'bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-full shadow-md transition';
+        btn1.innerHTML = '<i data-lucide="graduation-cap" class="w-5 h-5"></i>';
+        btn1.title = 'Entrenamiento Avanzado';
+        btn1.onclick = () => window.dispatchEvent(new Event('toggleAdvancedModal'));
+        
+        // Botón naranja (audiolibro real)
+        const btn2 = document.createElement('button');
+        btn2.className = 'bg-amber-600 hover:bg-amber-500 text-white p-2 rounded-full shadow-md transition';
+        btn2.innerHTML = '<i data-lucide="headphones" class="w-5 h-5"></i>';
+        btn2.title = 'Modo Audiolibro (reproduce toda la historia)';
+        btn2.id = 'audiobook-real-btn';
+        
+        container.appendChild(btn1);
+        container.appendChild(btn2);
+        bar.insertBefore(container, bar.firstChild);
+        if (window.lucide) window.lucide.createIcons();
+        return true;
+    };
+    const tryInject = () => { if (!injectButtons()) setTimeout(tryInject, 500); };
+    tryInject();
+}, 500);
+
+// -------------------- IMPLEMENTACIÓN DEL MODO AUDIOLIBRO (REAL) --------------------
+(function() {
+    let isPlaying = false;
+    let currentIdx = 0;
+    let guionCache = null;
+    let timeoutId = null;
+    let btnRef = null;
+
+    function getCurrentGuion() {
+        // Prioridad: guion activo en la interfaz (si se puede obtener)
+        // Si no, el último guardado o el por defecto
+        const scripts = JSON.parse(localStorage.getItem('mullerScripts') || '[]');
+        if (scripts.length > 0) {
+            const last = scripts[scripts.length - 1];
+            try { return JSON.parse(last.data); } catch(e) {}
+        }
+        return window.__DEFAULT_GUION__ || [];
+    }
+
+    function stopAudioBook() {
+        if (timeoutId) clearTimeout(timeoutId);
+        window.speechSynthesis.cancel();
+        isPlaying = false;
+        if (btnRef) {
+            btnRef.style.backgroundColor = '#d97706';
+            btnRef.innerHTML = '<i data-lucide="headphones" class="w-5 h-5"></i>';
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
+    function playScene(index) {
+        if (!guionCache || index >= guionCache.length) {
+            stopAudioBook();
+            alert('📖 Audiolibro finalizado');
+            return;
+        }
+        const scene = guionCache[index];
+        const utterance = new SpeechSynthesisUtterance(scene.text);
+        utterance.lang = 'de-DE';
+        utterance.rate = 0.9;
+        utterance.onend = () => {
+            timeoutId = setTimeout(() => {
+                playScene(index + 1);
+            }, 800);
+        };
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        currentIdx = index;
+    }
+
+    function startAudioBook() {
+        guionCache = getCurrentGuion();
+        if (!guionCache || guionCache.length === 0) {
+            alert('No hay ningún guion cargado.');
+            return;
+        }
+        stopAudioBook();
+        isPlaying = true;
+        playScene(0);
+        if (btnRef) {
+            btnRef.style.backgroundColor = '#ef4444';
+            btnRef.innerHTML = '<i data-lucide="square" class="w-5 h-5"></i>';
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
+    // Esperar a que el botón naranja exista y asignarle la función
+    const waitForOrangeBtn = setInterval(() => {
+        const orangeBtn = document.querySelector('.bg-amber-600.hover\\:bg-amber-500.text-white.p-2.rounded-full');
+        if (orangeBtn && !orangeBtn.hasAttribute('data-audiobook-ready')) {
+            orangeBtn.setAttribute('data-audiobook-ready', 'true');
+            btnRef = orangeBtn;
+            orangeBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (isPlaying) stopAudioBook();
+                else startAudioBook();
+            };
+            clearInterval(waitForOrangeBtn);
+        }
+    }, 500);
+})();
         // ========== INYECCIÓN DE BOTONES EN BARRA INFERIOR ==========
         setTimeout(() => {
             const injectButtons = () => {
