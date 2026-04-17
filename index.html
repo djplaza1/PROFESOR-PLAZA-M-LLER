@@ -1774,345 +1774,50 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        // ========== MÓDULO AVANZADO DE PRÁCTICA + ANALIZADOR + EXTRAS (PROFESOR MÜLLER) ==========
+     // ========== MÓDULO DE PRUEBA (BOTONES FLOTANTES VISIBLES) ==========
 // Pegar justo antes de root.render(...)
 
-// --- 1. ANALIZADOR AUTOMÁTICO DE GUIONES ---
-const analyzeScriptAndExtract = (guionData, scriptTitle = '') => {
-    // Cargar datos existentes
-    const loadExtracted = (key) => JSON.parse(localStorage.getItem(key) || '[]');
-    const saveExtracted = (key, data) => localStorage.setItem(key, JSON.stringify(data));
-    
-    let articles = loadExtracted('muller_extracted_articles');
-    let verbpreps = loadExtracted('muller_extracted_verbprep');
-    let prepositions = loadExtracted('muller_extracted_prepositions');
-    
-    // Función para limpiar palabras
-    const cleanWord = (w) => w.replace(/[.,!?;:()"»«]/g, '').trim();
-    
-    // Patrones de verbos con preposición (ampliados)
-    const verbPrepPatterns = [
-        ...GRAMMAR_PATTERNS.map(p => ({ verb: p.base, prep: p.tooltip.match(/([a-zäöüß]+\+?\s*[A-Za-z]+)/i)?.[0] || '', case: p.tooltip.includes('Akk') ? 'Akk' : (p.tooltip.includes('Dat') ? 'Dat' : '') })),
-        { verb: 'denken an', prep: 'an', case: 'Akk' },
-        { verb: 'teilnehmen an', prep: 'an', case: 'Dat' },
-        { verb: 'sich gewöhnen an', prep: 'an', case: 'Akk' },
-        { verb: 'fragen nach', prep: 'nach', case: 'Dat' },
-        { verb: 'antworten auf', prep: 'auf', case: 'Akk' },
-        { verb: 'bestehen aus', prep: 'aus', case: 'Dat' },
-        { verb: 'bestehen auf', prep: 'auf', case: 'Dat' },
-        { verb: 'sich verlieben in', prep: 'in', case: 'Akk' },
-        { verb: 'sich entscheiden für', prep: 'für', case: 'Akk' },
-        { verb: 'gehören zu', prep: 'zu', case: 'Dat' },
-        { verb: 'halten für', prep: 'für', case: 'Akk' },
-        { verb: 'handeln von', prep: 'von', case: 'Dat' },
-        { verb: 'sich handeln um', prep: 'um', case: 'Akk' },
-        { verb: 'leiden an', prep: 'an', case: 'Dat' },
-        { verb: 'leiden unter', prep: 'unter', case: 'Dat' },
-        { verb: 'sich sehnen nach', prep: 'nach', case: 'Dat' },
-        { verb: 'sterben an', prep: 'an', case: 'Dat' },
-        { verb: 'überzeugen von', prep: 'von', case: 'Dat' },
-        { verb: 'verfügen über', prep: 'über', case: 'Akk' },
-        { verb: 'verzichten auf', prep: 'auf', case: 'Akk' },
-        { verb: 'warnen vor', prep: 'vor', case: 'Dat' },
-        { verb: 'zweifeln an', prep: 'an', case: 'Dat' }
-    ];
-    
-    guionData.forEach(scene => {
-        const text = scene.text;
-        const words = text.split(/\s+/).map(cleanWord);
-        
-        // --- Extraer Artículos (sustantivos con der/die/das) ---
-        const articleRegex = /\b(der|die|das|den|dem|des|ein|eine|einen|einem|einer)\s+([A-ZÄÖÜ][a-zäöüß]+)\b/g;
-        let match;
-        while ((match = articleRegex.exec(text)) !== null) {
-            const articleWord = match[1].toLowerCase();
-            const noun = match[2];
-            let gender = '';
-            if (['der', 'den', 'dem', 'des'].includes(articleWord)) gender = 'der';
-            else if (['die', 'der'].includes(articleWord) && articleWord !== 'der') gender = 'die';
-            else if (['das', 'dem', 'des'].includes(articleWord)) gender = 'das';
-            else if (articleWord === 'ein') gender = 'der'; // aproximación
-            else if (articleWord === 'eine') gender = 'die';
-            else if (articleWord === 'einem') gender = 'der/das';
-            else if (articleWord === 'einer') gender = 'die';
-            else if (articleWord === 'einen') gender = 'der';
-            
-            if (gender && noun.length > 1) {
-                const existing = articles.find(a => a.word === noun);
-                if (!existing) {
-                    articles.push({
-                        word: noun,
-                        article: gender,
-                        examples: [text],
-                        scriptTitle: scriptTitle,
-                        dateAdded: new Date().toISOString()
-                    });
-                } else {
-                    if (!existing.examples.includes(text)) {
-                        existing.examples.push(text);
-                        if (existing.examples.length > 3) existing.examples.shift();
-                    }
-                }
-            }
-        }
-        
-        // --- Extraer Verbos con Preposición ---
-        verbPrepPatterns.forEach(vp => {
-            const verbBase = vp.verb.split(' ')[0].replace(/[()]/g, '');
-            const regex = new RegExp(`\\b${verbBase}\\w*\\s+.*?\\b${vp.prep}\\b`, 'gi');
-            if (regex.test(text)) {
-                const existing = verbpreps.find(v => v.verb === vp.verb);
-                if (!existing) {
-                    verbpreps.push({
-                        verb: vp.verb,
-                        prep: vp.prep,
-                        case: vp.case,
-                        examples: [text],
-                        scriptTitle: scriptTitle,
-                        dateAdded: new Date().toISOString()
-                    });
-                } else {
-                    if (!existing.examples.includes(text)) {
-                        existing.examples.push(text);
-                        if (existing.examples.length > 3) existing.examples.shift();
-                    }
-                }
-            }
-        });
-        
-        // --- Extraer Preposiciones con caso (análisis simple) ---
-        const allPreps = [...PREP_DAT, ...PREP_AKK, ...PREP_WECHSEL];
-        allPreps.forEach(prep => {
-            const prepRegex = new RegExp(`\\b${prep}\\s+(dem|den|der|das|die|einem|einen|einer|ein)`, 'gi');
-            let prepMatch;
-            while ((prepMatch = prepRegex.exec(text)) !== null) {
-                const following = prepMatch[1].toLowerCase();
-                let detectedCase = '';
-                if (['dem', 'einem', 'der'].includes(following) && PREP_DAT.includes(prep)) detectedCase = 'Dativ';
-                else if (['den', 'einen'].includes(following) && PREP_AKK.includes(prep)) detectedCase = 'Akkusativ';
-                else if (PREP_WECHSEL.includes(prep)) {
-                    detectedCase = (following === 'dem' || following === 'einem') ? 'Dativ' : 'Akkusativ';
-                }
-                if (detectedCase) {
-                    const existing = prepositions.find(p => p.prep === prep && p.case === detectedCase);
-                    if (!existing) {
-                        prepositions.push({
-                            prep: prep,
-                            case: detectedCase,
-                            examples: [text],
-                            scriptTitle: scriptTitle,
-                            dateAdded: new Date().toISOString()
-                        });
-                    } else {
-                        if (!existing.examples.includes(text)) {
-                            existing.examples.push(text);
-                            if (existing.examples.length > 3) existing.examples.shift();
-                        }
-                    }
-                }
-            }
-        });
-    });
-    
-    // Guardar en localStorage (limitamos tamaño para no saturar)
-    saveExtracted('muller_extracted_articles', articles.slice(0, 200));
-    saveExtracted('muller_extracted_verbprep', verbpreps.slice(0, 100));
-    saveExtracted('muller_extracted_prepositions', prepositions.slice(0, 150));
-    
-    return { articles, verbpreps, prepositions };
-};
-        // --- 2. HOOK PERSONALIZADO PARA OBSERVAR CAMBIOS EN GUIONDATA ---
-const useScriptAnalyzer = (guionData, activeScriptTitle) => {
-    useEffect(() => {
-        if (guionData && guionData.length > 0) {
-            // Ejecutar análisis en segundo plano para no bloquear UI
-            const timer = setTimeout(() => {
-                analyzeScriptAndExtract(guionData, activeScriptTitle);
-                // Disparar evento para que los módulos de práctica se actualicen
-                window.dispatchEvent(new Event('extractedDataUpdated'));
-            }, 500);
-            return () => clearTimeout(timer);
-        }
-    }, [guionData, activeScriptTitle]);
-};
-
-// --- 3. COMPONENTE PRINCIPAL DE PRÁCTICA AVANZADA (Con todos los extras) ---
-const AdvancedPracticeSuite = () => {
+const TestFloatingButton = () => {
     const [showModal, setShowModal] = useState(false);
-    const [activeModule, setActiveModule] = useState('articles');
-    const [articlesData, setArticlesData] = useState([]);
-    const [verbPrepData, setVerbPrepData] = useState([]);
-    const [prepData, setPrepData] = useState([]);
-    const [pluralData, setPluralData] = useState(PLURAL_DATABASE);
-    const [dailyChallenge, setDailyChallenge] = useState(null);
-    const [showNotification, setShowNotification] = useState(false);
-    const [notificationMsg, setNotificationMsg] = useState('');
     
-    // Estados de práctica
-    const [articleIndex, setArticleIndex] = useState(0);
-    const [articleAnswer, setArticleAnswer] = useState(null);
-    const [articleFeedback, setArticleFeedback] = useState('');
-    const [pluralIndex, setPluralIndex] = useState(0);
-    const [pluralAnswer, setPluralAnswer] = useState('');
-    const [pluralFeedback, setPluralFeedback] = useState('');
-    const [verbPrepIndex, setVerbPrepIndex] = useState(0);
-    const [verbPrepAnswer, setVerbPrepAnswer] = useState('');
-    const [verbPrepFeedback, setVerbPrepFeedback] = useState('');
-    const [prepIndex, setPrepIndex] = useState(0);
-    const [prepAnswer, setPrepAnswer] = useState('');
-    const [prepFeedback, setPrepFeedback] = useState('');
-    const [userErrors, setUserErrors] = useState(() => JSON.parse(localStorage.getItem('muller_error_stats') || '{}'));
-    
-    // Cargar datos extraídos al abrir o al recibir evento
-    const loadData = useCallback(() => {
-        setArticlesData(JSON.parse(localStorage.getItem('muller_extracted_articles') || '[]'));
-        setVerbPrepData(JSON.parse(localStorage.getItem('muller_extracted_verbprep') || '[]'));
-        setPrepData(JSON.parse(localStorage.getItem('muller_extracted_prepositions') || '[]'));
-        // También cargar plurales desde el guion (búsqueda simple)
-        const customPlurals = [];
-        const allGuiones = JSON.parse(localStorage.getItem('mullerScripts') || '[]');
-        // ... (lógica para extraer plurales de guiones, simplificada por espacio)
-        setPluralData([...PLURAL_DATABASE, ...customPlurals]);
-    }, []);
-    
-    useEffect(() => {
-        loadData();
-        window.addEventListener('extractedDataUpdated', loadData);
-        return () => window.removeEventListener('extractedDataUpdated', loadData);
-    }, [loadData]);
-    
-    // Registrar error para estadísticas
-    const recordError = (module, item, userAnswer) => {
-        const key = `${module}:${item}`;
-        const newErrors = { ...userErrors, [key]: (userErrors[key] || 0) + 1 };
-        setUserErrors(newErrors);
-        localStorage.setItem('muller_error_stats', JSON.stringify(newErrors));
-    };
-    
-    // Lógica de checks (similares a los anteriores pero enriquecidos)
-    const checkArticle = (selected) => { /* ... */ };
-    const checkPlural = () => { /* ... */ };
-    const checkVerbPrep = () => { /* ... */ };
-    const checkPrep = () => { /* ... */ };
-    
-    // Desafío diario
-    useEffect(() => {
-        const today = new Date().toDateString();
-        const lastChallenge = localStorage.getItem('muller_last_challenge_date');
-        if (lastChallenge !== today) {
-            // Crear desafío con 5 elementos aleatorios
-            const challengeItems = [];
-            // ... lógica para seleccionar items
-            setDailyChallenge({ items: challengeItems, completed: false, reward: 15 });
-        }
-    }, [articlesData, verbPrepData, prepData]);
-    
-    // Notificación simulada
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            const pending = (articlesData.length + verbPrepData.length + prepData.length) > 0;
-            if (pending) {
-                setNotificationMsg(`📚 Tienes ${articlesData.length} artículos y ${verbPrepData.length} verbos para practicar. ¡Hoy es un buen día!`);
-                setShowNotification(true);
-                setTimeout(() => setShowNotification(false), 5000);
-            }
-        }, 2000);
-        return () => clearTimeout(timer);
-    }, [articlesData, verbPrepData, prepData]);
-    
-    // Renderizado del modal (similar al anterior pero con pestañas y extras)
-    if (!showModal) {
-        return (
-            <>
-                {showNotification && (
-                    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg animate-bounce">
-                        {notificationMsg}
-                    </div>
-                )}
-                <button 
-                    onClick={() => setShowModal(true)}
-                    className="fixed bottom-20 left-4 z-50 bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-full shadow-xl"
-                    title="Entrenamiento Avanzado (Artículos, Verbos+Prep, Preposiciones)"
-                >
-                    <Icon name="graduation-cap" className="w-6 h-6" />
-                </button>
-            </>
-        );
-    }
-    
-    return (
-        <div className="fixed inset-0 z-50 bg-black/95 overflow-y-auto" style={{ top: '60px' }}>
-            {/* ... Interfaz completa con pestañas, tarjetas, botón añadir manual, estadísticas de errores ... */}
-            {/* Incluiré también el modo Audiolibro como un botón adicional en la UI principal (fuera del modal) */}
-        </div>
-    );
-};
-        // --- 4. MODO AUDIOLIBRO (Componente flotante) ---
-const AudiobookMode = () => {
-    // Se conectará al estado global mediante un contexto o eventos. 
-    // Implementación simplificada: botón que activa reproducción continua.
-    return (
-        <button 
-            onClick={() => {
-                // Activar modo audiolibro (se puede implementar con un estado global)
-                window.dispatchEvent(new Event('startAudiobook'));
-            }}
-            className="fixed bottom-20 left-20 z-50 bg-amber-600 hover:bg-amber-500 text-white p-3 rounded-full shadow-xl"
-            title="Modo Audiolibro (escuchar historia completa)"
-        >
-            <Icon name="headphones" className="w-6 h-6" />
-        </button>
-    );
-};
-
-// --- 5. INYECCIÓN DE COMPONENTES EN EL ROOT ---
-const InjectModules = () => {
-    // Usamos el hook del analizador directamente aquí (se ejecutará dentro del contexto de App)
-    // Como no podemos usar hooks fuera de un componente React, creamos un wrapper.
     return (
         <>
-            <AdvancedPracticeSuite />
-            <AudiobookMode />
+            <button 
+                onClick={() => setShowModal(true)}
+                className="fixed bottom-20 left-4 z-50 bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-full shadow-xl"
+                title="Entrenamiento Avanzado"
+            >
+                <Icon name="graduation-cap" className="w-6 h-6" />
+            </button>
+            <button 
+                onClick={() => alert('🎧 Modo Audiolibro activado (simulado)')}
+                className="fixed bottom-20 left-20 z-50 bg-amber-600 hover:bg-amber-500 text-white p-3 rounded-full shadow-xl"
+                title="Modo Audiolibro"
+            >
+                <Icon name="headphones" className="w-6 h-6" />
+            </button>
+            
+            {showModal && (
+                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" style={{top: '60px'}}>
+                    <div className="bg-gray-800 p-6 rounded-2xl max-w-md w-full">
+                        <h2 className="text-xl font-bold text-white mb-4">🚀 Módulos de Práctica</h2>
+                        <p className="text-gray-300 mb-4">Aquí aparecerán los entrenadores de Artículos, Plurales, etc.</p>
+                        <button onClick={() => setShowModal(false)} className="bg-purple-600 px-4 py-2 rounded-lg w-full">Cerrar</button>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
 
-// --- 6. INTEGRACIÓN CON LA APP PRINCIPAL ---
-// Para que el analizador funcione, necesitamos acceder a guionData y activeScriptTitle.
-// La forma más limpia sin modificar App es usar un patrón de eventos.
-// Cuando se cargue un guion, la función handleSaveScript y loadSavedScript deberían emitir un evento.
-// Pero como no modificamos App, interceptamos localStorage o usamos MutationObserver.
-// Alternativa: Sobrescribir localStorage.setItem para detectar cambios en 'mullerScripts' y 'guionData'.
-(function() {
-    const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key, value) {
-        originalSetItem.apply(this, arguments);
-        if (key === 'mullerScripts' || key === 'mullerStats') {
-            // Disparar análisis con los datos actuales (obtenidos del estado global de App, pero no accesible)
-            // En su lugar, leer desde localStorage y analizar
-            try {
-                const scripts = JSON.parse(localStorage.getItem('mullerScripts') || '[]');
-                // Analizar el último script o todos? Analizamos todos para nutrir la base.
-                scripts.forEach(script => {
-                    try {
-                        const guion = JSON.parse(script.data);
-                        analyzeScriptAndExtract(guion, script.title);
-                    } catch(e) {}
-                });
-                window.dispatchEvent(new Event('extractedDataUpdated'));
-            } catch(e) {}
-        }
-    };
-})();
-
-// Renderizar los módulos inyectados
+// Inyectar en el root
 setTimeout(() => {
-    if (!document.getElementById('advanced-modules-container')) {
+    if (!document.getElementById('test-modules-container')) {
         const container = document.createElement('div');
-        container.id = 'advanced-modules-container';
+        container.id = 'test-modules-container';
         document.getElementById('root').appendChild(container);
-        const root2 = ReactDOM.createRoot(container);
-        root2.render(<InjectModules />);
+        const testRoot = ReactDOM.createRoot(container);
+        testRoot.render(<TestFloatingButton />);
     }
 }, 500);
         root.render(
