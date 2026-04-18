@@ -2146,13 +2146,13 @@ function AdvancedPracticePanelFinal() {
                         <p className="text-sm text-gray-400">Conectado a tu GitHub. Sistema de repetición de fallos.</p>
                     </button>
 
-                    <button onClick={() => setActiveMode('preposiciones')} className="bg-slate-900 border border-amber-800/50 p-8 rounded-2xl hover:bg-amber-900/30 transition shadow-lg group flex flex-col items-center text-center">
-                        <div className="text-5xl mb-4 group-hover:scale-110 transition">📙</div>
-                        <h3 className="text-2xl font-bold text-amber-400 mb-2">Casos (Wechselprep)</h3>
-                        <p className="text-sm text-gray-400">Próximamente. Dativ vs Akkusativ.</p>
-                    </button>
-                </div>
-            )}
+                <button onClick={() => setActiveMode('preposiciones')} className="bg-slate-900 border border-amber-800/50 p-8 rounded-2xl hover:bg-amber-900/30 transition shadow-lg group flex flex-col items-center text-center">
+            <div className="text-5xl mb-4 group-hover:scale-110 transition">📙</div>
+            <h3 className="text-2xl font-bold text-amber-400 mb-2">Preposiciones</h3>
+            <p className="text-sm text-gray-400">Base de datos en tiempo real (GitHub). Casos y ejemplos B1/B2.</p>
+        </button>
+    </div>
+)}
 
             {activeMode === 'articulos' && <ArticlePracticeFinal onBack={() => setActiveMode('menu')} />}
             {activeMode === 'verbos_prep' && <CloudPracticeFinal onBack={() => setActiveMode('menu')} type="verbos" />}
