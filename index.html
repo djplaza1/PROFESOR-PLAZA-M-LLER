@@ -677,7 +677,9 @@
             if ((currentScene.speaker === roleplayChar || roleplayChar === 'Todos') && mode === 'dialogue' && !podcastMode) {
                 setMode('roleplay_wait'); setIsPlaying(false); return; 
             }
-            const sentenceUtterance = playSceneAudio(currentScene.text, currentScene.speaker);
+           // Limpiamos el texto de símbolos que el motor de voz lee por error (.;)
+const audioCleanText = currentScene.text.replace(/[.;;]/g, '.'); 
+const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
             let utterances = [sentenceUtterance];
             if (currentScene.vocab && currentScene.vocab.length > 0 && !podcastMode && !diktatMode && !puzzleMode && !declinaMode && !artikelSniperMode) {
                 currentScene.vocab.forEach(v => {
