@@ -1,0 +1,157 @@
+:root {
+  font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+  color: #eef2ff;
+  background: radial-gradient(circle at 20% 20%, #1d2a52, #070a16 55%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.glass {
+  background: rgba(17, 24, 39, 0.62);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.topbar {
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stats {
+  display: flex;
+  gap: 14px;
+  font-size: 0.9rem;
+  color: #c7d2fe;
+}
+
+.content {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.tabs {
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.tabs button {
+  border: 0;
+  background: transparent;
+  color: #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tabs button.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+}
+
+.panel {
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.kicker {
+  color: #fbbf24;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+h2 {
+  margin: 0 0 10px;
+}
+
+.translation {
+  margin: 0;
+  color: #bfdbfe;
+}
+
+.actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+button {
+  border: 0;
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+textarea {
+  width: 100%;
+  min-height: 130px;
+  margin-top: 12px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #0b1120;
+  color: #e2e8f0;
+  padding: 12px;
+  font-size: 1rem;
+}
+
+.score {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #4ade80;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
