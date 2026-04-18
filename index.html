@@ -2023,27 +2023,30 @@ function CloudPracticeFinal({ onBack, type }) {
     const [feedback, setFeedback] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
 
-   React.useEffect(() => {
-        // 🔗 URL PERMANENTE (Apunta a tus archivos Raw de GitHub)
+React.useEffect(() => {
+        // 🔗 URL PERMANENTE (Sin el hash de versión para que sea dinámica)
         const URL_VERBOS = "https://gist.githubusercontent.com/djplaza1/142845d2f0fb5a0b2b86e28fbf308809/raw/verbos_con_preposiciones.json";
-        const URL_PREPOSICIONES = "https://gist.githubusercontent.com/djplaza1/a53fde18c901a7f2d86977174b5b9a72/raw/preposiciones.json";
+        const URL_PREPOSICIONES = "https://gist.githubusercontent.com/djplaza1/4f44a8b19a8aa2d451e183859e3f764f/raw/preposiciones.json";
 
-        // Si el tipo es 'verbos' usa la primera URL, si no (es 'preposiciones'), usa la segunda.
         const GIST_URL = type === 'verbos' ? URL_VERBOS : URL_PREPOSICIONES;
 
+        // Frase de seguridad por si falla el servidor de GitHub
         const fallback = [{ de: "Wir warten ___ den Bus.", answer: "auf", prepCase: "Akk", es: "Esperamos al autobús." }];
 
         setLoading(true);
+        // El "?nocache=" es vital para que el navegador no guarde versiones viejas
         fetch(GIST_URL + "?nocache=" + new Date().getTime()) 
             .then(res => {
-                if (!res.ok) throw new Error();
+                if (!res.ok) throw new Error("Error en la descarga");
                 return res.json();
             })
             .then(data => { 
+                // Mezclamos las frases para que no salgan siempre igual
                 setQueue(data.sort(() => Math.random() - 0.5)); 
                 setLoading(false); 
             })
-            .catch(() => { 
+            .catch((err) => { 
+                console.error("Müller Error:", err);
                 setQueue(fallback); 
                 setLoading(false); 
             });
