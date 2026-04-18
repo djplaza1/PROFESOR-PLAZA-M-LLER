@@ -2096,14 +2096,28 @@ function CloudPracticeFinal({ onBack, type }) {
         </div>
     );
 
-    const current = queue[0];
+const current = queue[0];
+    
+    // Lista definitiva: Cubre el 99% de los casos de B1/B2
     const options = type === 'verbos' 
-        ? ['für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in', 'bei', 'aus', 'durch', 'ohne'] 
+        ? ['für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in', 'bei', 'aus', 'durch', 'ohne', 'gegen'] 
         : [
+            // --- Artículos Puros ---
             'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer',
-            'an', 'am', 'ans', 'auf', 'in', 'im', 'ins', 'aus', 'bei', 'beim', 'mit', 'nach', 
-            'seit', 'von', 'vom', 'zu', 'zum', 'zur', 'durch', 'für', 'um', 'vor', 'über',
-            'in einer', 'in einem', 'an einer', 'an einem', 'zu einer', 'zu einem'
+            
+            // --- Preposiciones Puras ---
+            'an', 'auf', 'in', 'aus', 'bei', 'mit', 'nach', 'seit', 'von', 'zu', 'durch', 'für', 'um', 'vor', 'über', 'unter', 'neben', 'zwischen', 'hinter', 'gegen',
+            
+            // --- Contracciones (Fundamentales) ---
+            'am', 'ans', 'im', 'ins', 'beim', 'vom', 'zum', 'zur', 'aufs',
+            
+            // --- Compuestas con Indefinidos (Ej: "en un...") ---
+            'in einer', 'in einem', 'an einer', 'an einem', 'zu einer', 'zu einem', 
+            'von einer', 'von einem', 'vor einer', 'vor einem', 'nach einer', 'mit einem', 'mit einer',
+            
+            // --- Compuestas con Definidos (Ej: "en la...") ---
+            'an der', 'an die', 'an den', 'auf der', 'auf die', 'auf den', 
+            'in der', 'in die', 'in den', 'vor der', 'vor dem', 'zu der', 'zu den'
           ];
 
     return (
