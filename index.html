@@ -2052,90 +2052,79 @@ React.useEffect(() => {
             });
     }, [type]);
 
-    const check = (guess) => {
-        if (queue.length === 0) return;
-        const current = queue[0];
-        
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(current.de.replace('___', current.answer));
-        utterance.lang = 'de-DE';
-        window.speechSynthesis.speak(utterance);
-
-        if (guess === current.answer) {
-            setFeedback({ type: 'success', text: `¡Richtig! Rige ${current.prepCase}` });
-            setTimeout(() => { setQueue(prev => prev.slice(1)); setFeedback(null); }, 1200);
-        } else {
-            setFeedback({ type: 'error', text: `⚠️ FALSCH: Exige '${current.answer}' (${current.prepCase})` });
-            setTimeout(() => { setQueue(prev => [...prev.slice(1), prev[0]]); setFeedback(null); }, 2200);
-        }
-    };
-
-    if (loading) return <div className="flex items-center justify-center h-full"><div className="text-white text-2xl font-bold animate-pulse">📡 Cargando base de datos Müller...</div></div>;
+ const check = (guess) => {
+    if (queue.length === 0) return;
+    const currentQuestion = queue[0]; // Usamos un nombre distinto para evitar conflictos
     
-    if (queue.length === 0) return (
-        <div className="flex flex-col items-center justify-center h-full p-4">
-            <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-white">⬅ Volver</button>
-            <h2 className="text-3xl font-bold text-green-400">¡Pack Completado! 🏆</h2>
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(currentQuestion.de.replace('___', currentQuestion.answer));
+    utterance.lang = 'de-DE';
+    window.speechSynthesis.speak(utterance);
+
+    if (guess === currentQuestion.answer) {
+        setFeedback({ type: 'success', text: `¡Richtig! Rige ${currentQuestion.prepCase}` });
+        setTimeout(() => { setQueue(prev => prev.slice(1)); setFeedback(null); }, 1200);
+    } else {
+        setFeedback({ type: 'error', text: `⚠️ FALSCH: Exige '${currentQuestion.answer}' (${currentQuestion.prepCase})` });
+        setTimeout(() => { setQueue(prev => [...prev.slice(1), prev[0]]); setFeedback(null); }, 2200);
+    }
+};
+
+if (loading) return <div className="flex items-center justify-center h-full"><div className="text-white text-2xl font-bold animate-pulse">📡 Cargando base de datos Müller...</div></div>;
+
+if (queue.length === 0) return (
+    <div className="flex flex-col items-center justify-center h-full p-4">
+        <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-white">⬅ Volver</button>
+        <h2 className="text-3xl font-bold text-green-400">¡Pack Completado! 🏆</h2>
+    </div>
+);
+
+// DECLARACIÓN ÚNICA DE CURRENT
+const current = queue[0];
+
+// CONFIGURACIÓN DE BOTONES SEGÚN EL MODO
+const options = type === 'verbos' 
+    ? ['für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in', 'bei', 'aus', 'durch', 'ohne'] 
+    : [
+        'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer',
+        'an', 'am', 'ans', 'auf', 'in', 'im', 'ins', 'aus', 'bei', 'beim', 'mit', 'nach', 
+        'seit', 'von', 'vom', 'zu', 'zum', 'zur', 'durch', 'für', 'um', 'vor', 'über'
+      ];
+
+return (
+    <div className="flex flex-col items-center justify-center p-4 animate-in fade-in h-full">
+        <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-gray-300 hover:text-white">⬅ Volver</button>
+        <div className="bg-slate-800 p-8 rounded-2xl shadow-2xl text-center max-w-4xl w-full border border-slate-700">
+            <p className="text-blue-400 font-bold mb-2 text-lg uppercase tracking-widest">{current.prepCase}</p>
+            <h3 className="text-4xl font-bold text-white mb-4 leading-tight">{current.de.replace('___', '_____')}</h3>
+            <p className="text-gray-400 mb-8 text-xl italic">{current.es}</p>
+            
+            {!feedback ? (
+                <div className="flex flex-wrap justify-center gap-2">
+                    {options.filter(o => {
+                        if (type !== 'verbos') return true;
+                        const relevant = [current.answer, 'für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in'];
+                        return relevant.includes(o) || o.length > 3;
+                    }).map(p => (
+                        <button 
+                            key={p} 
+                            onClick={() => check(p)} 
+                            className="bg-gray-700 hover:bg-amber-600 py-2 px-3 rounded-lg font-bold text-sm transition min-w-[60px] border-b-4 border-gray-900 active:border-b-0 active:translate-y-1 text-white"
+                        >
+                            {p}
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <div className={`p-6 rounded-xl font-bold text-2xl animate-in zoom-in shadow-inner ${feedback.type === 'error' ? 'bg-red-900 text-red-100 border-2 border-red-500' : 'bg-green-900 text-green-100 border-2 border-green-500'}`}>
+                    {feedback.text}
+                </div>
+            )}
+            
+            <p className="text-gray-500 text-sm mt-8 font-bold">Tarjetas restantes en este mazo: {queue.length}</p>
         </div>
-    );
-
-   const current = queue[0];
-    
-    // Definimos qué botones mostrar según el mazo
-   const current = queue[0];
-    
-    // Aquí definimos qué botones aparecen en cada modo
-    const options = type === 'verbos' 
-        ? ['für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in', 'bei', 'aus', 'durch', 'ohne'] 
-        : [
-            // ARTÍCULOS
-            'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer',
-            // PREPOSICIONES Y CONTRACCIONES (Schmelzformen)
-            'an', 'am', 'ans', 'auf', 'in', 'im', 'ins', 'aus', 'bei', 'beim', 'mit', 'nach', 
-            'seit', 'von', 'vom', 'zu', 'zum', 'zur', 'durch', 'für', 'um', 'vor', 'über'
-          ];
-
-    return (
-        <div className="flex flex-col items-center justify-center p-4 animate-in fade-in h-full">
-            <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-gray-300 hover:text-white">⬅ Volver</button>
-            <div className="bg-slate-800 p-8 rounded-2xl shadow-2xl text-center max-w-4xl w-full border border-slate-700">
-                <p className="text-blue-400 font-bold mb-2 text-lg uppercase tracking-widest">{current.prepCase}</p>
-                <h3 className="text-4xl font-bold text-white mb-4 leading-tight">{current.de.replace('___', '_____')}</h3>
-                <p className="text-gray-400 mb-8 text-xl italic">{current.es}</p>
-                
-{!feedback ? (
-                    <div className="flex flex-wrap justify-center gap-2">
-                        {options.filter(o => {
-                            // REGLA DE ORO: Si no es la pestaña de verbos, mostramos TODOS los botones
-                            if (type !== 'verbos') return true;
-                            
-                            // Si es la pestaña de verbos, filtramos para que no haya 40 botones
-                            const relevant = [current.answer, 'für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in'];
-                            return relevant.includes(o) || o.length > 3;
-                        }).map(p => (
-                            <button 
-                                key={p} 
-                                onClick={() => check(p)} 
-                                className="bg-gray-700 hover:bg-amber-600 py-2 px-3 rounded-lg font-bold text-sm transition min-w-[60px] border-b-4 border-gray-900 active:border-b-0 active:translate-y-1 text-white"
-                            >
-                                {p}
-                            </button>
-                        ))}
-                    </div>
-                ) : (
-                    <div className={`p-6 rounded-xl font-bold text-2xl animate-in zoom-in shadow-inner ${feedback.type === 'error' ? 'bg-red-900 text-red-100 border-2 border-red-500' : 'bg-green-900 text-green-100 border-2 border-green-500'}`}>
-                        {feedback.text}
-                    </div>
-                ) : (
-                    <div className={`p-6 rounded-xl font-bold text-2xl animate-in zoom-in ${feedback.type === 'error' ? 'bg-red-900 text-red-100 border-2 border-red-500' : 'bg-green-900 text-green-100 border-2 border-green-500'}`}>
-                        {feedback.text}
-                    </div>
-                )}
-                <p className="text-gray-500 text-sm mt-8 font-bold">Tarjetas restantes en este mazo: {queue.length}</p>
-            </div>
-        </div>
-    );
-}
+    </div>
+);
 
 function AdvancedPracticePanelFinal() {
     const [show, setShow] = React.useState(false);
