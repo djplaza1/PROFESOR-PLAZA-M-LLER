@@ -2094,14 +2094,23 @@ React.useEffect(() => {
                 <h3 className="text-4xl font-bold text-white mb-4 leading-tight">{current.de.replace('___', '_____')}</h3>
                 <p className="text-gray-400 mb-8 text-xl italic">{current.es}</p>
                 
-                {!feedback ? (
+{!feedback ? (
                     <div className="flex flex-wrap justify-center gap-2">
                         {options.filter(o => {
-                            // Mostrar solo opciones relevantes para no saturar la pantalla
+                            // Si estamos en preposiciones/artículos, mostramos todo
+                            if (type !== 'verbos') return true;
+                            
+                            // Si estamos en verbos, filtramos para no saturar
                             const relevant = [current.answer, 'für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in'];
                             return relevant.includes(o) || o.length > 3;
                         }).map(p => (
-                            <button key={p} onClick={() => check(p)} className="bg-gray-700 hover:bg-amber-600 py-3 px-5 rounded-lg font-bold text-lg transition min-w-[70px]">{p}</button>
+                            <button 
+                                key={p} 
+                                onClick={() => check(p)} 
+                                className="bg-gray-700 hover:bg-amber-600 py-3 px-5 rounded-lg font-bold text-lg transition min-w-[70px] border-b-4 border-gray-900 active:border-b-0 active:translate-y-1"
+                            >
+                                {p}
+                            </button>
                         ))}
                     </div>
                 ) : (
