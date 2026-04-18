@@ -2082,9 +2082,18 @@ React.useEffect(() => {
    const current = queue[0];
     
     // Definimos qué botones mostrar según el mazo
+   const current = queue[0];
+    
+    // Aquí definimos qué botones aparecen en cada modo
     const options = type === 'verbos' 
         ? ['für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in', 'bei', 'aus', 'durch', 'ohne'] 
-        : ['der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer', 'in', 'an', 'auf', 'aus', 'von', 'zu'];
+        : [
+            // ARTÍCULOS
+            'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer',
+            // PREPOSICIONES Y CONTRACCIONES (Schmelzformen)
+            'an', 'am', 'ans', 'auf', 'in', 'im', 'ins', 'aus', 'bei', 'beim', 'mit', 'nach', 
+            'seit', 'von', 'vom', 'zu', 'zum', 'zur', 'durch', 'für', 'um', 'vor', 'über'
+          ];
 
     return (
         <div className="flex flex-col items-center justify-center p-4 animate-in fade-in h-full">
