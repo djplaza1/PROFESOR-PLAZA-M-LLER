@@ -2023,108 +2023,99 @@ function CloudPracticeFinal({ onBack, type }) {
     const [feedback, setFeedback] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
 
-React.useEffect(() => {
-        // 🔗 URL PERMANENTE (Sin el hash de versión para que sea dinámica)
+    React.useEffect(() => {
+        // 🔗 URL PERMANENTE
         const URL_VERBOS = "https://gist.githubusercontent.com/djplaza1/142845d2f0fb5a0b2b86e28fbf308809/raw/verbos_con_preposiciones.json";
         const URL_PREPOSICIONES = "https://gist.githubusercontent.com/djplaza1/4f44a8b19a8aa2d451e183859e3f764f/raw/preposiciones.json";
 
         const GIST_URL = type === 'verbos' ? URL_VERBOS : URL_PREPOSICIONES;
-
-        // Frase de seguridad por si falla el servidor de GitHub
         const fallback = [{ de: "Wir warten ___ den Bus.", answer: "auf", prepCase: "Akk", es: "Esperamos al autobús." }];
 
         setLoading(true);
-        // El "?nocache=" es vital para que el navegador no guarde versiones viejas
-        fetch(GIST_URL + "?nocache=" + new Date().getTime()) 
+        fetch(GIST_URL + "?nocache=" + new Date().getTime())
             .then(res => {
-                if (!res.ok) throw new Error("Error en la descarga");
+                if (!res.ok) throw new Error();
                 return res.json();
             })
-            .then(data => { 
-                // Mezclamos las frases para que no salgan siempre igual
-                setQueue(data.sort(() => Math.random() - 0.5)); 
-                setLoading(false); 
+            .then(data => {
+                setQueue(data.sort(() => Math.random() - 0.5));
+                setLoading(false);
             })
-            .catch((err) => { 
-                console.error("Müller Error:", err);
-                setQueue(fallback); 
-                setLoading(false); 
+            .catch(() => {
+                setQueue(fallback);
+                setLoading(false);
             });
     }, [type]);
 
- const check = (guess) => {
-    if (queue.length === 0) return;
-    const currentQuestion = queue[0]; // Usamos un nombre distinto para evitar conflictos
+    const check = (guess) => {
+        if (queue.length === 0) return;
+        const currentItem = queue[0];
+        
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(currentItem.de.replace('___', currentItem.answer));
+        utterance.lang = 'de-DE';
+        window.speechSynthesis.speak(utterance);
+
+        if (guess === currentItem.answer) {
+            setFeedback({ type: 'success', text: `¡Richtig! Rige ${currentItem.prepCase}` });
+            setTimeout(() => { setQueue(prev => prev.slice(1)); setFeedback(null); }, 1200);
+        } else {
+            setFeedback({ type: 'error', text: `⚠️ FALSCH: Exige '${currentItem.answer}' (${currentItem.prepCase})` });
+            setTimeout(() => { setQueue(prev => [...prev.slice(1), prev[0]]); setFeedback(null); }, 2200);
+        }
+    };
+
+    if (loading) return <div className="flex items-center justify-center h-full"><div className="text-white text-2xl font-bold animate-pulse">📡 Cargando base de datos Müller...</div></div>;
     
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(currentQuestion.de.replace('___', currentQuestion.answer));
-    utterance.lang = 'de-DE';
-    window.speechSynthesis.speak(utterance);
-
-    if (guess === currentQuestion.answer) {
-        setFeedback({ type: 'success', text: `¡Richtig! Rige ${currentQuestion.prepCase}` });
-        setTimeout(() => { setQueue(prev => prev.slice(1)); setFeedback(null); }, 1200);
-    } else {
-        setFeedback({ type: 'error', text: `⚠️ FALSCH: Exige '${currentQuestion.answer}' (${currentQuestion.prepCase})` });
-        setTimeout(() => { setQueue(prev => [...prev.slice(1), prev[0]]); setFeedback(null); }, 2200);
-    }
-};
-
-if (loading) return <div className="flex items-center justify-center h-full"><div className="text-white text-2xl font-bold animate-pulse">📡 Cargando base de datos Müller...</div></div>;
-
-if (queue.length === 0) return (
-    <div className="flex flex-col items-center justify-center h-full p-4">
-        <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-white">⬅ Volver</button>
-        <h2 className="text-3xl font-bold text-green-400">¡Pack Completado! 🏆</h2>
-    </div>
-);
-
-// DECLARACIÓN ÚNICA DE CURRENT
-const current = queue[0];
-
-// CONFIGURACIÓN DE BOTONES SEGÚN EL MODO
-const options = type === 'verbos' 
-    ? ['für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in', 'bei', 'aus', 'durch', 'ohne'] 
-    : [
-        'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer',
-        'an', 'am', 'ans', 'auf', 'in', 'im', 'ins', 'aus', 'bei', 'beim', 'mit', 'nach', 
-        'seit', 'von', 'vom', 'zu', 'zum', 'zur', 'durch', 'für', 'um', 'vor', 'über'
-      ];
-
-return (
-    <div className="flex flex-col items-center justify-center p-4 animate-in fade-in h-full">
-        <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-gray-300 hover:text-white">⬅ Volver</button>
-        <div className="bg-slate-800 p-8 rounded-2xl shadow-2xl text-center max-w-4xl w-full border border-slate-700">
-            <p className="text-blue-400 font-bold mb-2 text-lg uppercase tracking-widest">{current.prepCase}</p>
-            <h3 className="text-4xl font-bold text-white mb-4 leading-tight">{current.de.replace('___', '_____')}</h3>
-            <p className="text-gray-400 mb-8 text-xl italic">{current.es}</p>
-            
-            {!feedback ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                    {options.filter(o => {
-                        if (type !== 'verbos') return true;
-                        const relevant = [current.answer, 'für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in'];
-                        return relevant.includes(o) || o.length > 3;
-                    }).map(p => (
-                        <button 
-                            key={p} 
-                            onClick={() => check(p)} 
-                            className="bg-gray-700 hover:bg-amber-600 py-2 px-3 rounded-lg font-bold text-sm transition min-w-[60px] border-b-4 border-gray-900 active:border-b-0 active:translate-y-1 text-white"
-                        >
-                            {p}
-                        </button>
-                    ))}
-                </div>
-            ) : (
-                <div className={`p-6 rounded-xl font-bold text-2xl animate-in zoom-in shadow-inner ${feedback.type === 'error' ? 'bg-red-900 text-red-100 border-2 border-red-500' : 'bg-green-900 text-green-100 border-2 border-green-500'}`}>
-                    {feedback.text}
-                </div>
-            )}
-            
-            <p className="text-gray-500 text-sm mt-8 font-bold">Tarjetas restantes en este mazo: {queue.length}</p>
+    if (queue.length === 0) return (
+        <div className="flex flex-col items-center justify-center h-full p-4">
+            <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-white">⬅ Volver</button>
+            <h2 className="text-3xl font-bold text-green-400">¡Pack Completado! 🏆</h2>
         </div>
-    </div>
-);
+    );
+
+    const current = queue[0];
+    
+    // Configuración de botones según el mazo
+    const options = type === 'verbos' 
+        ? ['für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in', 'bei', 'aus', 'durch', 'ohne'] 
+        : [
+            'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer',
+            'an', 'am', 'ans', 'auf', 'in', 'im', 'ins', 'aus', 'bei', 'beim', 'mit', 'nach', 
+            'seit', 'von', 'vom', 'zu', 'zum', 'zur', 'durch', 'für', 'um', 'vor', 'über'
+          ];
+
+    return (
+        <div className="flex flex-col items-center justify-center p-4 animate-in fade-in h-full">
+            <button onClick={onBack} className="absolute top-4 left-4 bg-gray-800 p-2 rounded text-gray-300 hover:text-white">⬅ Volver</button>
+            <div className="bg-slate-800 p-8 rounded-2xl shadow-2xl text-center max-w-4xl w-full border border-slate-700">
+                <p className="text-blue-400 font-bold mb-2 text-lg uppercase tracking-widest">{current.prepCase}</p>
+                <h3 className="text-4xl font-bold text-white mb-4 leading-tight">{current.de.replace('___', '_____')}</h3>
+                <p className="text-gray-400 mb-8 text-xl italic">{current.es}</p>
+                
+                {!feedback ? (
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {options.filter(o => {
+                            if (type !== 'verbos') return true;
+                            const relevant = [current.answer, 'für', 'auf', 'an', 'von', 'über', 'mit', 'um', 'zu', 'vor', 'nach', 'in'];
+                            return relevant.includes(o) || o.length > 3;
+                        }).map(p => (
+                            <button key={p} onClick={() => check(p)} className="bg-gray-700 hover:bg-amber-600 py-2 px-3 rounded-lg font-bold text-sm transition min-w-[60px] border-b-4 border-gray-900 active:border-b-0 active:translate-y-1 text-white">
+                                {p}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className={`p-6 rounded-xl font-bold text-2xl animate-in zoom-in shadow-inner ${feedback.type === 'error' ? 'bg-red-900 text-red-100 border-2 border-red-500' : 'bg-green-900 text-green-100 border-2 border-green-500'}`}>
+                        {feedback.text}
+                    </div>
+                )}
+                
+                <p className="text-gray-500 text-sm mt-8 font-bold">Tarjetas restantes en este mazo: {queue.length}</p>
+            </div>
+        </div>
+    );
+}
 
 function AdvancedPracticePanelFinal() {
     const [show, setShow] = React.useState(false);
