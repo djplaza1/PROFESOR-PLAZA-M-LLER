@@ -1764,10 +1764,13 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                     if (!key) continue;
                     allLocalData[key] = localStorage.getItem(key);
                 }
+                const backupTimestamp = new Date().toISOString();
+                localStorage.setItem('muller_last_backup_iso', backupTimestamp);
+                setLastBackupIso(backupTimestamp);
                 const dataToExport = {
                     allLocalStorage: allLocalData,
                     version: '4.0',
-                    exportDate: new Date().toISOString()
+                    exportDate: backupTimestamp
                 };
                 const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
@@ -1776,6 +1779,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                 a.download = `muller_progreso_${new Date().toISOString().slice(0,19)}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
+                alert('✅ Backup total exportado. Guarda este archivo en Drive para sincronizar todos tus dispositivos.');
             };
 
             const importData = (event) => {
@@ -1790,10 +1794,12 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                             Object.entries(data.allLocalStorage).forEach(([key, value]) => {
                                 localStorage.setItem(key, value);
                             });
+                            setLastBackupIso(localStorage.getItem('muller_last_backup_iso'));
                         } else if (data.allMullerData && typeof data.allMullerData === 'object') {
                             Object.entries(data.allMullerData).forEach(([key, value]) => {
                                 localStorage.setItem(key, value);
                             });
+                            setLastBackupIso(localStorage.getItem('muller_last_backup_iso'));
                         } else {
                             if (data.userStats) localStorage.setItem('mullerStats', JSON.stringify(data.userStats));
                             if (data.savedScripts) localStorage.setItem('mullerScripts', JSON.stringify(data.savedScripts));
@@ -1818,12 +1824,20 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                 );
             };
 
+            const [lastBackupIso, setLastBackupIso] = React.useState(() => localStorage.getItem('muller_last_backup_iso'));
+            const backupAgeDays = lastBackupIso ? Math.floor((Date.now() - new Date(lastBackupIso).getTime()) / (1000 * 60 * 60 * 24)) : null;
+
             return (
                 <>
                     <button onClick={requestMicPermission} className="fixed bottom-20 right-4 z-50 bg-green-600 hover:bg-green-500 text-white p-3 rounded-full shadow-xl" title="Solicitar permiso de micrófono">
                         <Icon name="mic" className="w-6 h-6" />
                     </button>
                     <div className="fixed bottom-36 right-4 z-50 flex flex-col gap-2">
+                        {backupAgeDays !== null && (
+                            <div className="bg-black/70 text-[10px] text-gray-200 px-2 py-1 rounded-lg border border-gray-700 text-center">
+                                Backup: hace {Math.max(0, backupAgeDays)} d
+                            </div>
+                        )}
                         <button onClick={showSyncHelp} className="bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-full shadow-xl" title="Guía sincronización total">
                             <Icon name="info" className="w-6 h-6" />
                         </button>
@@ -1970,6 +1984,7 @@ function getAdvancedProgress() {
 
 function saveAdvancedProgress(progress) {
     localStorage.setItem(ADVANCED_PROGRESS_KEY, JSON.stringify(progress));
+    window.dispatchEvent(new Event('advancedProgressUpdated'));
 }
 
 function getCardTip(type, item) {
@@ -2007,7 +2022,13 @@ function buildAdaptiveQueue(items, progress, getId, maxItems = 120) {
         const errors = stats.errors || 0;
         const difficult = stats.difficult || 0;
         const easy = stats.easy || 0;
-        const score = attempts === 0 ? 5 : 2 + (errors * 2.5) + (difficult * 1.5) - (easy * 0.7);
+        const consecutiveErrors = stats.consecutiveErrors || 0;
+        const lastSeenAt = stats.lastSeenAt ? new Date(stats.lastSeenAt).getTime() : 0;
+        const hoursSinceSeen = lastSeenAt ? Math.max(0, (Date.now() - lastSeenAt) / (1000 * 60 * 60)) : 72;
+        const recencyBoost = Math.min(3, hoursSinceSeen / 24);
+        const score = attempts === 0
+            ? 5
+            : 2 + (errors * 2.2) + (difficult * 1.4) + (consecutiveErrors * 1.8) + recencyBoost - (easy * 0.7);
         return { item, score: Math.max(0.5, score + Math.random()) };
     });
     weighted.sort((a, b) => b.score - a.score);
@@ -2033,13 +2054,29 @@ function filterQueueByMode(items, progress, getId, mode) {
     return items.filter((item) => {
         const stats = progress[getId(item)] || {};
         const errors = stats.errors || 0;
+        const correct = stats.correct || 0;
         const difficult = stats.difficult || 0;
         const attempts = stats.attempts || 0;
         if (mode === 'failed') return errors > 0;
         if (mode === 'difficult') return difficult > 0 || errors > 0;
+        if (mode === 'weak') return attempts >= 3 && (errors / Math.max(1, errors + correct)) >= 0.4;
         if (mode === 'new') return attempts === 0;
         return true;
     });
+}
+
+function getAdvancedDashboard() {
+    const progress = getAdvancedProgress();
+    const art = getProgressCounts(progress, 'articulos');
+    const verb = getProgressCounts(progress, 'verbos');
+    const prep = getProgressCounts(progress, 'preposiciones');
+    const totalAttempts = art.attempts + verb.attempts + prep.attempts;
+    const totalErrors = art.errors + verb.errors + prep.errors;
+    const accuracy = totalAttempts > 0 ? Math.round(((totalAttempts - totalErrors) / totalAttempts) * 100) : 0;
+    return {
+        art, verb, prep, totalAttempts, totalErrors, accuracy,
+        weak: art.weak + verb.weak + prep.weak
+    };
 }
 
 function ArticlePracticeFinal({ onBack }) {
@@ -2129,6 +2166,8 @@ function ArticlePracticeFinal({ onBack }) {
             easy: prev.easy + (difficulty === 'easy' ? 1 : 0),
             normal: prev.normal + (difficulty === 'normal' ? 1 : 0),
             difficult: prev.difficult + (difficulty === 'difficult' ? 1 : 0),
+            consecutiveErrors: feedback.type === 'error' ? (prev.consecutiveErrors || 0) + 1 : 0,
+            lastSeenAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
         const merged = { ...progressMap, [id]: next };
@@ -2169,6 +2208,7 @@ function ArticlePracticeFinal({ onBack }) {
                 <button onClick={() => setQueueFilter('smart')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'smart' ? 'bg-blue-700 text-white' : 'bg-slate-800 text-gray-300'}`}>Mezcla inteligente</button>
                 <button onClick={() => setQueueFilter('failed')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'failed' ? 'bg-red-700 text-white' : 'bg-slate-800 text-gray-300'}`}>Solo falladas</button>
                 <button onClick={() => setQueueFilter('difficult')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'difficult' ? 'bg-rose-700 text-white' : 'bg-slate-800 text-gray-300'}`}>Solo difíciles</button>
+                <button onClick={() => setQueueFilter('weak')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'weak' ? 'bg-fuchsia-700 text-white' : 'bg-slate-800 text-gray-300'}`}>Solo débiles</button>
                 <button onClick={() => setQueueFilter('new')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'new' ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-gray-300'}`}>Solo nuevas</button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
@@ -2280,6 +2320,8 @@ function CloudPracticeFinal({ onBack, type }) {
             easy: prev.easy + (difficulty === 'easy' ? 1 : 0),
             normal: prev.normal + (difficulty === 'normal' ? 1 : 0),
             difficult: prev.difficult + (difficulty === 'difficult' ? 1 : 0),
+            consecutiveErrors: feedback.type === 'error' ? (prev.consecutiveErrors || 0) + 1 : 0,
+            lastSeenAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
         const merged = { ...progressMap, [id]: next };
@@ -2316,10 +2358,11 @@ function CloudPracticeFinal({ onBack, type }) {
                         return <p>📊 Intentos: <b>{c.attempts}</b> · Fallos: <b>{c.errors}</b> · Fácil: <b>{c.easy}</b> · Normal: <b>{c.normal}</b> · Difícil: <b>{c.difficult}</b> · Problemáticas: <b>{c.weak}</b></p>;
                     })()}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
                     <button onClick={() => setQueueFilter('smart')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'smart' ? 'bg-blue-700 text-white' : 'bg-slate-700 text-gray-200'}`}>Mezcla inteligente</button>
                     <button onClick={() => setQueueFilter('failed')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'failed' ? 'bg-red-700 text-white' : 'bg-slate-700 text-gray-200'}`}>Solo falladas</button>
                     <button onClick={() => setQueueFilter('difficult')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'difficult' ? 'bg-rose-700 text-white' : 'bg-slate-700 text-gray-200'}`}>Solo difíciles</button>
+                    <button onClick={() => setQueueFilter('weak')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'weak' ? 'bg-fuchsia-700 text-white' : 'bg-slate-700 text-gray-200'}`}>Solo débiles</button>
                     <button onClick={() => setQueueFilter('new')} className={`p-2 rounded-lg text-xs font-bold ${queueFilter === 'new' ? 'bg-emerald-700 text-white' : 'bg-slate-700 text-gray-200'}`}>Solo nuevas</button>
                 </div>
                 <p className="text-blue-400 font-bold mb-2 uppercase tracking-widest">{current.prepCase || '🟡 Wechsel'}</p>
@@ -2359,13 +2402,20 @@ function CloudPracticeFinal({ onBack, type }) {
 function AdvancedPracticePanelFinal() {
     const [show, setShow] = React.useState(false);
     const [activeMode, setActiveMode] = React.useState('menu');
+    const [dashboard, setDashboard] = React.useState(() => getAdvancedDashboard());
 
     React.useEffect(() => {
         const open = () => { setShow(true); setActiveMode('menu'); };
         const close = () => setShow(false);
+        const refresh = () => setDashboard(getAdvancedDashboard());
         window.addEventListener('toggleAdvancedModal', open);
         window.addEventListener('closeAdvancedModal', close);
-        return () => { window.removeEventListener('toggleAdvancedModal', open); window.removeEventListener('closeAdvancedModal', close); };
+        window.addEventListener('advancedProgressUpdated', refresh);
+        return () => {
+            window.removeEventListener('toggleAdvancedModal', open);
+            window.removeEventListener('closeAdvancedModal', close);
+            window.removeEventListener('advancedProgressUpdated', refresh);
+        };
     }, []);
 
     if (!show) return null;
@@ -2381,7 +2431,15 @@ function AdvancedPracticePanelFinal() {
             </div>
 
             {activeMode === 'menu' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
+                <div className="max-w-5xl mx-auto w-full">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                        <div className="bg-slate-900/80 border border-blue-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Intentos</p><p className="text-xl font-black text-white">{dashboard.totalAttempts}</p></div>
+                        <div className="bg-slate-900/80 border border-red-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Fallos</p><p className="text-xl font-black text-red-300">{dashboard.totalErrors}</p></div>
+                        <div className="bg-slate-900/80 border border-emerald-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Precisión</p><p className="text-xl font-black text-emerald-300">{dashboard.accuracy}%</p></div>
+                        <div className="bg-slate-900/80 border border-fuchsia-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Débiles</p><p className="text-xl font-black text-fuchsia-300">{dashboard.weak}</p></div>
+                        <div className="bg-slate-900/80 border border-amber-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Art/Verb/Prep</p><p className="text-sm font-black text-amber-300">{dashboard.art.total}/{dashboard.verb.total}/{dashboard.prep.total}</p></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <button onClick={() => setActiveMode('articulos')} className="bg-slate-900 border border-blue-800/50 p-8 rounded-2xl hover:bg-blue-900/30 transition shadow-lg group flex flex-col items-center text-center">
                         <div className="text-5xl mb-4 group-hover:scale-110 transition">📘</div>
                         <h3 className="text-2xl font-bold text-blue-400 mb-2">Artículos (Der/Die/Das)</h3>
@@ -2399,6 +2457,7 @@ function AdvancedPracticePanelFinal() {
             <h3 className="text-2xl font-bold text-amber-400 mb-2">Preposiciones</h3>
             <p className="text-sm text-gray-400">Base de datos en tiempo real (GitHub). Casos y ejemplos B1/B2.</p>
         </button>
+    </div>
     </div>
 )}
 
