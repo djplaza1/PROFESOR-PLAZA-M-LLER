@@ -334,6 +334,76 @@
             return s;
         };
 
+        /** SRS vocabulario (SM-2 simplificado): mapa en localStorage `muller_vocab_srs_v1` */
+        const MULLER_VOCAB_SRS_STORAGE = 'muller_vocab_srs_v1';
+        function mullerVocabSrsKey(w) {
+            const de = (w && w.de ? String(w.de) : '').trim().toLowerCase();
+            const es = (w && w.es ? String(w.es) : '').trim().toLowerCase();
+            return de + '\u0000' + es;
+        }
+        function mullerGetVocabSrsMap() {
+            try {
+                const raw = localStorage.getItem(MULLER_VOCAB_SRS_STORAGE);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) { return {}; }
+        }
+        function mullerSetVocabSrsMap(map) {
+            try { localStorage.setItem(MULLER_VOCAB_SRS_STORAGE, JSON.stringify(map)); } catch (e) {}
+        }
+        function mullerApplyVocabSrsRating(map, word, level) {
+            const key = mullerVocabSrsKey(word);
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const prev = map[key] || null;
+            const q = level === 'hard' ? 2 : level === 'normal' ? 3 : 4;
+            let interval = prev && typeof prev.interval === 'number' ? prev.interval : 0;
+            let repetitions = prev && typeof prev.repetitions === 'number' ? prev.repetitions : 0;
+            let easeFactor = prev && typeof prev.easeFactor === 'number' ? prev.easeFactor : 2.5;
+            if (q < 3) {
+                repetitions = 0;
+                interval = 1;
+                easeFactor = Math.max(1.3, easeFactor - 0.2);
+            } else {
+                if (repetitions === 0) interval = 1;
+                else if (repetitions === 1) interval = 6;
+                else interval = Math.max(1, Math.round(interval * easeFactor));
+                repetitions += 1;
+                easeFactor = easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+                easeFactor = Math.max(1.3, easeFactor);
+            }
+            const dueDate = new Date(todayStr + 'T12:00:00');
+            dueDate.setDate(dueDate.getDate() + interval);
+            const due = dueDate.toISOString().slice(0, 10);
+            return { ...map, [key]: { interval, repetitions, easeFactor, due, lastRated: todayStr } };
+        }
+        function mullerSortVocabBySrs(words, map) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const today = new Date(todayStr + 'T12:00:00');
+            function urgency(w) {
+                const rec = map[mullerVocabSrsKey(w)];
+                if (!rec || !rec.due) return 0.3;
+                const due = new Date(rec.due + 'T12:00:00');
+                const diffDays = Math.floor((due - today) / 864e5);
+                if (diffDays < 0) return diffDays;
+                if (diffDays === 0) return 0;
+                return 500 + diffDays;
+            }
+            return [...words].sort((a, b) => {
+                const ua = urgency(a), ub = urgency(b);
+                if (ua !== ub) return ua - ub;
+                return (a.de || '').localeCompare(b.de || '');
+            });
+        }
+        function mullerCountVocabSrsDue(words, map) {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            let n = 0;
+            words.forEach((w) => {
+                const rec = map[mullerVocabSrsKey(w)];
+                if (!rec || !rec.due) { n++; return; }
+                if (rec.due <= todayStr) n++;
+            });
+            return n;
+        }
+
         // --- COMPONENTE PRINCIPAL ---
         function App() {
           const [activeTab, setActiveTab] = useState('historia'); 
@@ -440,6 +510,12 @@
                   return j ? JSON.parse(j) : { vocab: false, shadow: false, write: false };
               } catch (e) { return { vocab: false, shadow: false, write: false }; }
           });
+          const [vocabSrsEpoch, setVocabSrsEpoch] = useState(0);
+          const vocabSrsMap = useMemo(() => mullerGetVocabSrsMap(), [vocabSrsEpoch]);
+          const vocabSrsDueCount = useMemo(() => {
+              if (!currentVocabList.length) return 0;
+              return mullerCountVocabSrsDue(currentVocabList, vocabSrsMap);
+          }, [currentVocabList, vocabSrsMap]);
 
           const isPlayingRef = useRef(false);
           const timeoutRef = useRef(null);
@@ -570,7 +646,7 @@
               if (activeTab !== 'vocabulario') {
                   const allVocab = [];
                   guionData.forEach(scene => { if (scene.vocab) scene.vocab.forEach(v => { if (!allVocab.some(existing => existing.de === v.de)) allVocab.push(v); }); });
-                  setCurrentVocabList(allVocab); setVocabReviewIndex(0); setShowVocabTranslation(false);
+                  setCurrentVocabList(mullerSortVocabBySrs(allVocab, mullerGetVocabSrsMap())); setVocabReviewIndex(0); setShowVocabTranslation(false);
               }
           }, [guionData, activeTab]);
 
@@ -1136,6 +1212,11 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
             if (level === 'hard') { if (!newDiff.some(w => w.de === currentWord.de)) newDiff.push(currentWord); } 
             else if (level === 'normal') { if (!newNorm.some(w => w.de === currentWord.de)) newNorm.push(currentWord); }
             saveProgress({ difficultVocab: newDiff, normalVocab: newNorm, activityByDay: mergeActivityPoints(15) });
+            try {
+                const nextMap = mullerApplyVocabSrsRating(mullerGetVocabSrsMap(), currentWord, level);
+                mullerSetVocabSrsMap(nextMap);
+                setVocabSrsEpoch((e) => e + 1);
+            } catch (e) {}
             if (vocabReviewIndex < currentVocabList.length - 1) { setVocabReviewIndex(prev => prev + 1); setShowVocabTranslation(false); } 
             else { alert("¡Has completado todas las tarjetas de esta lista!"); setActiveTab('guiones'); }
           };
@@ -1671,7 +1752,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                       <button onClick={()=>{setActiveTab('historia'); setMode('dialogue'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'historia' ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.35)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="play" className="w-3 h-3 md:w-4 md:h-4" /> Historia</button>
                       <button onClick={()=>{setActiveTab('shadowing'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'shadowing' ? 'bg-teal-600 text-white shadow-[0_0_18px_rgba(13,148,136,0.45)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="audio-lines" className="w-3 h-3 md:w-4 md:h-4" /> Shadowing</button>
                       <button onClick={()=>{setActiveTab('escritura'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'escritura' ? 'bg-rose-700 text-white shadow-[0_0_18px_rgba(190,18,60,0.4)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="pen-line" className="w-3 h-3 md:w-4 md:h-4" /> Escritura</button>
-                      <button onClick={()=>{setActiveTab('vocabulario'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'vocabulario' ? 'bg-amber-600 text-white shadow-[0_0_20px_rgba(217,119,6,0.35)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="book-open" className="w-3 h-3 md:w-4 md:h-4" /> Vocab</button>
+                      <button onClick={()=>{setActiveTab('vocabulario'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'vocabulario' ? 'bg-amber-600 text-white shadow-[0_0_20px_rgba(217,119,6,0.35)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="book-open" className="w-3 h-3 md:w-4 md:h-4" /> Vocab{vocabSrsDueCount > 0 ? <span className="ml-0.5 min-w-[1.1rem] px-1 rounded-full bg-white/20 text-[10px] font-black leading-none py-0.5" title="Tarjetas prioritarias SRS en la lista actual">{vocabSrsDueCount > 99 ? '99+' : vocabSrsDueCount}</span> : null}</button>
                       <button onClick={()=>{setActiveTab('b1meister'); stopAudio(); setPracticeActive(null); setBxCategory('mix');}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'b1meister' ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.8)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="target" className="w-3 h-3 md:w-4 md:h-4" /> B1</button>
                       <button onClick={()=>{setActiveTab('b2ausblick'); stopAudio(); setPracticeActive(null); setBxCategory('mix');}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'b2ausblick' ? 'bg-sky-600 text-white shadow-[0_0_15px_rgba(2,132,199,0.8)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="layers" className="w-3 h-3 md:w-4 md:h-4" /> B2</button>
                       <button onClick={()=>{setActiveTab('progreso'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'progreso' ? 'bg-yellow-600 text-white shadow-[0_0_18px_rgba(202,138,4,0.35)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="bar-chart" className="w-3 h-3 md:w-4 md:h-4" /> Progreso</button>
@@ -1753,7 +1834,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   selected.forEach((lesson) => { words = words.concat(lesson.words); });
                                   words.sort(() => Math.random() - 0.5);
                                   const diffWords = words.filter((w) => w.diff === 1);
-                                  const final = [...words, ...diffWords];
+                                  const final = mullerSortVocabBySrs([...words, ...diffWords], mullerGetVocabSrsMap());
                                   setCurrentVocabList(final);
                                   setActiveScriptTitle("Mezcla personalizada");
                                   setVocabReviewIndex(0);
@@ -1891,6 +1972,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   <div className="space-y-2 text-xs text-gray-300">
                                       <p><span className="text-white font-bold">Racha:</span> {userStats.streakDays} días</p>
                                       <p><span className="text-white font-bold">Monedas:</span> {userStats.coins}</p>
+                                      <p><span className="text-emerald-300 font-bold">SRS vocabulario:</span> {Object.keys(vocabSrsMap).length} tarjetas con calendario (este dispositivo)</p>
                                       <p><span className="text-white font-bold">Intentos pronunciación:</span> {userStats.pronunciationAttempts || 0}</p>
                                       <p><span className="text-white font-bold">Diktat aciertos:</span> {userStats.diktatCorrect || 0} / intentos {userStats.diktatAttempts || 0}</p>
                                       <p className="text-[10px] text-gray-500 pt-2">Exporta PDF desde Progreso para un informe imprimible.</p>
@@ -1917,7 +1999,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   const steps = [
                       { t: 'Bienvenido al Entrenador Müller', d: 'Historia es el centro: escenas, audio y modos (Diktat, quiz…). Usa las pestañas arriba para cambiar de actividad.' },
                       { t: 'Voces naturales (gratis)', d: 'Pulsa el icono del panel azul: elige voz alemana y español del sistema. Prueba con el botón “Probar voz”.' },
-                      { t: 'Vocab y Progreso', d: 'Marca tarjetas difícil/normal/fácil; en Progreso repasas mazos y exportas a Anki.' },
+                      { t: 'Vocab y Progreso', d: 'Fácil/Normal/Difícil programa repaso espaciado (SRS). En Progreso ves mazos y exportas a Anki.' },
                       { t: 'Entrenamiento avanzado', d: 'El botón morado abre artículos, verbos y preposiciones con seguimiento de precisión.' },
                       { t: 'Shadowing, Escritura y B1/B2', d: 'Shadowing entrena pronunciación; Escritura incluye OCR; B1/B2 son frases modelo. ¡Viel Erfolg!' },
                   ];
@@ -2110,6 +2192,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   <p className="text-[10px] text-gray-500 mt-3">Abre el botón morado flotante para practicar artículos, verbos y preposiciones.</p>
                               </div>
                           )}
+                          <p className="text-xs text-emerald-200/90 mb-4 flex flex-wrap items-center gap-2"><Icon name="timer" className="w-4 h-4" /> Repaso espaciado (SRS): <strong>{Object.keys(vocabSrsMap).length}</strong> palabras con fecha de repaso · se ordenan solas al abrir una lección. Solo en este navegador.</p>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
                               <div className="bg-gray-900 p-4 md:p-6 rounded-2xl border border-red-900/50 flex flex-col relative group">
                                   <h2 className="text-base md:text-lg font-bold mb-3 md:mb-4 flex items-center gap-2 text-red-500"><Icon name="target" className="w-5 h-5 md:w-6 md:h-6" /> Vocab. Difícil</h2>
@@ -2209,7 +2292,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                                   <p className="text-[10px] text-amber-600 mt-0.5">{lesson.words.length} palabras</p>
                                               </div>
                                               <div className="flex items-center gap-2">
-                                                  <button onClick={(e) => { e.stopPropagation(); let practiceList = [...lesson.words]; practiceList.sort(() => Math.random() - 0.5); let diffWords = lesson.words.filter(w => w.diff === 1); if(diffWords.length > 0) { let extraShuffled = [...diffWords].sort(() => Math.random() - 0.5); practiceList = [...practiceList, ...extraShuffled]; } setCurrentVocabList(practiceList); setActiveScriptTitle(lesson.title); setVocabReviewIndex(0); setShowVocabTranslation(false); setActiveTab('vocabulario'); }} className="bg-amber-600 hover:bg-amber-500 text-white px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[10px] md:text-xs font-bold shadow-lg flex-1 flex justify-center items-center gap-1 md:gap-2 transition"><Icon name="play" className="w-3 h-3 md:w-4 md:h-4" /> Practicar</button>
+                                                  <button onClick={(e) => { e.stopPropagation(); let practiceList = [...lesson.words]; practiceList.sort(() => Math.random() - 0.5); let diffWords = lesson.words.filter(w => w.diff === 1); if(diffWords.length > 0) { let extraShuffled = [...diffWords].sort(() => Math.random() - 0.5); practiceList = [...practiceList, ...extraShuffled]; } setCurrentVocabList(mullerSortVocabBySrs(practiceList, mullerGetVocabSrsMap())); setActiveScriptTitle(lesson.title); setVocabReviewIndex(0); setShowVocabTranslation(false); setActiveTab('vocabulario'); }} className="bg-amber-600 hover:bg-amber-500 text-white px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[10px] md:text-xs font-bold shadow-lg flex-1 flex justify-center items-center gap-1 md:gap-2 transition"><Icon name="play" className="w-3 h-3 md:w-4 md:h-4" /> Practicar</button>
                                                   <button onClick={(e) => { e.stopPropagation(); const newLessons = customVocabLessons.filter(l => l.id !== lesson.id); setCustomVocabLessons(newLessons); localStorage.setItem('mullerCustomVocab', JSON.stringify(newLessons)); }} className="text-gray-500 hover:text-red-500 bg-gray-900 p-1 rounded-lg border border-gray-700 transition"><Icon name="trash-2" className="w-3 h-3 md:w-4 md:h-4" /></button>
                                               </div>
                                           </div>
@@ -2233,6 +2316,9 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   {activeTab === 'vocabulario' && !practiceActive && (
                       <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in">
                           <h1 className="absolute top-4 md:top-8 text-lg md:text-2xl font-black text-amber-900/40 uppercase tracking-widest hidden md:block">Active Recall - {activeScriptTitle}</h1>
+                          {vocabSrsDueCount > 0 ? (
+                              <p className="absolute top-12 md:top-[4.25rem] left-1/2 -translate-x-1/2 max-w-lg text-center text-[10px] md:text-xs text-amber-900/70 font-bold px-3 hidden md:block">SRS: {vocabSrsDueCount} tarjetas prioritarias en esta lista (nuevas o tocadas hoy)</p>
+                          ) : null}
                           {currentVocabList.length === 0 ? (
                               <div className="text-center text-amber-900/60 font-bold text-base md:text-2xl">Este guion no tiene vocabulario configurado.</div>
                           ) : (
@@ -2252,9 +2338,17 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                               <button onClick={() => handleVocabDifficulty('normal')} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 md:py-4 rounded-xl font-bold text-base md:text-lg shadow-lg transition">Normal</button>
                                               <button onClick={() => handleVocabDifficulty('hard')} className="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 md:py-4 rounded-xl font-bold text-base md:text-lg border-2 border-red-400 transition">Difícil</button>
                                           </div>
+                                          <p className="text-[10px] md:text-xs text-slate-800/80 text-center max-w-md leading-snug">Cada opción actualiza el calendario SRS (intervalos tipo Anki/SM-2): más espacio si fue fácil, repaso antes si fue difícil.</p>
                                       </div>
                                   )}
                                   <p className="text-amber-900/60 font-bold mt-4 md:mt-8 bg-white/20 px-4 md:px-6 py-1.5 md:py-2 rounded-full border border-amber-900/20 text-xs md:text-sm">Palabra {vocabReviewIndex + 1} de {currentVocabList.length}</p>
+                                  {(() => {
+                                      const w = currentVocabList[vocabReviewIndex];
+                                      if (!w) return null;
+                                      const s = vocabSrsMap[mullerVocabSrsKey(w)];
+                                      if (!s || !s.due) return null;
+                                      return <p className="text-[10px] text-amber-900/55 -mt-2">Programado: próximo repaso {s.due} · intervalo {s.interval} d · facilidad {typeof s.easeFactor === 'number' ? s.easeFactor.toFixed(2) : '—'}</p>;
+                                  })()}
                               </div>
                           )}
                           {showHandwriting && <HandwritingPad onClose={() => setShowHandwriting(false)} />}
