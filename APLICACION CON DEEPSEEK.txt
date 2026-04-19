@@ -1758,16 +1758,11 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
             };
 
             const exportData = () => {
-                const mullerData = {};
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith('muller')) {
-                        mullerData[key] = localStorage.getItem(key);
-                    }
-                }
                 const dataToExport = {
-                    allMullerData: mullerData,
-                    version: '3.0',
+                    userStats: JSON.parse(localStorage.getItem('mullerStats') || '{}'),
+                    savedScripts: JSON.parse(localStorage.getItem('mullerScripts') || '[]'),
+                    customVocabLessons: JSON.parse(localStorage.getItem('mullerCustomVocab') || '[]'),
+                    version: '2.0',
                     exportDate: new Date().toISOString()
                 };
                 const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {type: 'application/json'});
@@ -1786,15 +1781,9 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                 reader.onload = (e) => {
                     try {
                         const data = JSON.parse(e.target.result);
-                        if (data.allMullerData && typeof data.allMullerData === 'object') {
-                            Object.entries(data.allMullerData).forEach(([key, value]) => {
-                                localStorage.setItem(key, value);
-                            });
-                        } else {
-                            if (data.userStats) localStorage.setItem('mullerStats', JSON.stringify(data.userStats));
-                            if (data.savedScripts) localStorage.setItem('mullerScripts', JSON.stringify(data.savedScripts));
-                            if (data.customVocabLessons) localStorage.setItem('mullerCustomVocab', JSON.stringify(data.customVocabLessons));
-                        }
+                        if (data.userStats) localStorage.setItem('mullerStats', JSON.stringify(data.userStats));
+                        if (data.savedScripts) localStorage.setItem('mullerScripts', JSON.stringify(data.savedScripts));
+                        if (data.customVocabLessons) localStorage.setItem('mullerCustomVocab', JSON.stringify(data.customVocabLessons));
                         alert('✅ Datos importados correctamente. Recarga la página para ver los cambios.');
                         window.location.reload();
                     } catch(err) { alert('❌ Archivo inválido'); }
@@ -1939,68 +1928,11 @@ function extractArticlesFromGuionFinal(guionData, scriptTitle) {
 // 📁 SISTEMA DE ENTRENAMIENTO AVANZADO - LOGICA MÜLLER (SRS + MEMORIA)
 // ============================================================================
 
-const ADVANCED_PROGRESS_KEY = 'muller_advanced_progress';
-
-function getAdvancedProgress() {
-    try {
-        return JSON.parse(localStorage.getItem(ADVANCED_PROGRESS_KEY) || '{}');
-    } catch (e) {
-        return {};
-    }
-}
-
-function saveAdvancedProgress(progress) {
-    localStorage.setItem(ADVANCED_PROGRESS_KEY, JSON.stringify(progress));
-}
-
-function getCardTip(type, item) {
-    if (type === 'articulos') {
-        const fullWord = (item.de || '').toLowerCase();
-        const noun = fullWord.split(' ').slice(1).join(' ');
-        if (noun.endsWith('ung') || noun.endsWith('heit') || noun.endsWith('keit') || noun.endsWith('schaft')) {
-            return "Truco: muchas palabras en -ung/-heit/-keit/-schaft son DIE.";
-        }
-        if (noun.endsWith('chen') || noun.endsWith('lein')) {
-            return "Truco: diminutivos en -chen/-lein casi siempre son DAS.";
-        }
-        if (noun.endsWith('er') || noun.endsWith('ling') || noun.endsWith('ismus')) {
-            return "Truco: muchos sustantivos en -er/-ling/-ismus son DER.";
-        }
-        return "Truco: aprende cada palabra junto a su artículo (DER/DIE/DAS) como un bloque.";
-    }
-    const prep = (item.answer || '').toLowerCase();
-    const tips = {
-        'für': "'Für' pide siempre Acusativo.",
-        'mit': "'Mit' pide siempre Dativo.",
-        'auf': "Con verbos, 'auf' suele ir con Acusativo.",
-        'bei': "'Bei' describe contexto/lugar y usa Dativo.",
-        'nach': "'Nach' (dirección/tiempo) suele usar Dativo.",
-        'von': "'Von' (origen/posesión) usa Dativo."
-    };
-    return item.trick || item.tipp || tips[prep] || "Revisa el caso que exige esta preposición y memoriza un ejemplo fijo.";
-}
-
-function buildAdaptiveQueue(items, progress, getId, maxItems = 120) {
-    const weighted = items.map((item) => {
-        const id = getId(item);
-        const stats = progress[id] || {};
-        const attempts = stats.attempts || 0;
-        const errors = stats.errors || 0;
-        const difficult = stats.difficult || 0;
-        const easy = stats.easy || 0;
-        const score = attempts === 0 ? 5 : 2 + (errors * 2.5) + (difficult * 1.5) - (easy * 0.7);
-        return { item, score: Math.max(0.5, score + Math.random()) };
-    });
-    weighted.sort((a, b) => b.score - a.score);
-    return weighted.slice(0, Math.min(maxItems, weighted.length)).map(entry => entry.item);
-}
-
 function ArticlePracticeFinal({ onBack }) {
     const [mode, setMode] = React.useState(null);
     const [queue, setQueue] = React.useState([]);
     const [feedback, setFeedback] = React.useState(null);
     const [loading, setLoading] = React.useState(false);
-    const [progressMap, setProgressMap] = React.useState(() => getAdvancedProgress());
     
     // 🧠 Persistencia de palabras dominadas (Cerebro de Oro)
     const [masteredArticles, setMasteredArticles] = React.useState(() => {
@@ -2024,7 +1956,7 @@ function ArticlePracticeFinal({ onBack }) {
                 alert(`¡Increíble! Ya dominas todo el mazo ${selectedMode}. 🏆`);
                 setMode(null);
             } else {
-                setQueue(buildAdaptiveQueue(finalQueue, progressMap, (item) => `articulos::${item.de}`));
+                setQueue(finalQueue.sort(() => Math.random() - 0.5));
             }
             setLoading(false);
         };
@@ -2065,27 +1997,6 @@ function ArticlePracticeFinal({ onBack }) {
         setFeedback(null);
     };
 
-    const registerTrainingResult = (difficulty) => {
-        if (!feedback || queue.length === 0) return;
-        const current = feedback.currentCard || queue[0];
-        const id = `articulos::${current.de}`;
-        const prev = progressMap[id] || { attempts: 0, correct: 0, errors: 0, easy: 0, normal: 0, difficult: 0 };
-        const next = {
-            ...prev,
-            attempts: prev.attempts + 1,
-            correct: prev.correct + (feedback.type === 'success' ? 1 : 0),
-            errors: prev.errors + (feedback.type === 'error' ? 1 : 0),
-            easy: prev.easy + (difficulty === 'easy' ? 1 : 0),
-            normal: prev.normal + (difficulty === 'normal' ? 1 : 0),
-            difficult: prev.difficult + (difficulty === 'difficult' ? 1 : 0),
-            updatedAt: new Date().toISOString()
-        };
-        const merged = { ...progressMap, [id]: next };
-        setProgressMap(merged);
-        saveAdvancedProgress(merged);
-        handleNextWord();
-    };
-
     const check = (guess) => {
         if (queue.length === 0) return;
         const current = queue[0];
@@ -2097,9 +2008,9 @@ function ArticlePracticeFinal({ onBack }) {
         window.speechSynthesis.speak(utterance);
 
         if (guess === correct) {
-            setFeedback({ type: 'success', text: `¡Richtig! 🟢 ${current.de}`, tip: getCardTip('articulos', current), currentCard: current });
+            setFeedback({ type: 'success', text: `¡Richtig! 🟢 ${current.de}` });
         } else {
-            setFeedback({ type: 'error', text: `⚠️ FALSCH! Era: ${current.de}`, tip: getCardTip('articulos', current), currentCard: current });
+            setFeedback({ type: 'error', text: `⚠️ FALSCH! Era: ${current.de}` });
         }
     };
 
@@ -2139,16 +2050,7 @@ function ArticlePracticeFinal({ onBack }) {
                         <div className={`p-6 rounded-xl font-black text-2xl mb-6 ${feedback.type === 'error' ? 'bg-red-900 border-2 border-red-500 text-red-100' : 'bg-green-900 border-2 border-green-500 text-green-100'}`}>
                             {feedback.text}
                         </div>
-                        <div className="bg-black/40 p-4 rounded-xl border border-cyan-500/30 text-left mb-5">
-                            <p className="text-cyan-300 font-bold text-sm uppercase mb-1">💡 Truco para recordarlo</p>
-                            <p className="text-gray-200 text-sm italic">{feedback.tip}</p>
-                        </div>
                         <div className="flex flex-col gap-3">
-                            <div className="grid grid-cols-3 gap-2">
-                                <button onClick={() => registerTrainingResult('easy')} className="bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded-lg font-bold text-sm">Fácil</button>
-                                <button onClick={() => registerTrainingResult('normal')} className="bg-yellow-700 hover:bg-yellow-600 text-white py-2 rounded-lg font-bold text-sm">Normal</button>
-                                <button onClick={() => registerTrainingResult('difficult')} className="bg-rose-700 hover:bg-rose-600 text-white py-2 rounded-lg font-bold text-sm">Difícil</button>
-                            </div>
                             <button onClick={handleMastered} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold border-b-4 border-emerald-800 transition">🌟 ¡Ya me la sé para siempre!</button>
                             <button onClick={handleNextWord} className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl font-bold transition">
                                 {feedback.type === 'error' ? 'Reintentar luego ➔' : 'Siguiente ➔'}
@@ -2166,7 +2068,6 @@ function CloudPracticeFinal({ onBack, type }) {
     const [queue, setQueue] = React.useState([]);
     const [feedback, setFeedback] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    const [progressMap, setProgressMap] = React.useState(() => getAdvancedProgress());
 
     React.useEffect(() => {
         const URL_VERBOS = "https://gist.githubusercontent.com/djplaza1/142845d2f0fb5a0b2b86e28fbf308809/raw/verbos_con_preposiciones.json";
@@ -2177,12 +2078,22 @@ function CloudPracticeFinal({ onBack, type }) {
         fetch(GIST_URL + "?nocache=" + new Date().getTime())
             .then(res => res.json())
             .then(data => {
-                const queueType = type === 'verbos' ? 'verbos' : 'preposiciones';
-                setQueue(buildAdaptiveQueue(data, progressMap, (item) => `${queueType}::${item.de}::${item.answer}`));
+                setQueue(data.sort(() => Math.random() - 0.5));
                 setLoading(false);
             })
             .catch(() => setLoading(false));
     }, [type]);
+
+    const getMullerTip = (item) => {
+        if (item.trick || item.tipp) return item.trick || item.tipp;
+        const prep = item.answer.toLowerCase();
+        const tips = {
+            'für': "¡Cuidado! 'Für' rige siempre 🔴 Acusativo.",
+            'mit': "'Mit' rige siempre 🔵 Dativo.",
+            'auf': "Superficie horizontal. Con verbos suele ser 🔴 Acusativo."
+        };
+        return tips[prep] || `Repasa el caso de esta preposición.`;
+    };
 
     const check = (guess) => {
         if (queue.length === 0) return;
@@ -2193,32 +2104,10 @@ function CloudPracticeFinal({ onBack, type }) {
         window.speechSynthesis.speak(utterance);
 
         if (guess === currentItem.answer) {
-            setFeedback({ type: 'success', text: `¡Richtig! Es '${currentItem.answer}'`, currentCard: currentItem, tip: getCardTip(type, currentItem) });
+            setFeedback({ type: 'success', text: `¡Richtig! Es '${currentItem.answer}'` });
         } else {
-            setFeedback({ type: 'error', text: `⚠️ FALSCH: Era '${currentItem.answer}'`, currentCard: currentItem, tip: getCardTip(type, currentItem) });
+            setFeedback({ type: 'error', text: `⚠️ FALSCH: Era '${currentItem.answer}'` });
         }
-    };
-
-    const registerTrainingResult = (difficulty) => {
-        if (!feedback || queue.length === 0) return;
-        const current = feedback.currentCard || queue[0];
-        const queueType = type === 'verbos' ? 'verbos' : 'preposiciones';
-        const id = `${queueType}::${current.de}::${current.answer}`;
-        const prev = progressMap[id] || { attempts: 0, correct: 0, errors: 0, easy: 0, normal: 0, difficult: 0 };
-        const next = {
-            ...prev,
-            attempts: prev.attempts + 1,
-            correct: prev.correct + (feedback.type === 'success' ? 1 : 0),
-            errors: prev.errors + (feedback.type === 'error' ? 1 : 0),
-            easy: prev.easy + (difficulty === 'easy' ? 1 : 0),
-            normal: prev.normal + (difficulty === 'normal' ? 1 : 0),
-            difficult: prev.difficult + (difficulty === 'difficult' ? 1 : 0),
-            updatedAt: new Date().toISOString()
-        };
-        const merged = { ...progressMap, [id]: next };
-        setProgressMap(merged);
-        saveAdvancedProgress(merged);
-        handleContinue();
     };
 
     const handleContinue = () => {
@@ -2261,12 +2150,7 @@ function CloudPracticeFinal({ onBack, type }) {
                         </div>
                         <div className="bg-black/40 p-4 rounded-xl border border-amber-500/30 text-left mb-6">
                             <p className="text-amber-400 font-bold text-sm uppercase mb-1">💡 Müller-Tipp:</p>
-                            <p className="text-gray-200 text-sm italic">{feedback.tip}</p>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                            <button onClick={() => registerTrainingResult('easy')} className="bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded-lg font-bold text-sm">Fácil</button>
-                            <button onClick={() => registerTrainingResult('normal')} className="bg-yellow-700 hover:bg-yellow-600 text-white py-2 rounded-lg font-bold text-sm">Normal</button>
-                            <button onClick={() => registerTrainingResult('difficult')} className="bg-rose-700 hover:bg-rose-600 text-white py-2 rounded-lg font-bold text-sm">Difícil</button>
+                            <p className="text-gray-200 text-sm italic">{getMullerTip(current)}</p>
                         </div>
                         <button onClick={handleContinue} className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black text-xl transition">CONTINUAR ➔</button>
                     </div>
