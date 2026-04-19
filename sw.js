@@ -1,6 +1,6 @@
-/* Müller — Service Worker ligero: red primero para HTML/JSON, caché para el resto */
-const CACHE = 'muller-sw-v1';
-const PRECACHE_URLS = ['./', './index.html', './manifest.json', './b1-b2-database.json'];
+/* Müller — Service Worker: red primero; caché de app + metadatos offline (último guion vía Cache API) */
+const CACHE = 'muller-sw-v2';
+const PRECACHE_URLS = ['./', './index.html', './manifest.json', './b1-b2-database.json', './vocab-packs/reise-mini.json'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -29,6 +29,10 @@ self.addEventListener('fetch', (event) => {
                 })
                 .catch(() => caches.match('./index.html') || caches.match(req))
         );
+        return;
+    }
+    if (url.origin === self.location.origin && url.pathname.endsWith('.muller-offline-meta.json')) {
+        event.respondWith(caches.open('muller-offline-user-v1').then((c) => c.match(event.request).then((hit) => hit || fetch(event.request).catch(() => new Response('{}', { headers: { 'Content-Type': 'application/json' } })))));
         return;
     }
     if (
