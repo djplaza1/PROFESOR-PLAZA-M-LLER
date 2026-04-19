@@ -1987,6 +1987,7 @@ function getAdvancedProgress() {
 function saveAdvancedProgress(progress) {
     localStorage.setItem(ADVANCED_PROGRESS_KEY, JSON.stringify(progress));
     window.dispatchEvent(new Event('advancedProgressUpdated'));
+    runAchievementsCheck();
 }
 
 function getTodayISODate() {
@@ -2008,6 +2009,52 @@ function getDailyActivity() {
 function saveDailyActivity(activity) {
     localStorage.setItem(DAILY_ACTIVITY_KEY, JSON.stringify(activity));
     window.dispatchEvent(new Event('advancedProgressUpdated'));
+    runAchievementsCheck();
+}
+
+const ACHIEVEMENTS_KEY = 'muller_achievements';
+
+const ACHIEVEMENT_DEFS = [
+    { id: 'telc_first', icon: '📌', title: 'Erste Schritte', desc: '10 intentos en entrenamiento avanzado', test: (d) => d.totalAttempts >= 10 },
+    { id: 'telc_steady', icon: '💪', title: 'Konstant', desc: '50 intentos acumulados', test: (d) => d.totalAttempts >= 50 },
+    { id: 'telc_marathon', icon: '🏃', title: 'Ausdauer', desc: '200 intentos acumulados', test: (d) => d.totalAttempts >= 200 },
+    { id: 'telc_daily', icon: '✅', title: 'Tagesziel', desc: 'Completaste el objetivo diario', test: (d) => d.todayAttempts >= d.dailyGoal && d.dailyGoal > 0 },
+    { id: 'telc_streak3', icon: '🔥', title: 'Serie 3', desc: 'Racha de 3 días seguidos', test: (d) => d.streakDays >= 3 },
+    { id: 'telc_streak7', icon: '🔥', title: 'Serie 7', desc: 'Racha de 7 días seguidos', test: (d) => d.streakDays >= 7 },
+    { id: 'telc_streak30', icon: '🏆', title: 'Serie 30', desc: 'Racha de 30 días seguidos', test: (d) => d.streakDays >= 30 },
+    { id: 'telc_precision', icon: '🎯', title: 'Präzision', desc: '≥85% precisión con ≥40 intentos', test: (d) => d.totalAttempts >= 40 && d.accuracy >= 85 },
+    { id: 'telc_three_pillars', icon: '⚡', title: 'Drei Säulen', desc: 'Has practicado Artículos, Verbos+Prep y Preposiciones', test: (d) => d.art.total > 0 && d.verb.total > 0 && d.prep.total > 0 },
+    { id: 'telc_weak_zero', icon: '🛡️', title: 'Schwächen im Griff', desc: '0 tarjetas débiles con ≥80 intentos', test: (d) => d.totalAttempts >= 80 && d.weak === 0 }
+];
+
+function getAchievementsUnlocked() {
+    try {
+        return JSON.parse(localStorage.getItem(ACHIEVEMENTS_KEY) || '{}');
+    } catch (e) {
+        return {};
+    }
+}
+
+function runAchievementsCheck() {
+    const dash = getAdvancedDashboard();
+    const unlocked = { ...getAchievementsUnlocked() };
+    let changed = false;
+    ACHIEVEMENT_DEFS.forEach((def) => {
+        if (!unlocked[def.id] && def.test(dash)) {
+            unlocked[def.id] = new Date().toISOString();
+            changed = true;
+        }
+    });
+    if (changed) {
+        localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(unlocked));
+        window.dispatchEvent(new Event('achievementsUpdated'));
+    }
+}
+
+function setDailyGoalCount(n) {
+    const activity = getDailyActivity();
+    activity.dailyGoal = Math.max(5, Math.min(200, Math.round(Number(n))));
+    saveDailyActivity(activity);
 }
 
 function registerDailyAttempt() {
@@ -2044,18 +2091,19 @@ function getCardTip(type, item) {
         if (noun.endsWith('er') || noun.endsWith('ling') || noun.endsWith('ismus')) {
             return "Truco: muchos sustantivos en -er/-ling/-ismus son DER.";
         }
-        return "Truco: aprende cada palabra junto a su artículo (DER/DIE/DAS) como un bloque.";
+        return "Truco: aprende cada palabra junto a su artículo (DER/DIE/DAS) como un bloque. En TELC, el género marca concordancia en la frase entera.";
     }
     const prep = (item.answer || '').toLowerCase();
     const tips = {
-        'für': "'Für' pide siempre Acusativo.",
-        'mit': "'Mit' pide siempre Dativo.",
-        'auf': "Con verbos, 'auf' suele ir con Acusativo.",
-        'bei': "'Bei' describe contexto/lugar y usa Dativo.",
-        'nach': "'Nach' (dirección/tiempo) suele usar Dativo.",
-        'von': "'Von' (origen/posesión) usa Dativo."
+        'für': "'Für' rige Akkusativ (objetivo/duración). Muy frecuente en redacción y cloze TELC.",
+        'mit': "'Mit' + Dativ: compañía/medio. Error típico: confundir con Akkusativ.",
+        'auf': "En verbos fijos, 'auf' suele Akk. (objetivo/respuesta). Memoriza la colocación completa.",
+        'bei': "'Bei' + Dativ: lugar abstracto/situación (bei der Arbeit).",
+        'nach': "'Nach' + Dativ: dirección con nombres de ciudad/país; tiempo después de un hecho.",
+        'von': "'Von' + Dativ: origen/partitivo; en TELC aparece mucho en textos informativos."
     };
-    return item.trick || item.tipp || tips[prep] || "Revisa el caso que exige esta preposición y memoriza un ejemplo fijo.";
+    const base = item.trick || item.tipp || tips[prep] || "Fija verbo + preposición + caso como una unidad; en el examen no hay tiempo para deducirlo.";
+    return base + " (TELC: prioriza colocaciones frecuentes en B1/B2.)";
 }
 
 function buildAdaptiveQueue(items, progress, getId, maxItems = 120) {
@@ -2457,18 +2505,30 @@ function AdvancedPracticePanelFinal() {
     const [show, setShow] = React.useState(false);
     const [activeMode, setActiveMode] = React.useState('menu');
     const [dashboard, setDashboard] = React.useState(() => getAdvancedDashboard());
+    const [achUnlocked, setAchUnlocked] = React.useState(() => getAchievementsUnlocked());
 
     React.useEffect(() => {
-        const open = () => { setShow(true); setActiveMode('menu'); };
+        const open = () => {
+            runAchievementsCheck();
+            setShow(true);
+            setActiveMode('menu');
+            setDashboard(getAdvancedDashboard());
+            setAchUnlocked(getAchievementsUnlocked());
+        };
         const close = () => setShow(false);
-        const refresh = () => setDashboard(getAdvancedDashboard());
+        const refresh = () => {
+            setDashboard(getAdvancedDashboard());
+            setAchUnlocked(getAchievementsUnlocked());
+        };
         window.addEventListener('toggleAdvancedModal', open);
         window.addEventListener('closeAdvancedModal', close);
         window.addEventListener('advancedProgressUpdated', refresh);
+        window.addEventListener('achievementsUpdated', refresh);
         return () => {
             window.removeEventListener('toggleAdvancedModal', open);
             window.removeEventListener('closeAdvancedModal', close);
             window.removeEventListener('advancedProgressUpdated', refresh);
+            window.removeEventListener('achievementsUpdated', refresh);
         };
     }, []);
 
@@ -2494,6 +2554,34 @@ function AdvancedPracticePanelFinal() {
                         <div className="bg-slate-900/80 border border-amber-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Art/Verb/Prep</p><p className="text-sm font-black text-amber-300">{dashboard.art.total}/{dashboard.verb.total}/{dashboard.prep.total}</p></div>
                         <div className="bg-slate-900/80 border border-cyan-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Objetivo Hoy</p><p className="text-xl font-black text-cyan-300">{dashboard.todayAttempts}/{dashboard.dailyGoal}</p><p className="text-[10px] text-cyan-200">{dashboard.dailyProgress}%</p></div>
                         <div className="bg-slate-900/80 border border-orange-900/40 rounded-xl p-3 text-center"><p className="text-xs text-gray-400">Racha</p><p className="text-xl font-black text-orange-300">🔥 {dashboard.streakDays}</p><p className="text-[10px] text-orange-200">días</p></div>
+                    </div>
+                    <div className="bg-slate-900/60 border border-purple-800/40 rounded-xl p-4 mb-6 flex flex-col md:flex-row md:items-center gap-4">
+                        <div className="flex-1">
+                            <p className="text-xs font-bold text-purple-300 uppercase tracking-widest mb-2">Objetivo diario (tarjetas calificadas)</p>
+                            <div className="flex items-center gap-3">
+                                <input type="range" min="5" max="100" step="5" value={dashboard.dailyGoal}
+                                    onChange={(e) => { setDailyGoalCount(parseInt(e.target.value, 10)); setDashboard(getAdvancedDashboard()); }}
+                                    className="flex-1 accent-cyan-500" />
+                                <span className="text-cyan-300 font-mono font-bold w-12 text-right">{dashboard.dailyGoal}</span>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-400 md:max-w-xs">Ajusta el ritmo: en TELC cuenta más la constancia diaria que un solo día intenso.</p>
+                    </div>
+                    <div className="mb-6">
+                        <p className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-3">Insignias TELC / Müller</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                            {ACHIEVEMENT_DEFS.map((def) => {
+                                const unlockedAt = achUnlocked[def.id];
+                                return (
+                                    <div key={def.id} title={def.desc}
+                                        className={`rounded-lg p-2 text-center border text-[11px] leading-tight ${unlockedAt ? 'bg-amber-950/40 border-amber-600/50 text-amber-100' : 'bg-slate-900/60 border-slate-700 text-gray-600'}`}>
+                                        <div className="text-lg mb-0.5">{def.icon}</div>
+                                        <div className="font-bold">{def.title}</div>
+                                        {unlockedAt && <div className="text-[9px] text-amber-300/80 mt-1">Desbloqueada</div>}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <button onClick={() => setActiveMode('articulos')} className="bg-slate-900 border border-blue-800/50 p-8 rounded-2xl hover:bg-blue-900/30 transition shadow-lg group flex flex-col items-center text-center">
