@@ -560,6 +560,12 @@
             return matrix[b.length][a.length];
         };
 
+        /** El STT en móvil a veces devuelve la misma palabra 3+ veces seguidas; no es énfasis, es ruido del motor. */
+        const collapseStutterRepeats = (s) => {
+            if (!s || typeof s !== 'string') return '';
+            return s.replace(/\b(\S+)(?:\s+\1){2,}\b/gi, '$1').trim();
+        };
+
         /** Normaliza texto alemán para comparar lo que dicta el STT con el guion (umlauts, ß, puntuación). */
         const normalizeGermanSpeechText = (s) => {
             if (!s || typeof s !== 'string') return '';
@@ -1079,6 +1085,8 @@
           const timeoutRef = useRef(null);
           const recognitionRef = useRef(null);
           const spokenTextRef = useRef("");
+          const speechFinalRef = useRef("");
+          const micIgnoreMouseUntilRef = useRef(0);
           const noiseContextRef = useRef(null);
           const noiseSourceRef = useRef(null);
           const noiseGainRef = useRef(null);
@@ -1938,30 +1946,56 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               if (userStats.hearts <= 0 && evalOpts.mode !== 'shadow') { setShowDeathModal(true); return; }
               const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
               if (!SpeechRecognition) { alert("Tu navegador no soporta esta función. Usa Google Chrome."); return; }
-              if (recognitionRef.current) recognitionRef.current.stop();
+              if (recognitionRef.current) {
+                  try { recognitionRef.current.stop(); } catch (e) {}
+              }
               const recognition = new SpeechRecognition();
               recognition.lang = 'de-DE';
+              const mobileStt = typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || ''));
+              /* continuous: una sola sesión por pulsación; en móvil interimResults=false reduce duplicados del motor */
               recognition.continuous = true;
-              recognition.interimResults = true;
-              recognition.maxAlternatives = 5;
+              recognition.interimResults = !mobileStt;
+              recognition.maxAlternatives = mobileStt ? 1 : 3;
               recognitionRef.current = recognition;
               spokenTextRef.current = "";
+              speechFinalRef.current = "";
               const opts = { mode: evalOpts.mode || 'default' };
-              recognition.onstart = () => { setIsListening(true); setSpokenText(""); setPronunciationScore(null); setGrammarPolizeiMsg(""); setPronunciationFeedback([]); };
-              recognition.onresult = (event) => {
-                  let piece = "";
-                  for (let i = 0; i < event.results.length; i++) {
-                      const res = event.results[i];
-                      let alt = res[0];
-                      for (let j = 1; j < res.length; j++) {
-                          const cj = res[j].confidence;
-                          const cb = alt.confidence;
-                          if (typeof cj === 'number' && (typeof cb !== 'number' || cj >= cb)) alt = res[j];
-                      }
-                      piece += alt.transcript;
+              const pickAlt = (res) => {
+                  let alt = res[0];
+                  for (let j = 1; j < res.length; j++) {
+                      const cj = res[j].confidence;
+                      const cb = alt.confidence;
+                      if (typeof cj === 'number' && (typeof cb !== 'number' || cj >= cb)) alt = res[j];
                   }
-                  spokenTextRef.current = piece;
-                  setSpokenText(piece);
+                  return alt;
+              };
+              recognition.onstart = () => {
+                  setIsListening(true);
+                  setSpokenText("");
+                  speechFinalRef.current = "";
+                  spokenTextRef.current = "";
+                  setPronunciationScore(null);
+                  setGrammarPolizeiMsg("");
+                  setPronunciationFeedback([]);
+              };
+              recognition.onresult = (event) => {
+                  let interim = "";
+                  for (let i = event.resultIndex; i < event.results.length; i++) {
+                      const res = event.results[i];
+                      const alt = pickAlt(res);
+                      const raw = alt.transcript || "";
+                      const t = raw.trim();
+                      if (!t) continue;
+                      if (res.isFinal) {
+                          speechFinalRef.current = (speechFinalRef.current + (speechFinalRef.current ? " " : "") + t).trim();
+                      } else {
+                          interim = (interim ? interim + " " : "") + t;
+                      }
+                  }
+                  const display = (speechFinalRef.current + (interim ? (speechFinalRef.current ? " " : "") + interim : "")).trim();
+                  const cleaned = collapseStutterRepeats(display);
+                  spokenTextRef.current = cleaned;
+                  setSpokenText(cleaned);
               };
               recognition.onerror = (event) => {
                   console.error("Error de micro:", event.error);
@@ -1970,11 +2004,27 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                       alert("Permiso de micrófono denegado. Activa el mic en la barra del navegador.");
                   }
               };
-              recognition.onend = () => { setIsListening(false); evaluatePronunciation(targetText, spokenTextRef.current, opts); };
-              try { recognition.start(); } catch(e){}
+              recognition.onend = () => {
+                  setIsListening(false);
+                  evaluatePronunciation(targetText, spokenTextRef.current || "", opts);
+              };
+              try { recognition.start(); } catch (e) {}
           };
 
-          const handleVoiceStop = () => { if (recognitionRef.current && isListening) recognitionRef.current.stop(); };
+          const handleVoiceStop = () => {
+              const r = recognitionRef.current;
+              if (!r) return;
+              try { r.stop(); } catch (e) {}
+          };
+
+          const micMouseDownGuard = (fn) => () => {
+              if (Date.now() < micIgnoreMouseUntilRef.current) return;
+              fn();
+          };
+          const micTouchStartGuard = (fn) => () => {
+              micIgnoreMouseUntilRef.current = Date.now() + 450;
+              fn();
+          };
 
           const evaluatePronunciation = (targetText, transcript, opts = {}) => {
               const mode = opts.mode || 'default';
@@ -1988,7 +2038,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               }
               const textToCompare = targetText || guionData[getActualSceneIndex()].text;
               const cleanOrig = normalizeGermanSpeechText(textToCompare);
-              const cleanSpoken = normalizeGermanSpeechText(transcript);
+              const cleanSpoken = normalizeGermanSpeechText(collapseStutterRepeats(transcript));
               if (!cleanOrig) return;
               const distance = levenshteinDistance(cleanOrig, cleanSpoken);
               const maxLength = Math.max(cleanOrig.length, cleanSpoken.length, 1);
@@ -3605,7 +3655,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                                   <p className="text-xs font-bold text-teal-300 mb-1 flex items-center gap-2"><Icon name="mic" className="w-4 h-4" /> Comprobar pronunciación</p>
                                                   <p className="text-[10px] text-gray-500 mb-3">El navegador transcribe tu alemán y lo compara con el texto del guion (sin juzgar acento puro). Mantén pulsado el micrófono mientras lees la frase; suelta para ver el resultado. <span className="text-teal-400/90">En Shadowing no pierdes vidas.</span></p>
                                                   <div className="flex flex-col items-center gap-3">
-                                                      <button type="button" aria-label="Mantén pulsado y lee en voz alta para comprobar pronunciación" onMouseDown={() => scene?.text && handleVoiceStart(scene.text, { mode: 'shadow' })} onMouseUp={handleVoiceStop} onMouseLeave={handleVoiceStop} onTouchStart={() => scene?.text && handleVoiceStart(scene.text, { mode: 'shadow' })} onTouchEnd={handleVoiceStop} className={`rounded-full p-5 md:p-6 text-white transition shadow-xl select-none ${isListening ? 'bg-red-500 animate-pulse ring-4 ring-red-400/35 shadow-[0_0_32px_rgba(239,68,68,0.55)] border-2 border-white/35' : 'muller-mic-hold-btn ring-4 ring-teal-300/35 shadow-[0_0_28px_rgba(20,184,166,0.45)]'}`} title="Mantén pulsado y lee en voz alta">
+                                                      <button type="button" aria-label="Mantén pulsado y lee en voz alta para comprobar pronunciación" onMouseDown={micMouseDownGuard(() => scene?.text && handleVoiceStart(scene.text, { mode: 'shadow' }))} onMouseUp={handleVoiceStop} onMouseLeave={handleVoiceStop} onTouchStart={micTouchStartGuard(() => scene?.text && handleVoiceStart(scene.text, { mode: 'shadow' }))} onTouchEnd={handleVoiceStop} className={`rounded-full p-5 md:p-6 text-white transition shadow-xl select-none touch-manipulation ${isListening ? 'bg-red-500 animate-pulse ring-4 ring-red-400/35 shadow-[0_0_32px_rgba(239,68,68,0.55)] border-2 border-white/35' : 'muller-mic-hold-btn ring-4 ring-teal-300/35 shadow-[0_0_28px_rgba(20,184,166,0.45)]'}`} title="Mantén pulsado y lee en voz alta">
                                                           <Icon name="mic" className="w-10 h-10 md:w-12 md:h-12 text-white relative z-[1]" />
                                                       </button>
                                                       <span className="text-[10px] text-gray-500">Mantén pulsado · suelta para evaluar</span>
@@ -3918,7 +3968,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                 <p className="text-sm text-gray-500 italic mb-6 text-center max-w-2xl">({q.es})</p>
                                 <div className="flex flex-col items-center gap-3 md:gap-4 w-full bg-black/40 p-4 md:p-8 rounded-2xl border border-white/10 shadow-2xl">
                                     <button type="button" onClick={() => { const u = new SpeechSynthesisUtterance(q.de); u.lang = 'de-DE'; window.__mullerApplyPreferredDeVoice(u); u.rate = parseFloat(localStorage.getItem(MULLER_TTS_RATE_KEY) || '0.92') || 0.92; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }} className="w-full max-w-md py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-sm border border-white/10 flex items-center justify-center gap-2"><Icon name="volume-2" className="w-5 h-5" /> Escuchar pregunta</button>
-                                    <button onMouseDown={() => handleVoiceStart(modelDe)} onMouseUp={handleVoiceStop} onMouseLeave={handleVoiceStop} onTouchStart={() => handleVoiceStart(modelDe)} onTouchEnd={handleVoiceStop} className={`rounded-full p-8 md:p-12 text-white transition transform hover:scale-105 shadow-xl select-none ${isListening ? 'bg-red-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-500'}`}><Icon name="mic" className="w-14 h-14 md:w-20 md:h-20" /></button>
+                                    <button type="button" onMouseDown={micMouseDownGuard(() => handleVoiceStart(modelDe))} onMouseUp={handleVoiceStop} onMouseLeave={handleVoiceStop} onTouchStart={micTouchStartGuard(() => handleVoiceStart(modelDe))} onTouchEnd={handleVoiceStop} className={`rounded-full p-8 md:p-12 text-white transition transform hover:scale-105 shadow-xl select-none touch-manipulation ${isListening ? 'bg-red-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-500'}`}><Icon name="mic" className="w-14 h-14 md:w-20 md:h-20" /></button>
                                     <p className="text-gray-400 font-bold mt-1 text-center text-xs md:text-sm">Mantén pulsado para responder (se compara con una frase modelo B1)</p>
                                     {spokenText && (
                                         <div className="text-center w-full mt-4 md:mt-6">
@@ -3957,7 +4007,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                         <button onClick={() => { window.speechSynthesis.cancel(); window.speechSynthesis.speak(playSceneAudio(guionData[getActualSceneIndex()].text, guionData[getActualSceneIndex()].speaker)); }} className="flex flex-col items-center text-gray-400 hover:text-white transition">
                                             <div className="bg-gray-800 p-2 md:p-4 rounded-full mb-1 md:mb-2"><Icon name="volume-2" className="w-5 h-5 md:w-8 md:h-8" /></div><span className="text-[10px] md:text-sm font-bold">1. Escuchar</span>
                                         </button>
-                                        <button onMouseDown={() => handleVoiceStart()} onMouseUp={handleVoiceStop} onMouseLeave={handleVoiceStop} onTouchStart={(e) => { handleVoiceStart(); }} onTouchEnd={(e) => { handleVoiceStop(); }} className={`flex flex-col items-center transition transform select-none ${isListening ? 'text-red-400 scale-110' : 'text-blue-400 hover:text-blue-300'}`}>
+                                        <button type="button" onMouseDown={micMouseDownGuard(() => handleVoiceStart())} onMouseUp={handleVoiceStop} onMouseLeave={handleVoiceStop} onTouchStart={micTouchStartGuard(() => handleVoiceStart())} onTouchEnd={handleVoiceStop} className={`flex flex-col items-center transition transform select-none touch-manipulation ${isListening ? 'text-red-400 scale-110' : 'text-blue-400 hover:text-blue-300'}`}>
                                             <div className={`p-2 md:p-4 rounded-full mb-1 md:mb-2 shadow-xl ${isListening ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.8)]' : 'bg-blue-600 text-white'}`}><Icon name="mic" className="w-5 h-5 md:w-8 md:h-8" /></div><span className="text-[10px] md:text-sm font-bold">2. Mantener</span>
                                         </button>
                                     </div>
