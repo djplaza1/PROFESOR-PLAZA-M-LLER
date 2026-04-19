@@ -20,6 +20,9 @@
     
     <!-- Babel para compilar JSX en el navegador -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- OCR manuscrito / impreso en el navegador: gratis, sin API key (Tesseract + datos de idioma de) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -69,6 +72,22 @@
             border-radius: 0.75rem;
             border: 2px solid #475569;
             cursor: crosshair;
+        }
+        .writing-pad-wrap {
+            touch-action: none;
+            background-color: #0c1222;
+            background-image: linear-gradient(transparent 35px, rgba(148, 163, 184, 0.09) 36px);
+            background-size: 100% 36px;
+            border-radius: 0.75rem;
+            border: 2px solid rgba(71, 85, 105, 0.6);
+            overflow: hidden;
+        }
+        .writing-lab-canvas {
+            touch-action: none;
+            display: block;
+            width: 100%;
+            cursor: crosshair;
+            background: transparent;
         }
     </style>
 </head>
@@ -195,6 +214,41 @@
         const PREP_AKK = ["durch", "für", "gegen", "ohne", "um"];
         const PREP_WECHSEL = ["in", "an", "auf", "neben", "hinter", "über", "unter", "vor", "zwischen"];
 
+        const WRITING_COPY_DRILLS = [
+            "Der Termin findet am Dienstag statt.",
+            "Ich würde gerne einen Termin vereinbaren.",
+            "Können Sie mir bitte helfen?",
+            "Das Wetter ist heute sehr schön.",
+            "Ich interessiere mich für Kunst und Kultur.",
+            "Trotz des Regens sind wir spazieren gegangen.",
+            "Wegen des Staus kam ich zu spät.",
+            "Sobald ich Zeit habe, rufe ich dich an.",
+            "Entschuldigung, ich habe mich verspätet.",
+            "Könnten Sie das bitte wiederholen?"
+        ];
+        const WRITING_PROMPTS_DE = [
+            { de: "Beschreibe deinen typischen Arbeitstag.", es: "Describe tu día laboral típico." },
+            { de: "Was machst du gern in deiner Freizeit?", es: "¿Qué te gusta hacer en tu tiempo libre?" },
+            { de: "Erzähle von deiner letzten Reise.", es: "Habla de tu último viaje." },
+            { de: "Warum lernst du Deutsch?", es: "¿Por qué estudias alemán?" },
+            { de: "Was sind deine Pläne für die Zukunft?", es: "¿Cuáles son tus planes para el futuro?" },
+            { de: "Beschreibe dein Zuhause.", es: "Describe tu hogar." },
+            { de: "Was isst du gern? Was isst du nicht gern?", es: "¿Qué te gusta y qué no te gusta comer?" },
+            { de: "Schreibe einen kurzen Brief an einen Freund.", es: "Escribe una carta corta a un amigo." }
+        ];
+        const WRITING_DICTATION_LINES = [
+            { de: "Guten Tag, ich habe eine Frage.", es: "Buenos días, tengo una pregunta." },
+            { de: "Der Schlüssel liegt auf dem Tisch.", es: "La llave está sobre la mesa." },
+            { de: "Wir treffen uns um acht Uhr.", es: "Quedamos a las ocho." },
+            { de: "Ich freue mich auf das Wochenende.", es: "Me alegro por el fin de semana." },
+            { de: "Das Museum ist heute geschlossen.", es: "El museo está cerrado hoy." }
+        ];
+        const LETTER_DRILLS = [
+            { title: "Umlaute Ä Ö Ü und ß", sample: "Äpfel · Öl · Über · Straße", practice: "Äpfel Öl Über Straße" },
+            { title: "Alltag", sample: "schön · müde · hören · groß", practice: "Schön müde hören groß" },
+            { title: "Satzanfang", sample: "Großschreibung: Ich, Du, Der, Die", practice: "Ich lerne Deutsch jeden Tag." }
+        ];
+
         const levenshteinDistance = (a, b) => {
             if (a.length === 0) return b.length;
             if (b.length === 0) return a.length;
@@ -211,6 +265,47 @@
                 }
             }
             return matrix[b.length][a.length];
+        };
+
+        /** Normaliza texto alemán para comparar lo que dicta el STT con el guion (umlauts, ß, puntuación). */
+        const normalizeGermanSpeechText = (s) => {
+            if (!s || typeof s !== 'string') return '';
+            let t = s.toLowerCase().trim();
+            t = t.replace(/\u00df/g, 'ss').replace(/ß/g, 'ss');
+            t = t.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue');
+            t = t.replace(/[’'`´]/g, "'");
+            t = t.replace(/[^a-z0-9\s']/g, ' ');
+            t = t.replace(/\s+/g, ' ').trim();
+            return t;
+        };
+
+        const germanWordDistanceOk = (a, b) => {
+            if (a === b) return true;
+            const d = levenshteinDistance(a, b);
+            const L = Math.max(a.length, b.length, 1);
+            if (L <= 2) return d <= 0;
+            if (L <= 5) return d <= 1;
+            if (L <= 10) return d <= 2;
+            return d <= Math.min(3, Math.floor(L * 0.25));
+        };
+
+        /** Empareja palabras del modelo con las reconocidas en orden (tolera palabras de más al inicio). */
+        const matchGermanWordsSequential = (origWords, spokenWords) => {
+            const feedback = [];
+            let si = 0;
+            for (const ow of origWords) {
+                if (!ow) continue;
+                let found = false;
+                for (let j = si; j < spokenWords.length; j++) {
+                    if (germanWordDistanceOk(ow, spokenWords[j])) {
+                        found = true;
+                        si = j + 1;
+                        break;
+                    }
+                }
+                feedback.push({ word: ow, correct: found });
+            }
+            return feedback;
         };
 
         // --- COMPONENTE PRINCIPAL ---
@@ -295,6 +390,17 @@
           const [audiobookPlaying, setAudiobookPlaying] = useState(false);
           const [shadowRate, setShadowRate] = useState(0.88);
           const [shadowShowText, setShadowShowText] = useState(true);
+          const [writingMode, setWritingMode] = useState('free');
+          const [writingGrid, setWritingGrid] = useState(true);
+          const [writingStroke, setWritingStroke] = useState(4);
+          const [writingCopyIdx, setWritingCopyIdx] = useState(0);
+          const [writingPromptIdx, setWritingPromptIdx] = useState(0);
+          const [writingDictIdx, setWritingDictIdx] = useState(0);
+          const [writingLetterIdx, setWritingLetterIdx] = useState(0);
+          const [writingGuionWriteIdx, setWritingGuionWriteIdx] = useState(0);
+          const [writingDictReveal, setWritingDictReveal] = useState(false);
+          const [writingCanvasKey, setWritingCanvasKey] = useState(0);
+          const [writingVocabIdx, setWritingVocabIdx] = useState(0);
 
           const isPlayingRef = useRef(false);
           const timeoutRef = useRef(null);
@@ -328,6 +434,14 @@
           useEffect(() => {
               window.__MULLER_ACTIVE_GUION__ = guionData;
           }, [guionData]);
+
+          useEffect(() => {
+              if (activeTab !== 'shadowing') return;
+              setSpokenText("");
+              setPronunciationScore(null);
+              setPronunciationFeedback([]);
+              setGrammarPolizeiMsg("");
+          }, [sceneIndex, activeTab]);
 
           const saveProgress = (newStatsUpdates) => {
               const mergedStats = { ...userStats, ...newStatsUpdates, lastPlayedDate: new Date().toISOString().split('T')[0] };
@@ -845,49 +959,92 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               }
           };
 
-          const handleVoiceStart = (targetText = null) => {
-              if (userStats.hearts <= 0) { setShowDeathModal(true); return; }
+          const handleVoiceStart = (targetText = null, evalOpts = {}) => {
+              if (userStats.hearts <= 0 && evalOpts.mode !== 'shadow') { setShowDeathModal(true); return; }
               const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
               if (!SpeechRecognition) { alert("Tu navegador no soporta esta función. Usa Google Chrome."); return; }
               if (recognitionRef.current) recognitionRef.current.stop();
               const recognition = new SpeechRecognition();
-              recognition.lang = 'de-DE'; recognition.continuous = true; recognition.interimResults = true; recognition.maxAlternatives = 1;
+              recognition.lang = 'de-DE';
+              recognition.continuous = true;
+              recognition.interimResults = true;
+              recognition.maxAlternatives = 5;
               recognitionRef.current = recognition;
               spokenTextRef.current = "";
+              const opts = { mode: evalOpts.mode || 'default' };
               recognition.onstart = () => { setIsListening(true); setSpokenText(""); setPronunciationScore(null); setGrammarPolizeiMsg(""); setPronunciationFeedback([]); };
               recognition.onresult = (event) => {
-                  let currentTranscript = "";
-                  for (let i = 0; i < event.results.length; i++) currentTranscript += event.results[i][0].transcript;
-                  spokenTextRef.current = currentTranscript;
-                  setSpokenText(currentTranscript);
+                  let piece = "";
+                  for (let i = 0; i < event.results.length; i++) {
+                      const res = event.results[i];
+                      let alt = res[0];
+                      for (let j = 1; j < res.length; j++) {
+                          const cj = res[j].confidence;
+                          const cb = alt.confidence;
+                          if (typeof cj === 'number' && (typeof cb !== 'number' || cj >= cb)) alt = res[j];
+                      }
+                      piece += alt.transcript;
+                  }
+                  spokenTextRef.current = piece;
+                  setSpokenText(piece);
               };
-              recognition.onerror = (event) => { console.error("Error de micro:", event.error); setIsListening(false); };
-              recognition.onend = () => { setIsListening(false); evaluatePronunciation(targetText, spokenTextRef.current); };
+              recognition.onerror = (event) => {
+                  console.error("Error de micro:", event.error);
+                  setIsListening(false);
+                  if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                      alert("Permiso de micrófono denegado. Activa el mic en la barra del navegador.");
+                  }
+              };
+              recognition.onend = () => { setIsListening(false); evaluatePronunciation(targetText, spokenTextRef.current, opts); };
               try { recognition.start(); } catch(e){}
           };
 
           const handleVoiceStop = () => { if (recognitionRef.current && isListening) recognitionRef.current.stop(); };
 
-          const evaluatePronunciation = (targetText, transcript) => {
-              if (!transcript || transcript.trim() === "") return;
+          const evaluatePronunciation = (targetText, transcript, opts = {}) => {
+              const mode = opts.mode || 'default';
+              if (!transcript || transcript.trim() === "") {
+                  if (mode === 'shadow') {
+                      setGrammarPolizeiMsg("No se detectó voz. Comprueba el micrófono o habla más cerca.");
+                      setPronunciationScore(null);
+                      setPronunciationFeedback([]);
+                  }
+                  return;
+              }
               const textToCompare = targetText || guionData[getActualSceneIndex()].text;
-              const cleanOrig = textToCompare.toLowerCase().replace(/[.,!?¿¡]/g, '').trim();
-              const cleanSpoken = transcript.toLowerCase().replace(/[.,!?¿¡]/g, '').trim();
+              const cleanOrig = normalizeGermanSpeechText(textToCompare);
+              const cleanSpoken = normalizeGermanSpeechText(transcript);
+              if (!cleanOrig) return;
               const distance = levenshteinDistance(cleanOrig, cleanSpoken);
-              const maxLength = Math.max(cleanOrig.length, cleanSpoken.length);
-              let score = Math.round(((maxLength - distance) / maxLength) * 100);
-              const origWords = cleanOrig.split(/\s+/);
-              const spokenWords = cleanSpoken.split(/\s+/);
-              let feedbackArr = [];
-              origWords.forEach(word => {
-                  const match = spokenWords.find(sw => levenshteinDistance(word, sw) <= (word.length <= 4 ? 0 : 1));
-                  if (match) feedbackArr.push({ word: word, correct: true });
-                  else { feedbackArr.push({ word: word, correct: false }); score -= 5; }
-              });
-              let polizeiMsg = ""; let penalty = false;
-              if (cleanOrig.includes("wegen des") && cleanSpoken.includes("wegen dem")) { score -= 20; polizeiMsg = "🚨 Grammatik-Polizei: Has external DATIVO en vez de GENITIVO. -1 ❤️"; penalty = true; }
+              const maxLength = Math.max(cleanOrig.length, cleanSpoken.length, 1);
+              let scorePhrase = Math.round(((maxLength - distance) / maxLength) * 100);
+              const origWords = cleanOrig.split(/\s+/).filter(Boolean);
+              const spokenWords = cleanSpoken.split(/\s+/).filter(Boolean);
+              const feedbackArr = matchGermanWordsSequential(origWords, spokenWords);
+              const correctN = feedbackArr.filter((f) => f.correct).length;
+              const wordRatio = origWords.length ? correctN / origWords.length : 1;
+              let scoreWords = Math.round(wordRatio * 100);
+              let score = Math.round(scorePhrase * 0.45 + scoreWords * 0.55);
+              let polizeiMsg = "";
+              let penalty = false;
+              if (mode !== 'shadow' && cleanOrig.includes("wegen des") && cleanSpoken.includes("wegen dem")) {
+                  score -= 20;
+                  polizeiMsg = "🚨 Grammatik-Polizei: Has external DATIVO en vez de GENITIVO. -1 ❤️";
+                  penalty = true;
+              }
               const finalScore = score > 100 ? 100 : score < 0 ? 0 : score;
-              setGrammarPolizeiMsg(polizeiMsg); setPronunciationScore(finalScore); setPronunciationFeedback(feedbackArr);
+              if (mode === 'shadow') setGrammarPolizeiMsg("");
+              else setGrammarPolizeiMsg(polizeiMsg);
+              setPronunciationScore(finalScore);
+              setPronunciationFeedback(feedbackArr);
+              if (mode === 'shadow') {
+                  saveProgress({
+                      pronunciationAttempts: (userStats.pronunciationAttempts || 0) + 1,
+                      pronunciationTotalScore: (userStats.pronunciationTotalScore || 0) + finalScore,
+                      ...(finalScore >= 85 ? { coins: userStats.coins + 2, activityByDay: mergeActivityPoints(8) } : {}),
+                  });
+                  return;
+              }
               if (penalty || finalScore < 50) deductHeart();
               else if (finalScore >= 90) saveProgress({ coins: userStats.coins + 5, activityByDay: mergeActivityPoints(12) });
           };
@@ -1121,7 +1278,8 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               if (activeTab === 'vocabulario') return 'bg-amber-950/70'; // Suavizado
               if (activeTab === 'b1meister' || activeTab === 'b2ausblick') return 'bg-slate-900'; // Suavizado
               if (activeTab === 'storybuilder') return 'bg-indigo-950'; // Suavizado
-              if (activeTab === 'shadowing') return 'bg-violet-950/90';
+              if (activeTab === 'shadowing') return 'bg-teal-950/90';
+              if (activeTab === 'escritura') return 'bg-stone-950';
               if (fluesternMode) return 'bg-zinc-900 filter contrast-125 sepia-50'; 
               if (isReviewing || practiceActive) return 'bg-gray-900'; // Suavizado
               const speaker = guionData[getActualSceneIndex()]?.speaker;
@@ -1133,6 +1291,205 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 
           const currentPracticeList = practiceActive === 'diff' ? userStats.difficultVocab : (practiceActive === 'norm' ? userStats.normalVocab : userStats.difficultGrammar);
           const currentPracticeItem = currentPracticeList ? currentPracticeList[practiceIndex] : null;
+
+          /** Lienzo para lápiz óptico / dedo: pointer capture, sin scroll al trazar. */
+          const TabletWritingCanvas = ({ padKey, grid, strokeW }) => {
+              const wrapRef = useRef(null);
+              const canvasRef = useRef(null);
+              const ctxRef = useRef(null);
+              const drawingRef = useRef(false);
+              const sizeRef = useRef({ w: 400, h: 400 });
+              const [ocrLoading, setOcrLoading] = useState(false);
+              const [ocrText, setOcrText] = useState('');
+              const [ocrHint, setOcrHint] = useState('');
+              const [ocrErr, setOcrErr] = useState('');
+
+              const layoutCanvas = useCallback(() => {
+                  const canvas = canvasRef.current;
+                  const wrap = wrapRef.current;
+                  if (!canvas || !wrap) return;
+                  const w = wrap.clientWidth;
+                  const h = Math.max(280, Math.min(560, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 600) * 0.42)));
+                  const dpr = window.devicePixelRatio || 1;
+                  sizeRef.current = { w, h };
+                  canvas.width = w * dpr;
+                  canvas.height = h * dpr;
+                  canvas.style.width = `${w}px`;
+                  canvas.style.height = `${h}px`;
+                  const ctx = canvas.getContext('2d');
+                  ctx.setTransform(1, 0, 0, 1, 0, 0);
+                  ctx.scale(dpr, dpr);
+                  ctx.lineCap = 'round';
+                  ctx.lineJoin = 'round';
+                  ctx.strokeStyle = '#f1f5f9';
+                  ctx.lineWidth = strokeW;
+                  ctxRef.current = ctx;
+              }, [strokeW, padKey]);
+
+              useEffect(() => { layoutCanvas(); }, [layoutCanvas]);
+
+              const getPos = (e) => {
+                  const canvas = canvasRef.current;
+                  if (!canvas) return { x: 0, y: 0 };
+                  const rect = canvas.getBoundingClientRect();
+                  let cx = e.clientX;
+                  let cy = e.clientY;
+                  if (e.touches && e.touches[0]) { cx = e.touches[0].clientX; cy = e.touches[0].clientY; }
+                  else if (e.changedTouches && e.changedTouches[0]) { cx = e.changedTouches[0].clientX; cy = e.changedTouches[0].clientY; }
+                  return { x: cx - rect.left, y: cy - rect.top };
+              };
+
+              const startDraw = (e) => {
+                  e.preventDefault();
+                  const ctx = ctxRef.current;
+                  if (!ctx) return;
+                  try { if (e.pointerId != null) canvasRef.current.setPointerCapture(e.pointerId); } catch (err) {}
+                  drawingRef.current = true;
+                  const p = getPos(e);
+                  ctx.beginPath();
+                  ctx.moveTo(p.x, p.y);
+              };
+              const moveDraw = (e) => {
+                  e.preventDefault();
+                  if (!drawingRef.current || !ctxRef.current) return;
+                  const p = getPos(e);
+                  ctxRef.current.lineTo(p.x, p.y);
+                  ctxRef.current.stroke();
+              };
+              const endDraw = (e) => {
+                  e.preventDefault();
+                  drawingRef.current = false;
+                  try { if (e.pointerId != null) canvasRef.current.releasePointerCapture(e.pointerId); } catch (err) {}
+              };
+
+              const clearPad = () => {
+                  const ctx = ctxRef.current;
+                  const { w, h } = sizeRef.current;
+                  if (!ctx) return;
+                  ctx.clearRect(0, 0, w, h);
+              };
+              const savePng = () => {
+                  const canvas = canvasRef.current;
+                  if (!canvas) return;
+                  const link = document.createElement('a');
+                  link.download = `muller_escritura_${Date.now()}.png`;
+                  link.href = canvas.toDataURL('image/png');
+                  link.click();
+              };
+
+              const canvasToBlackOnWhite = (source) => {
+                  const w = source.width;
+                  const h = source.height;
+                  const tmp = document.createElement('canvas');
+                  tmp.width = w;
+                  tmp.height = h;
+                  const sctx = source.getContext('2d');
+                  const tctx = tmp.getContext('2d');
+                  const img = sctx.getImageData(0, 0, w, h);
+                  const d = img.data;
+                  const out = tctx.createImageData(w, h);
+                  const o = out.data;
+                  for (let i = 0; i < d.length; i += 4) {
+                      const a = d[i + 3];
+                      const v = a > 40 ? 0 : 255;
+                      o[i] = v;
+                      o[i + 1] = v;
+                      o[i + 2] = v;
+                      o[i + 3] = 255;
+                  }
+                  tctx.putImageData(out, 0, 0);
+                  return tmp;
+              };
+
+              const runHandwritingOcr = async () => {
+                  if (typeof Tesseract === 'undefined') {
+                      setOcrErr('No se pudo cargar Tesseract.js. Comprueba la conexión y recarga.');
+                      return;
+                  }
+                  const source = canvasRef.current;
+                  if (!source || source.width < 8) return;
+                  setOcrErr('');
+                  setOcrText('');
+                  setOcrLoading(true);
+                  setOcrHint('Preparando imagen…');
+                  let worker;
+                  try {
+                      const bw = canvasToBlackOnWhite(source);
+                      worker = await Tesseract.createWorker('deu', 1, {
+                          logger: (m) => {
+                              if (m.status === 'recognizing text' && m.progress != null) setOcrHint(`Leyendo… ${Math.round(100 * m.progress)}%`);
+                              else if (m.status && String(m.status).includes('loading')) setOcrHint('Descargando modelo alemán (solo la 1ª vez, ~2–5 MB)…');
+                              else if (m.status) setOcrHint(String(m.status));
+                          },
+                      });
+                      const { data: { text } } = await worker.recognize(bw);
+                      await worker.terminate();
+                      worker = null;
+                      const t = (text || '').replace(/\s+\n/g, '\n').trim();
+                      setOcrText(t);
+                      if (!t) setOcrHint('No se detectó texto. Escribe más grande o con más contraste.');
+                      else setOcrHint('');
+                  } catch (err) {
+                      if (worker) try { await worker.terminate(); } catch (e) {}
+                      setOcrErr(err?.message || 'Error en OCR');
+                      setOcrHint('');
+                  } finally {
+                      setOcrLoading(false);
+                  }
+              };
+
+              return (
+                  <div className="space-y-3">
+                      <div ref={wrapRef} className={grid ? 'writing-pad-wrap' : 'rounded-xl border-2 border-slate-600 bg-[#0c1222] overflow-hidden'}>
+                          <canvas
+                              ref={canvasRef}
+                              className="writing-lab-canvas"
+                              onPointerDown={startDraw}
+                              onPointerMove={moveDraw}
+                              onPointerUp={endDraw}
+                              onPointerLeave={endDraw}
+                              onPointerCancel={endDraw}
+                              onMouseDown={startDraw}
+                              onMouseMove={moveDraw}
+                              onMouseUp={endDraw}
+                              onTouchStart={(e) => { e.preventDefault(); startDraw(e); }}
+                              onTouchMove={(e) => { e.preventDefault(); moveDraw(e); }}
+                              onTouchEnd={(e) => { e.preventDefault(); endDraw(e); }}
+                          />
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center items-center">
+                          <button type="button" onClick={clearPad} className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-bold">Borrar lienzo</button>
+                          <button type="button" onClick={savePng} className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-bold">Guardar PNG</button>
+                          <button
+                              type="button"
+                              disabled={ocrLoading}
+                              onClick={runHandwritingOcr}
+                              className="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-sm font-bold flex items-center gap-2"
+                              title="OCR gratuito en tu dispositivo (Tesseract). La primera vez descarga el idioma alemán."
+                          >
+                              {ocrLoading ? <span className="animate-pulse">⏳ OCR…</span> : <><Icon name="scan-line" className="w-4 h-4" /> Reconocer texto</>}
+                          </button>
+                      </div>
+                      <p className="text-[10px] text-center text-slate-500 px-1">
+                          Motor: <strong className="text-slate-400">Tesseract.js</strong> (alemán, local). El manuscrito es aproximado; la letra muy ligada o muy pequeña empeora el resultado.
+                      </p>
+                      {ocrHint && <p className="text-xs text-indigo-300/90 text-center">{ocrHint}</p>}
+                      {ocrErr && <p className="text-xs text-red-400 text-center bg-red-950/40 rounded-lg px-2 py-1">{ocrErr}</p>}
+                      {(ocrText || ocrLoading) && (
+                          <div className="rounded-xl border border-indigo-600/40 bg-black/40 p-3">
+                              <label className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Texto reconocido (editable)</label>
+                              <textarea
+                                  className="mt-2 w-full min-h-[100px] bg-slate-900/80 border border-white/10 rounded-lg p-2 text-sm text-white font-mono"
+                                  value={ocrText}
+                                  onChange={(e) => setOcrText(e.target.value)}
+                                  placeholder={ocrLoading ? '…' : ''}
+                                  readOnly={ocrLoading}
+                              />
+                          </div>
+                      )}
+                  </div>
+              );
+          };
 
           // Componente de escritura a mano (canvas)
           const HandwritingPad = ({ onClose }) => {
@@ -1196,7 +1553,8 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               <div className="w-full bg-gradient-to-b from-zinc-900/95 via-black/90 to-black/95 backdrop-blur-xl border-b border-white/[0.07] shadow-[0_4px_24px_rgba(0,0,0,0.35)] p-2 md:p-3 flex flex-col md:flex-row gap-2 md:gap-3 justify-between items-center z-20">
                   <div className="flex gap-1 md:gap-2 bg-zinc-950/80 p-1 rounded-xl ring-1 ring-white/[0.06] w-full md:w-auto overflow-x-auto hide-scrollbar">
                       <button onClick={()=>{setActiveTab('historia'); setMode('dialogue'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'historia' ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.35)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="play" className="w-3 h-3 md:w-4 md:h-4" /> Historia</button>
-                      <button onClick={()=>{setActiveTab('shadowing'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'shadowing' ? 'bg-violet-600 text-white shadow-[0_0_18px_rgba(124,58,237,0.45)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="audio-lines" className="w-3 h-3 md:w-4 md:h-4" /> Shadowing</button>
+                      <button onClick={()=>{setActiveTab('shadowing'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'shadowing' ? 'bg-teal-600 text-white shadow-[0_0_18px_rgba(13,148,136,0.45)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="audio-lines" className="w-3 h-3 md:w-4 md:h-4" /> Shadowing</button>
+                      <button onClick={()=>{setActiveTab('escritura'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'escritura' ? 'bg-rose-700 text-white shadow-[0_0_18px_rgba(190,18,60,0.4)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="pen-line" className="w-3 h-3 md:w-4 md:h-4" /> Escritura</button>
                       <button onClick={()=>{setActiveTab('vocabulario'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'vocabulario' ? 'bg-amber-600 text-white shadow-[0_0_20px_rgba(217,119,6,0.35)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="book-open" className="w-3 h-3 md:w-4 md:h-4" /> Vocab</button>
                       <button onClick={()=>{setActiveTab('b1meister'); stopAudio(); setPracticeActive(null); setBxCategory('mix');}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'b1meister' ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.8)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="target" className="w-3 h-3 md:w-4 md:h-4" /> B1</button>
                       <button onClick={()=>{setActiveTab('b2ausblick'); stopAudio(); setPracticeActive(null); setBxCategory('mix');}} className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-bold text-xs transition ${activeTab === 'b2ausblick' ? 'bg-sky-600 text-white shadow-[0_0_15px_rgba(2,132,199,0.8)] ring-1 ring-white/20' : 'text-gray-400 hover:text-white whitespace-nowrap'}`}><Icon nav name="layers" className="w-3 h-3 md:w-4 md:h-4" /> B2</button>
@@ -1614,10 +1972,10 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 
                   {activeTab === 'shadowing' && !practiceActive && (
                       <div className="flex-1 flex flex-col p-4 md:p-8 max-w-3xl mx-auto w-full animate-in fade-in duration-500 overflow-y-auto">
-                          <h1 className="text-2xl md:text-4xl font-black text-violet-200 mb-2 flex items-center gap-2 md:gap-3">
+                          <h1 className="text-2xl md:text-4xl font-black text-teal-100 mb-2 flex items-center gap-2 md:gap-3">
                               <Icon name="audio-lines" className="w-8 h-8 md:w-10 md:h-10" /> Shadowing
                           </h1>
-                          <p className="text-violet-100/85 text-sm md:text-base mb-6 leading-relaxed">
+                          <p className="text-teal-50/90 text-sm md:text-base mb-6 leading-relaxed">
                               Escucha el modelo en alemán (voz del sistema), luego repite en voz alta siguiendo el ritmo y la entonación. Es la técnica de <strong className="text-white">shadowing</strong> para ganar fluidez y pronunciación tipo TELC.
                           </p>
                           {guionData.length === 0 ? (
@@ -1637,8 +1995,8 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                       };
                                       return (
                                           <>
-                                              <div className="bg-black/45 border border-violet-500/35 rounded-2xl p-4 md:p-6 mb-4 shadow-inner">
-                                                  <p className="text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-2">Escena {si + 1} / {guionData.length} · {scene?.speaker || '—'}</p>
+                                              <div className="bg-black/45 border border-teal-500/35 rounded-2xl p-4 md:p-6 mb-4 shadow-inner">
+                                                  <p className="text-[10px] font-bold text-teal-400 uppercase tracking-widest mb-2">Escena {si + 1} / {guionData.length} · {scene?.speaker || '—'}</p>
                                                   {shadowShowText ? (
                                                       <p className="text-xl md:text-2xl text-white font-medium leading-relaxed">{scene?.text}</p>
                                                   ) : (
@@ -1651,19 +2009,53 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                               <div className="flex flex-wrap gap-2 mb-4 items-center">
                                                   <span className="text-xs text-gray-400 w-full sm:w-auto">Velocidad del modelo:</span>
                                                   {[0.75, 0.88, 1].map((r) => (
-                                                      <button key={r} type="button" onClick={() => setShadowRate(r)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${shadowRate === r ? 'bg-violet-600 text-white ring-1 ring-white/25' : 'bg-gray-800/90 text-gray-300 hover:bg-gray-700'}`}>{r === 0.75 ? 'Lenta' : r === 0.88 ? 'Media' : 'Normal'}</button>
+                                                      <button key={r} type="button" onClick={() => setShadowRate(r)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${shadowRate === r ? 'bg-teal-600 text-white ring-1 ring-white/25' : 'bg-gray-800/90 text-gray-300 hover:bg-gray-700'}`}>{r === 0.75 ? 'Lenta' : r === 0.88 ? 'Media' : 'Normal'}</button>
                                                   ))}
                                                   <button type="button" onClick={() => setShadowShowText(!shadowShowText)} className="ml-auto px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-amber-100 border border-amber-700/40 hover:bg-gray-700">{shadowShowText ? 'Ocultar texto' : 'Mostrar texto'}</button>
                                               </div>
                                               <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                                                  <button type="button" onClick={playModel} className="flex-1 bg-violet-600 hover:bg-violet-500 text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 shadow-lg transition">
+                                                  <button type="button" onClick={playModel} className="flex-1 bg-teal-600 hover:bg-teal-500 text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 shadow-lg transition">
                                                       <Icon name="volume-2" className="w-5 h-5" /> Escuchar modelo
                                                   </button>
-                                                  <button type="button" onClick={playModel} className="flex-1 bg-violet-900/85 hover:bg-violet-800 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-violet-500/30 transition">
+                                                  <button type="button" onClick={playModel} className="flex-1 bg-teal-900/85 hover:bg-teal-800 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 border border-teal-500/30 transition">
                                                       <Icon name="repeat" className="w-5 h-5" /> Repetir audio
                                                   </button>
                                               </div>
-                                              <p className="text-center text-gray-500 text-xs mb-5">Después de escuchar: habla al mismo tiempo o justo después; prioriza fluidez, no perfección.</p>
+                                              <p className="text-center text-gray-500 text-xs mb-4">Después de escuchar: habla al mismo tiempo o justo después; prioriza fluidez, no perfección.</p>
+                                              <div className="rounded-2xl border border-teal-500/30 bg-black/35 p-4 md:p-5 mb-5">
+                                                  <p className="text-xs font-bold text-teal-300 mb-1 flex items-center gap-2"><Icon name="mic" className="w-4 h-4" /> Comprobar pronunciación</p>
+                                                  <p className="text-[10px] text-gray-500 mb-3">El navegador transcribe tu alemán y lo compara con el texto del guion (sin juzgar acento puro). Mantén pulsado el micrófono mientras lees la frase; suelta para ver el resultado. <span className="text-teal-400/90">En Shadowing no pierdes vidas.</span></p>
+                                                  <div className="flex flex-col items-center gap-3">
+                                                      <button type="button" onMouseDown={() => scene?.text && handleVoiceStart(scene.text, { mode: 'shadow' })} onMouseUp={handleVoiceStop} onMouseLeave={handleVoiceStop} onTouchStart={() => scene?.text && handleVoiceStart(scene.text, { mode: 'shadow' })} onTouchEnd={handleVoiceStop} className={`rounded-full p-5 md:p-6 text-white transition shadow-xl select-none ${isListening ? 'bg-red-500 animate-pulse ring-2 ring-red-300/50' : 'bg-teal-600 hover:bg-teal-500 ring-2 ring-teal-400/20'}`} title="Mantén pulsado y lee en voz alta">
+                                                          <Icon name="mic" className="w-10 h-10 md:w-12 md:h-12" />
+                                                      </button>
+                                                      <span className="text-[10px] text-gray-500">Mantén pulsado · suelta para evaluar</span>
+                                                      {grammarPolizeiMsg && (
+                                                          <p className="text-amber-200/90 text-xs text-center bg-amber-950/40 border border-amber-700/30 rounded-lg px-3 py-2 w-full">{grammarPolizeiMsg}</p>
+                                                      )}
+                                                      {spokenText && (
+                                                          <div className="w-full text-center mt-1">
+                                                              <p className="text-yellow-200/95 font-mono text-sm md:text-base mb-2 break-words">"{spokenText}"</p>
+                                                              {pronunciationFeedback.length > 0 && (
+                                                                  <div className="flex flex-wrap gap-1 justify-center my-2 bg-black/40 p-2 rounded-xl border border-white/10">
+                                                                      {pronunciationFeedback.map((item, idx) => (
+                                                                          <span key={idx} className={`text-xs font-bold px-2 py-0.5 rounded ${item.correct ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-600/30' : 'bg-red-900/50 text-red-300 border border-red-600/30'}`}>{item.word}</span>
+                                                                      ))}
+                                                                  </div>
+                                                              )}
+                                                              {pronunciationScore !== null && (
+                                                                  <div className="flex items-center justify-center gap-2 mt-2">
+                                                                      <div className="flex-1 max-w-xs bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                                                                          <div className={`h-full rounded-full transition-all duration-700 ${pronunciationScore >= 85 ? 'bg-emerald-500' : pronunciationScore >= 55 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${pronunciationScore}%` }} />
+                                                                      </div>
+                                                                      <span className="font-black text-white text-sm md:text-lg tabular-nums">{pronunciationScore}%</span>
+                                                                  </div>
+                                                              )}
+                                                              <p className="text-[10px] text-gray-500 mt-2">&gt;85%: verde · 55–84%: mejorable · &lt;55%: repite tras escuchar el modelo</p>
+                                                          </div>
+                                                      )}
+                                                  </div>
+                                              </div>
                                               <div className="flex gap-3 justify-center flex-wrap">
                                                   <button type="button" disabled={si <= 0} onClick={() => setSceneIndex((s) => Math.max(0, s - 1))} className="px-5 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 font-bold disabled:opacity-30 disabled:pointer-events-none">← Anterior</button>
                                                   <button type="button" disabled={si >= guionData.length - 1} onClick={() => setSceneIndex((s) => Math.min(guionData.length - 1, s + 1))} className="px-5 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 font-bold disabled:opacity-30 disabled:pointer-events-none">Siguiente →</button>
@@ -1673,6 +2065,151 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   })()}
                               </>
                           )}
+                      </div>
+                  )}
+
+                  {activeTab === 'escritura' && !practiceActive && (
+                      <div className="flex-1 flex flex-col p-3 md:p-6 max-w-4xl mx-auto w-full animate-in fade-in duration-500 overflow-y-auto pb-24">
+                          <h1 className="text-2xl md:text-4xl font-black text-rose-100 mb-1 flex items-center gap-2 md:gap-3">
+                              <Icon name="pen-line" className="w-8 h-8 md:w-10 md:h-10" /> Escritura
+                          </h1>
+                          <p className="text-stone-300/95 text-xs md:text-sm mb-4 leading-relaxed border-b border-white/10 pb-3">
+                              Zona solo para escribir a mano — pensada para <strong className="text-white">tableta con lápiz</strong> (p. ej. Lenovo Tab). El lienzo usa <strong className="text-white">pointer capture</strong> para que el trazo no se pierda al apoyar la mano. Activa las <strong className="text-white">líneas</strong> como cuaderno.
+                          </p>
+                          <div className="flex flex-wrap gap-1.5 md:gap-2 mb-4">
+                              {[
+                                  { id: 'free', label: 'Libre', sub: 'notas / borrador' },
+                                  { id: 'copy', label: 'Copia', sub: 'caligrafía' },
+                                  { id: 'dictation', label: 'Dictado', sub: 'oír y escribir' },
+                                  { id: 'prompt', label: 'Tema', sub: 'redacción' },
+                                  { id: 'letters', label: 'Letras DE', sub: 'ÄÖÜß' },
+                                  { id: 'guion', label: 'Guion', sub: 'misma historia' },
+                                  { id: 'vocab', label: 'Palabra', sub: 'del vocab' }
+                              ].map((m) => (
+                                  <button
+                                      key={m.id}
+                                      type="button"
+                                      onClick={() => { setWritingMode(m.id); setWritingDictReveal(false); setWritingCanvasKey((k) => k + 1); }}
+                                      className={`px-2.5 py-1.5 md:px-3 md:py-2 rounded-xl text-left border transition ${writingMode === m.id ? 'bg-rose-800/90 border-rose-400/50 text-white shadow-lg' : 'bg-black/40 border-white/10 text-gray-400 hover:border-rose-500/40 hover:text-white'}`}
+                                  >
+                                      <span className="block text-[10px] md:text-xs font-black">{m.label}</span>
+                                      <span className="block text-[9px] text-gray-500 md:text-[10px]">{m.sub}</span>
+                                  </button>
+                              ))}
+                          </div>
+
+                          {writingMode === 'free' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-rose-500/25 p-3 md:p-4">
+                                  <p className="text-rose-200/90 text-sm font-bold mb-1">Página en blanco</p>
+                                  <p className="text-[11px] text-gray-500">Escribe lo que quieras: resúmenes, listas, conjugaciones… Usa <strong className="text-gray-300">Borrar</strong> o <strong className="text-gray-300">Guardar PNG</strong> debajo del lienzo.</p>
+                              </div>
+                          )}
+
+                          {writingMode === 'copy' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-rose-500/25 p-3 md:p-4 space-y-2">
+                                  <p className="text-rose-200/90 text-sm font-bold">Copia la frase (caligrafía alemana)</p>
+                                  <p className="text-lg md:text-2xl text-white font-medium leading-snug">{WRITING_COPY_DRILLS[writingCopyIdx % WRITING_COPY_DRILLS.length]}</p>
+                                  <div className="flex flex-wrap gap-2 pt-2">
+                                      <button type="button" onClick={() => { setWritingCopyIdx((i) => (i + 1) % WRITING_COPY_DRILLS.length); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-900/80 hover:bg-rose-800 border border-rose-600/40">Otra frase →</button>
+                                  </div>
+                              </div>
+                          )}
+
+                          {writingMode === 'dictation' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-rose-500/25 p-3 md:p-4 space-y-3">
+                                  <p className="text-rose-200/90 text-sm font-bold">Dictado alemán</p>
+                                  <p className="text-[11px] text-gray-500">Escucha (varias veces si hace falta). Escribe en el lienzo lo que oyes. Luego comprueba el texto.</p>
+                                  <div className="flex flex-wrap gap-2 items-center">
+                                      <button
+                                          type="button"
+                                          onClick={() => {
+                                              const line = WRITING_DICTATION_LINES[writingDictIdx % WRITING_DICTATION_LINES.length];
+                                              window.speechSynthesis.cancel();
+                                              const u = new SpeechSynthesisUtterance(line.de);
+                                              u.lang = 'de-DE';
+                                              u.rate = 0.88;
+                                              window.speechSynthesis.speak(u);
+                                          }}
+                                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 font-bold text-sm"
+                                      >
+                                          <Icon name="volume-2" className="w-4 h-4" /> Escuchar dictado
+                                      </button>
+                                      <button type="button" onClick={() => { setWritingDictIdx((i) => (i + 1) % WRITING_DICTATION_LINES.length); setWritingDictReveal(false); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10">Otro dictado</button>
+                                      <button type="button" onClick={() => setWritingDictReveal((r) => !r)} className="text-xs font-bold px-3 py-2 rounded-lg bg-amber-900/60 hover:bg-amber-800/80 border border-amber-600/40">{writingDictReveal ? 'Ocultar solución' : 'Mostrar solución'}</button>
+                                  </div>
+                                  {writingDictReveal && (
+                                      <div className="text-sm border border-emerald-700/40 rounded-lg p-3 bg-emerald-950/40">
+                                          <p className="text-white font-medium">{WRITING_DICTATION_LINES[writingDictIdx % WRITING_DICTATION_LINES.length].de}</p>
+                                          <p className="text-emerald-300/80 text-xs mt-1 italic">{WRITING_DICTATION_LINES[writingDictIdx % WRITING_DICTATION_LINES.length].es}</p>
+                                      </div>
+                                  )}
+                              </div>
+                          )}
+
+                          {writingMode === 'prompt' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-rose-500/25 p-3 md:p-4 space-y-2">
+                                  <p className="text-rose-200/90 text-sm font-bold">Tema para redacción corta</p>
+                                  <p className="text-base md:text-lg text-white font-semibold">{WRITING_PROMPTS_DE[writingPromptIdx % WRITING_PROMPTS_DE.length].de}</p>
+                                  <p className="text-xs text-gray-500 italic">{WRITING_PROMPTS_DE[writingPromptIdx % WRITING_PROMPTS_DE.length].es}</p>
+                                  <button type="button" onClick={() => { setWritingPromptIdx((i) => (i + 1) % WRITING_PROMPTS_DE.length); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-900/80 hover:bg-rose-800 border border-rose-600/40 mt-2">Otro tema</button>
+                              </div>
+                          )}
+
+                          {writingMode === 'letters' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-rose-500/25 p-3 md:p-4 space-y-2">
+                                  <p className="text-rose-200/90 text-sm font-bold">{LETTER_DRILLS[writingLetterIdx % LETTER_DRILLS.length].title}</p>
+                                  <p className="text-xs text-amber-200/80">{LETTER_DRILLS[writingLetterIdx % LETTER_DRILLS.length].sample}</p>
+                                  <p className="text-lg md:text-xl text-white tracking-wide font-medium">Práctica: {LETTER_DRILLS[writingLetterIdx % LETTER_DRILLS.length].practice}</p>
+                                  <button type="button" onClick={() => { setWritingLetterIdx((i) => (i + 1) % LETTER_DRILLS.length); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-900/80 hover:bg-rose-800 border border-rose-600/40">Siguiente bloque</button>
+                              </div>
+                          )}
+
+                          {writingMode === 'guion' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-rose-500/25 p-3 md:p-4 space-y-2">
+                                  {guionData.length === 0 ? (
+                                      <p className="text-gray-500 text-sm">No hay guion. Carga uno en <strong className="text-white">Biblioteca</strong>.</p>
+                                  ) : (
+                                      <>
+                                          <p className="text-rose-200/90 text-sm font-bold">Copia una línea del guion activo</p>
+                                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Escena {writingGuionWriteIdx + 1} / {guionData.length} · {guionData[writingGuionWriteIdx]?.speaker || '—'}</p>
+                                          <p className="text-lg md:text-xl text-white leading-relaxed">{guionData[writingGuionWriteIdx]?.text}</p>
+                                          {guionData[writingGuionWriteIdx]?.translation && <p className="text-xs text-gray-500 italic border-t border-white/10 pt-2">({guionData[writingGuionWriteIdx].translation})</p>}
+                                          <div className="flex flex-wrap gap-2 pt-2">
+                                              <button type="button" disabled={writingGuionWriteIdx <= 0} onClick={() => { setWritingGuionWriteIdx((i) => Math.max(0, i - 1)); setWritingCanvasKey((k) => k + 1); }} className="px-3 py-1.5 rounded-lg bg-slate-800 font-bold text-xs disabled:opacity-30">← Anterior</button>
+                                              <button type="button" disabled={writingGuionWriteIdx >= guionData.length - 1} onClick={() => { setWritingGuionWriteIdx((i) => Math.min(guionData.length - 1, i + 1)); setWritingCanvasKey((k) => k + 1); }} className="px-3 py-1.5 rounded-lg bg-slate-800 font-bold text-xs disabled:opacity-30">Siguiente →</button>
+                                          </div>
+                                      </>
+                                  )}
+                              </div>
+                          )}
+
+                          {writingMode === 'vocab' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-rose-500/25 p-3 md:p-4 space-y-2">
+                                  <p className="text-rose-200/90 text-sm font-bold">Repite la palabra / frase del vocabulario</p>
+                                  {currentVocabList.length === 0 ? (
+                                      <p className="text-gray-500 text-sm">Sin lista de vocabulario aún. Abre <strong className="text-white">Vocab</strong> o carga un guion con vocabulario en <strong className="text-white">Historia</strong>.</p>
+                                  ) : (
+                                      <>
+                                          <p className="text-xl md:text-2xl text-amber-100 font-black">{currentVocabList[writingVocabIdx % currentVocabList.length].de}</p>
+                                          <p className="text-sm text-gray-500">{currentVocabList[writingVocabIdx % currentVocabList.length].es}</p>
+                                          <button type="button" onClick={() => { setWritingVocabIdx((i) => (i + 1) % currentVocabList.length); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-900/50 hover:bg-amber-800/70 border border-amber-600/40">Otra palabra</button>
+                                      </>
+                                  )}
+                              </div>
+                          )}
+
+                          <div className="flex flex-wrap gap-2 md:gap-3 items-center mb-3 text-[11px] md:text-xs">
+                              <label className="flex items-center gap-2 cursor-pointer bg-black/30 px-2 py-1 rounded-lg border border-white/10">
+                                  <input type="checkbox" className="accent-rose-500" checked={writingGrid} onChange={(e) => setWritingGrid(e.target.checked)} />
+                                  Líneas (cuaderno)
+                              </label>
+                              <span className="text-gray-500">Grosor:</span>
+                              {[2, 4, 7].map((w) => (
+                                  <button key={w} type="button" onClick={() => setWritingStroke(w)} className={`px-2 py-1 rounded-lg font-bold ${writingStroke === w ? 'bg-rose-700 text-white' : 'bg-slate-800 text-gray-400'}`}>{w}px</button>
+                              ))}
+                          </div>
+
+                          <TabletWritingCanvas padKey={writingCanvasKey} grid={writingGrid} strokeW={writingStroke} />
                       </div>
                   )}
 
@@ -2025,7 +2562,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                 Backup: hace {Math.max(0, backupAgeDays)} d
                             </div>
                         )}
-                        <button onClick={showSyncHelp} className="bg-gradient-to-br from-violet-500 to-purple-900 hover:from-violet-400 hover:to-purple-800 text-white p-3 rounded-full float-icon-glow ring-2 ring-white/10" title="Guía sincronización total">
+                        <button onClick={showSyncHelp} className="bg-gradient-to-br from-teal-500 to-teal-900 hover:from-teal-400 hover:to-teal-800 text-white p-3 rounded-full float-icon-glow ring-2 ring-white/10" title="Guía sincronización total">
                             <Icon name="info" className="w-6 h-6" />
                         </button>
                         <button onClick={exportData} className="bg-gradient-to-br from-sky-500 to-blue-800 hover:from-sky-400 hover:to-blue-700 text-white p-3 rounded-full float-icon-glow ring-2 ring-white/10" title="Exportar progreso">
