@@ -37,12 +37,15 @@
             -webkit-text-size-adjust: 100%;
             text-size-adjust: 100%;
         }
-        /* Teléfono/tablet: base un poco mayor para que UI y textos se acerquen al tamaño “cómodo” del PC sin depender del zoom */
-        @media (max-width: 1023px) {
-            html { font-size: 106.25%; }
+        /* Teléfono/tablet: escala base mayor (todo lo en rem crece: textos, botones, espaciados) */
+        @media (max-width: 1024px) {
+            html { font-size: 115%; }
+        }
+        @media (max-width: 768px) {
+            html { font-size: 120%; }
         }
         @media (max-width: 480px) {
-            html { font-size: 112.5%; }
+            html { font-size: 128%; }
         }
         body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Outfit', system-ui, -apple-system, sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -560,10 +563,43 @@
             return matrix[b.length][a.length];
         };
 
-        /** El STT en móvil a veces devuelve la misma palabra 3+ veces seguidas; no es énfasis, es ruido del motor. */
+        /** Quita repeticiones consecutivas de la misma palabra (STT móvil suele duplicar 5–20 veces). */
+        const dedupeConsecutiveWords = (s) => {
+            if (!s || typeof s !== 'string') return '';
+            const parts = s.trim().split(/\s+/).filter(Boolean);
+            const out = [];
+            for (const w of parts) {
+                const low = w.toLowerCase();
+                if (out.length && out[out.length - 1].toLowerCase() === low) continue;
+                out.push(w);
+            }
+            return out.join(' ');
+        };
+
+        /** Une un nuevo trozo final del STT sin duplicar: en Android muchos motores reenvían la frase COMPLETA en cada evento. */
+        const mergeSpeechFinalChunk = (prev, chunk) => {
+            if (!chunk || !String(chunk).trim()) return prev || '';
+            const n = String(chunk).trim();
+            if (!prev || !String(prev).trim()) return n;
+            const p = String(prev).trim();
+            if (n === p) return p;
+            if (n.startsWith(p)) return n;
+            if (p.startsWith(n)) return p;
+            if (p.includes(n) && n.length < p.length) return p;
+            if (n.includes(p) && p.length < n.length) return n;
+            return `${p} ${n}`.trim();
+        };
+
+        /** Limpieza extra: colapsa triples+ y pasa dedupe consecutivo. */
         const collapseStutterRepeats = (s) => {
             if (!s || typeof s !== 'string') return '';
-            return s.replace(/\b(\S+)(?:\s+\1){2,}\b/gi, '$1').trim();
+            let t = s.trim();
+            let prev = '';
+            while (prev !== t) {
+                prev = t;
+                t = t.replace(/\b(\S+)(?:\s+\1)+\b/gi, '$1').trim();
+            }
+            return dedupeConsecutiveWords(t);
         };
 
         /** Normaliza texto alemán para comparar lo que dicta el STT con el guion (umlauts, ß, puntuación). */
@@ -1983,13 +2019,12 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   for (let i = event.resultIndex; i < event.results.length; i++) {
                       const res = event.results[i];
                       const alt = pickAlt(res);
-                      const raw = alt.transcript || "";
-                      const t = raw.trim();
-                      if (!t) continue;
+                      const raw = (alt.transcript || "").trim();
+                      if (!raw) continue;
                       if (res.isFinal) {
-                          speechFinalRef.current = (speechFinalRef.current + (speechFinalRef.current ? " " : "") + t).trim();
+                          speechFinalRef.current = mergeSpeechFinalChunk(speechFinalRef.current, raw);
                       } else {
-                          interim = (interim ? interim + " " : "") + t;
+                          interim = raw;
                       }
                   }
                   const display = (speechFinalRef.current + (interim ? (speechFinalRef.current ? " " : "") + interim : "")).trim();
