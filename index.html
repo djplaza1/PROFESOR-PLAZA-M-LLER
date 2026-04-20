@@ -1017,6 +1017,15 @@
           /** Si practicas un guion guardado en Biblioteca, su id; si no, null (ejemplo, IA o no guardado). Sirve para vincular «Distribuir → B1/B2». */
           const [activeSavedScriptId, setActiveSavedScriptId] = useState(null);
           const [customVocabLessons, setCustomVocabLessons] = useState([]);
+          const [lexikonSearch, setLexikonSearch] = useState('');
+          const [lexikonWiki, setLexikonWiki] = useState('de');
+          const [lexikonResults, setLexikonResults] = useState(null);
+          const [lexikonDictLoading, setLexikonDictLoading] = useState(false);
+          const [lexikonTransText, setLexikonTransText] = useState('');
+          const [lexikonTransOut, setLexikonTransOut] = useState('');
+          const [lexikonTransLoading, setLexikonTransLoading] = useState(false);
+          const [lexikonSaveLessonId, setLexikonSaveLessonId] = useState('');
+          const [lexikonNewLessonTitle, setLexikonNewLessonTitle] = useState('');
           const [vocabTitleInput, setVocabTitleInput] = useState("");
           const [vocabTextInput, setVocabTextInput] = useState("");
           const [userStats, setUserStats] = useState({
@@ -1816,6 +1825,31 @@
                   localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(empty));
               } catch (e) {}
               setBxImportSummary('');
+              setBxIndex(0);
+          };
+
+          const clearBxUserLevelAllCategories = (levelKey) => {
+              const lab = levelKey === 'b1' ? 'B1' : 'B2';
+              if (!window.confirm(`¿Seguro? Se borrarán TODAS tus aportaciones en ${lab} (vocabulario, verbos, preposiciones, conectores y Redemittel). No se toca el archivo b1-b2-database.json.`)) return;
+              setBxUserOverlay((prev) => {
+                  const base = normalizeBxPayload(prev);
+                  Object.keys(BX_DB_EMPTY).forEach((cat) => { base[levelKey][cat] = []; });
+                  try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(base)); } catch (e) {}
+                  return base;
+              });
+              setBxIndex(0);
+          };
+
+          const clearBxUserOneCategory = (levelKey, catKey) => {
+              const lab = levelKey === 'b1' ? 'B1' : 'B2';
+              const name = { vocabulario: 'Vocabulario', verbos: 'Verbos', preposiciones: 'Preposiciones', conectores: 'Conectores', redemittel: 'Redemittel' }[catKey] || catKey;
+              if (!window.confirm(`¿Seguro? Se borran solo tus aportaciones en «${name}» (${lab}). El resto de categorías y el JSON base no se tocan.`)) return;
+              setBxUserOverlay((prev) => {
+                  const base = normalizeBxPayload(prev);
+                  base[levelKey][catKey] = [];
+                  try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(base)); } catch (e) {}
+                  return base;
+              });
               setBxIndex(0);
           };
 
