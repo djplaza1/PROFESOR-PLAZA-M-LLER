@@ -7107,7 +7107,8 @@ function getCardTip(type, item) {
     return base + " (TELC: prioriza colocaciones frecuentes en B1/B2.)";
 }
 
-function buildAdaptiveQueue(items, progress, getId, maxItems = 120) {
+/** Si no pasas maxItems, se usan todas las tarjetas (sin tope 120). El examen mixto pasa un límite explícito (p. ej. 55). */
+function buildAdaptiveQueue(items, progress, getId, maxItems) {
     const weighted = items.map((item) => {
         const id = getId(item);
         const stats = progress[id] || {};
@@ -7125,7 +7126,8 @@ function buildAdaptiveQueue(items, progress, getId, maxItems = 120) {
         return { item, score: Math.max(0.5, score + Math.random()) };
     });
     weighted.sort((a, b) => b.score - a.score);
-    return weighted.slice(0, Math.min(maxItems, weighted.length)).map(entry => entry.item);
+    const cap = maxItems != null ? Math.min(maxItems, weighted.length) : weighted.length;
+    return weighted.slice(0, cap).map(entry => entry.item);
 }
 
 function getProgressCounts(progress, prefix) {
