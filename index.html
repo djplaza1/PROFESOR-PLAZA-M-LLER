@@ -102,6 +102,13 @@
         .float-icon-glow {
             box-shadow: 0 4px 14px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
         }
+        .muller-reduce-motion *,
+        .muller-reduce-motion *::before,
+        .muller-reduce-motion *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
         @media (max-width: 640px) {
             .tempus-panel { font-size: 0.75rem; padding: 0.5rem; }
             .verb-tag { font-size: 0.7rem; }
@@ -1680,6 +1687,14 @@
               window.addEventListener('muller-open-profile-settings', openSettings);
               return () => window.removeEventListener('muller-open-profile-settings', openSettings);
           }, []);
+          useEffect(() => { try { localStorage.setItem('muller_show_floating_tools', showFloatingTools ? '1' : '0'); } catch (e) {} }, [showFloatingTools]);
+          useEffect(() => {
+              try { localStorage.setItem('muller_reduce_motion', reduceMotionUi ? '1' : '0'); } catch (e) {}
+              try {
+                  if (reduceMotionUi) document.documentElement.classList.add('muller-reduce-motion');
+                  else document.documentElement.classList.remove('muller-reduce-motion');
+              } catch (e) {}
+          }, [reduceMotionUi]);
           const [uiTheme, setUiTheme] = useState(() => { try { return localStorage.getItem(MULLER_THEME_KEY) || 'dark'; } catch (e) { return 'dark'; } });
           const [showOnboarding, setShowOnboarding] = useState(() => { try { return !localStorage.getItem(MULLER_ONBOARDING_KEY); } catch (e) { return true; } });
           const [onboardingStep, setOnboardingStep] = useState(1);
@@ -1692,6 +1707,8 @@
           const [communitySubTab, setCommunitySubTab] = useState('economia');
           const [showProfileSettingsModal, setShowProfileSettingsModal] = useState(false);
           const [profileSettingsTab, setProfileSettingsTab] = useState('perfil');
+          const [showFloatingTools, setShowFloatingTools] = useState(() => { try { return localStorage.getItem('muller_show_floating_tools') !== '0'; } catch (e) { return true; } });
+          const [reduceMotionUi, setReduceMotionUi] = useState(() => { try { return localStorage.getItem('muller_reduce_motion') === '1'; } catch (e) { return false; } });
           const [authTick, setAuthTick] = useState(0);
           const [authEmail, setAuthEmail] = useState('');
           const [authPassword, setAuthPassword] = useState('');
@@ -4342,7 +4359,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           void oralClock;
 
           return (
-            <div className={`flex flex-col muller-main-fill md:h-screen md:max-h-[850px] w-full font-sans md:rounded-xl overflow-hidden shadow-2xl relative transition-colors duration-500 muller-theme-bg ${themeShellClass} ${uiTheme === 'light' ? 'text-slate-900' : 'text-white'} ${getBgColor()}`}>
+            <div className={`flex flex-col muller-main-fill md:h-screen md:max-h-[850px] w-full font-sans md:rounded-xl overflow-hidden shadow-2xl relative transition-colors duration-500 muller-theme-bg ${reduceMotionUi ? 'muller-reduce-motion' : ''} ${themeShellClass} ${uiTheme === 'light' ? 'text-slate-900' : 'text-white'} ${getBgColor()}`}>
 
               {showSplash && (
                   <div className="fixed inset-0 z-[300] flex flex-col md:flex-row overflow-hidden" role="presentation">
@@ -4361,21 +4378,14 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   <div className="flex flex-col gap-2 w-full min-w-0 md:flex-1 md:max-w-[min(100%,76rem)]">
                       <div className="flex flex-wrap gap-1.5 md:gap-2 bg-zinc-950/85 p-1.5 rounded-2xl ring-1 ring-white/[0.1] w-full items-center touch-manipulation justify-center md:justify-start">
                       <button onClick={()=>{setActiveTab('inicio'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'inicio' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(79,70,229,0.5)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="layout-dashboard" className="w-4 h-4 md:w-5 md:h-5" /> Inicio</button>
-                      <ExerciseHelpBtn helpId="nav_inicio" compact />
                       <button onClick={()=>{setActiveTab('ruta'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'ruta' ? 'bg-fuchsia-600 text-white shadow-[0_0_18px_rgba(192,38,211,0.45)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="map" className="w-4 h-4 md:w-5 md:h-5" /> Ruta</button>
-                      <ExerciseHelpBtn helpId="nav_ruta" compact />
                       <button onClick={()=>{setActiveTab('historia'); setMode('dialogue'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'historia' ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="play" className="w-4 h-4 md:w-5 md:h-5" /> Historia</button>
-                      <ExerciseHelpBtn helpId="nav_historia" compact />
                       <button onClick={()=>{setActiveTab('shadowing'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'shadowing' ? 'bg-teal-600 text-white shadow-[0_0_18px_rgba(13,148,136,0.5)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="audio-lines" className="w-4 h-4 md:w-5 md:h-5" /> Shadowing</button>
-                      <ExerciseHelpBtn helpId="nav_shadowing" compact />
                       <button onClick={()=>{setActiveTab('escritura'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'escritura' ? 'bg-rose-700 text-white shadow-[0_0_18px_rgba(190,18,60,0.45)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="pen-line" className="w-4 h-4 md:w-5 md:h-5" /> Escritura</button>
-                      <ExerciseHelpBtn helpId="nav_escritura" compact />
                       <button onClick={()=>{setActiveTab('vocabulario'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'vocabulario' ? 'bg-amber-600 text-white shadow-[0_0_20px_rgba(217,119,6,0.4)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="book-open" className="w-4 h-4 md:w-5 md:h-5" /> Vocab{vocabSrsDueCount > 0 ? <span className="ml-0.5 min-w-[1.1rem] px-1 rounded-full bg-white/20 text-[10px] font-black leading-none py-0.5" title="Tarjetas prioritarias SRS en la lista actual">{vocabSrsDueCount > 99 ? '99+' : vocabSrsDueCount}</span> : null}</button>
-                      <ExerciseHelpBtn helpId="nav_vocab" compact />
                       <button onClick={()=>{setActiveTab('entrenamiento'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'entrenamiento' ? 'bg-fuchsia-600 text-white shadow-[0_0_18px_rgba(192,38,211,0.6)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="graduation-cap" className="w-4 h-4 md:w-5 md:h-5" /> Entrena</button>
                       <ExerciseHelpBtn helpId="advanced_menu" compact />
                       <button onClick={()=>{setActiveTab('bxbank'); setBxBankLevel('b1'); stopAudio(); setPracticeActive(null); setBxCategory('mix');}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'bxbank' ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.8)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="target" className="w-4 h-4 md:w-5 md:h-5" /> Banco B1/B2</button>
-                      <ExerciseHelpBtn helpId="nav_b1" compact />
                       </div>
                       <div className="flex flex-wrap gap-1.5 md:gap-2 bg-zinc-950/85 p-1.5 rounded-2xl ring-1 ring-white/[0.1] w-full items-center touch-manipulation justify-center md:justify-start">
                       {activeTab === 'bxbank' ? (
@@ -4385,21 +4395,18 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                           </div>
                       ) : null}
                       <button onClick={()=>{setActiveTab('progreso'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'progreso' ? 'bg-yellow-600 text-white shadow-[0_0_18px_rgba(202,138,4,0.35)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="bar-chart" className="w-4 h-4 md:w-5 md:h-5" /> Progreso</button>
-                      <ExerciseHelpBtn helpId="nav_progreso" compact />
                       <button onClick={()=>{setActiveTab('guiones'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'guiones' ? 'bg-purple-600 text-white shadow-[0_0_18px_rgba(147,51,234,0.45)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="file-text" className="w-4 h-4 md:w-5 md:h-5" /> Biblioteca</button>
-                      <ExerciseHelpBtn helpId="nav_biblioteca" compact />
                       <button type="button" onClick={()=>{setActiveTab('lexikon'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'lexikon' ? 'bg-cyan-700 text-white shadow-[0_0_16px_rgba(14,116,144,0.5)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="library" className="w-4 h-4 md:w-5 md:h-5" /> Lexikon</button>
-                      <ExerciseHelpBtn helpId="nav_lexikon" compact />
                       <button onClick={()=>{setActiveTab('telc'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'telc' ? 'bg-orange-700 text-white shadow-[0_0_16px_rgba(194,65,12,0.5)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="clipboard-check" className="w-4 h-4 md:w-5 md:h-5" /> TELC</button>
-                      <ExerciseHelpBtn helpId="nav_telc" compact />
                       <button onClick={()=>{setActiveTab('storybuilder'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'storybuilder' ? 'bg-fuchsia-600 text-white shadow-[0_0_18px_rgba(192,38,211,0.45)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="sparkles" className="w-4 h-4 md:w-5 md:h-5" /> IA</button>
-                      <ExerciseHelpBtn helpId="nav_ia" compact />
                       <button onClick={()=>{setActiveTab('comunidad'); stopAudio(); setPracticeActive(null);}} className={`flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${activeTab === 'comunidad' ? 'bg-violet-600 text-white shadow-[0_0_18px_rgba(124,58,237,0.5)] ring-1 ring-white/25 border-white/20' : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`}><Icon nav name="trophy" className="w-4 h-4 md:w-5 md:h-5" /> Comunidad</button>
-                      <ExerciseHelpBtn helpId="nav_comunidad" compact />
                       </div>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
+                      <button type="button" onClick={() => window.__MULLER_OPEN_EXERCISE_HELP && window.__MULLER_OPEN_EXERCISE_HELP('nav_inicio')} className="text-[10px] font-black text-amber-200/90 hover:text-white underline underline-offset-2 px-2 py-1 rounded-lg border border-white/10 hover:bg-white/10" title="Ayuda contextual rápida">
+                          Ayuda
+                      </button>
                       <span className="inline-flex flex-col items-center gap-0.5">
                           <button type="button" aria-label="Centro Müller: voces, plan del día y ayuda" onClick={() => { setShowMullerHub(true); setMullerHubTab('voices'); }} className="bg-gradient-to-br from-sky-600 to-indigo-900 hover:from-sky-500 hover:to-indigo-800 text-white p-2 rounded-full shadow-lg ring-2 ring-white/15 transition" title="Voces del sistema, plan del día, retos y tour">
                               <Icon name="layout-dashboard" className="w-5 h-5" />
@@ -4681,8 +4688,11 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                       <div className="rounded-xl border border-white/10 bg-black/25 p-4">
                                           <p className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-2">Preferencias de uso</p>
                                           <div className="flex flex-wrap gap-2">
+                                              <button type="button" onClick={() => setShowFloatingTools((v) => !v)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${showFloatingTools ? 'bg-cyan-700 border-cyan-400 text-white' : 'bg-slate-800 border-white/10 text-gray-300'}`}>Herramientas flotantes: {showFloatingTools ? 'ON' : 'OFF'}</button>
+                                              <button type="button" onClick={() => setReduceMotionUi((v) => !v)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${reduceMotionUi ? 'bg-emerald-700 border-emerald-400 text-white' : 'bg-slate-800 border-white/10 text-gray-300'}`}>Reducir animaciones: {reduceMotionUi ? 'ON' : 'OFF'}</button>
                                               <button type="button" onClick={() => setPodcastMode((v) => !v)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${podcastMode ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-white/10 text-gray-300'}`}>Podcast: {podcastMode ? 'ON' : 'OFF'}</button>
                                               <button type="button" onClick={() => setHistoriaAudioOnly((v) => !v)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${historiaAudioOnly ? 'bg-violet-600 border-violet-400 text-white' : 'bg-slate-800 border-white/10 text-gray-300'}`}>Solo audio: {historiaAudioOnly ? 'ON' : 'OFF'}</button>
+                                              <button type="button" onClick={() => { try { localStorage.setItem(MULLER_ONBOARDING_KEY, '1'); } catch (e) {} setShowOnboarding(false); setOnboardingNever(true); }} className="px-3 py-1.5 rounded-lg text-xs font-bold border border-white/15 bg-slate-800 text-gray-300">Desactivar onboarding</button>
                                               <button type="button" onClick={() => { setShowMullerHub(true); setMullerHubTab('voices'); setShowProfileSettingsModal(false); }} className="px-3 py-1.5 rounded-lg text-xs font-bold border border-sky-500/30 bg-sky-900/30 text-sky-200">Más ajustes de voces…</button>
                                           </div>
                                       </div>
@@ -7158,18 +7168,21 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 
             return (
                 <>
-                    <button onClick={requestMicPermission} className="fixed bottom-20 right-4 z-50 bg-gradient-to-br from-emerald-500 to-green-700 hover:from-emerald-400 hover:to-green-600 text-white p-3 rounded-full float-icon-glow ring-2 ring-white/10" title="Solicitar permiso de micrófono">
+                    {showFloatingTools && <button onClick={requestMicPermission} className="fixed bottom-20 right-4 z-50 bg-gradient-to-br from-emerald-500 to-green-700 hover:from-emerald-400 hover:to-green-600 text-white p-3 rounded-full float-icon-glow ring-2 ring-white/10" title="Solicitar permiso de micrófono">
                         <Icon name="mic" className="w-6 h-6" />
-                    </button>
+                    </button>}
                     <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('muller-open-profile-settings', { detail: { tab: 'ajustes' } }))} className="fixed bottom-20 left-4 z-50 bg-gradient-to-br from-fuchsia-600 to-indigo-800 hover:from-fuchsia-500 hover:to-indigo-700 text-white p-3 rounded-full float-icon-glow ring-2 ring-white/15" title="Ajustes premium (globales)">
                         <Icon name="settings" className="w-6 h-6" />
                     </button>
-                    <div className="fixed bottom-36 right-4 z-50 flex flex-col gap-2">
+                    {showFloatingTools && <div className="fixed bottom-36 right-4 z-50 flex flex-col gap-2">
                         {backupAgeDays !== null && (
                             <div className="bg-black/70 text-[10px] text-gray-200 px-2 py-1 rounded-lg border border-gray-700 text-center">
                                 Backup: hace {Math.max(0, backupAgeDays)} d
                             </div>
                         )}
+                        <div className="bg-black/70 text-[10px] text-gray-200 px-2 py-1 rounded-lg border border-gray-700 text-center">
+                            {mullerSupabaseConfigured() ? 'Sync: Supabase' : 'Sync: Local'} · SFX {typeof window.__mullerSfxEnabled === 'function' && window.__mullerSfxEnabled() ? 'ON' : 'OFF'}
+                        </div>
                         <button onClick={showSyncHelp} className="bg-gradient-to-br from-teal-500 to-teal-900 hover:from-teal-400 hover:to-teal-800 text-white p-3 rounded-full float-icon-glow ring-2 ring-white/10" title="Guía sincronización total">
                             <Icon name="info" className="w-6 h-6" />
                         </button>
@@ -7186,7 +7199,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                         <button type="button" onClick={exportDecksOnly} className="bg-gradient-to-br from-amber-600 to-slate-900 hover:from-amber-500 hover:to-slate-800 text-white py-2 px-2 rounded-xl float-icon-glow ring-2 ring-white/10 text-[10px] font-bold leading-tight" title="Exportar solo mazos (vocab difícil/normal y gramática)">
                             Mazos
                         </button>
-                    </div>
+                    </div>}
                 </>
             );
         }
