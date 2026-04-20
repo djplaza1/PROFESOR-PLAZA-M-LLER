@@ -185,7 +185,7 @@ declare
   v_granted int := 0;
   v_balance bigint := 0;
   v_reason text := 'ok';
-  v_claim_count int := 0;
+  v_cnt int := 0;
   v_last_claim timestamptz := null;
 begin
   v_uid := auth.uid();
@@ -209,20 +209,20 @@ begin
   end if;
 
   select claim_count, last_claim_at
-    into v_claim_count, v_last_claim
+    into v_cnt, v_last_claim
     from public.muller_reward_claims
     where user_id = v_uid and reward_type = p_reward_type and day_key = v_day;
 
-  v_claim_count := coalesce(v_claim_count, 0);
+  v_cnt := coalesce(v_cnt, 0);
 
   if p_reward_type = 'daily_bonus' then
-    if v_claim_count >= 1 then
+    if v_cnt >= 1 then
       v_reason := 'already_claimed_today';
     else
       v_granted := 40;
     end if;
   elsif p_reward_type = 'ad_reward' then
-    if v_claim_count >= 6 then
+    if v_cnt >= 6 then
       v_reason := 'daily_limit_reached';
     elsif v_last_claim is not null and v_last_claim > (v_now - interval '15 minutes') then
       v_reason := 'cooldown_15m';
