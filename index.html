@@ -693,6 +693,22 @@
             return window.__mullerSbClient;
         }
 
+        function mullerCloudSyncErrorLabel(error) {
+            if (!error) return 'Error de nube';
+            const code = String(error.code || '').trim();
+            const msg = String(error.message || error.details || error.hint || '').toLowerCase();
+            if (code === '42P01' || (msg.includes('relation') && msg.includes('does not exist')) || msg.includes('muller_user_state')) {
+                return 'Falta tabla nube';
+            }
+            if (code === '42501' || msg.includes('permission denied') || msg.includes('row-level security') || msg.includes('rls')) {
+                return 'Permisos nube';
+            }
+            if (msg.includes('jwt') || msg.includes('token') || msg.includes('expired')) {
+                return 'Sesion nube expirada';
+            }
+            return 'Error al leer nube';
+        }
+
         function tryBxUserOverlay() {
             try {
                 const raw = localStorage.getItem(MULLER_BX_USER_OVERLAY_KEY);
@@ -2433,7 +2449,11 @@
                       if (cancelled) return;
                       if (error) {
                           setCloudSyncState('error');
-                          setCloudSyncLabel('Error al leer nube');
+                          setCloudSyncLabel(mullerCloudSyncErrorLabel(error));
+                          if (window.__mullerToast) {
+                              const detail = String(error.message || error.code || 'fallo desconocido').slice(0, 140);
+                              window.__mullerToast(`Sync nube: ${detail}`, 'error');
+                          }
                           return;
                       }
                       if (data && data.payload) {
