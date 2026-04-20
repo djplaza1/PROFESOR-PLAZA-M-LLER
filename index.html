@@ -247,7 +247,7 @@
             --muller-mobile-header-h: 12rem;
             --muller-mobile-bottom-nav-h: 5rem;
         }
-        @media (min-width: 768px) {
+        @media (min-width: 1025px) {
             :root {
                 --muller-mobile-header-h: 0rem;
                 --muller-mobile-bottom-nav-h: 0rem;
@@ -4829,7 +4829,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           }, [activeTab]);
 
           return (
-            <div className={`flex flex-col muller-main-fill md:h-[100svh] md:max-h-[100svh] w-full font-sans md:rounded-xl overflow-x-hidden md:overflow-hidden shadow-2xl relative transition-colors duration-500 muller-theme-bg ${reduceMotionUi ? 'muller-reduce-motion' : ''} ${themeShellClass} ${uiTheme === 'light' ? 'text-slate-900' : 'text-white'} ${getBgColor()}`}>
+            <div className={`flex flex-col muller-main-fill h-[100svh] max-h-[100svh] w-full font-sans md:rounded-xl overflow-x-hidden md:overflow-hidden shadow-2xl relative transition-colors duration-500 muller-theme-bg ${reduceMotionUi ? 'muller-reduce-motion' : ''} ${themeShellClass} ${uiTheme === 'light' ? 'text-slate-900' : 'text-white'} ${getBgColor()}`}>
 
               {showSplash && (
                   <div className="fixed inset-0 z-[300] flex flex-col md:flex-row overflow-hidden" role="presentation">
@@ -5563,7 +5563,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               </nav>
 
               {/* CONTENIDO PRINCIPAL */}
-              <div className={`muller-app-main flex-1 overflow-y-auto relative flex flex-col hide-scrollbar pt-[var(--muller-mobile-header-h)] md:pt-0 pb-[calc(var(--muller-mobile-bottom-nav-h)+max(0.5rem,env(safe-area-inset-bottom,0px)))] md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] ${uiTheme === 'light' ? 'text-slate-900' : ''}`}>
+              <div className={`muller-app-main flex-1 overflow-y-auto relative flex flex-col hide-scrollbar pt-[var(--muller-mobile-header-h)] md:pt-0 pb-[calc(var(--muller-mobile-bottom-nav-h)+max(0.5rem,env(safe-area-inset-bottom,0px)))] ${uiTheme === 'light' ? 'text-slate-900' : ''}`}>
                   
                   {activeTab === 'telc' && !practiceActive && (() => {
                       const telcPack = (window.MULLER_TELC_BY_LEVEL && window.MULLER_TELC_BY_LEVEL[telcLevel]) || (window.MULLER_TELC_BY_LEVEL && window.MULLER_TELC_BY_LEVEL.B1);
