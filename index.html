@@ -37,15 +37,9 @@
             -webkit-text-size-adjust: 100%;
             text-size-adjust: 100%;
         }
-        /* Teléfono/tablet: escala base mayor (todo lo en rem crece: textos, botones, espaciados) */
+        /* Escala base: la fija también el script mullerApplyRootFont (px en <html>) para que funcione igual en pestaña web y PWA */
         @media (max-width: 1024px) {
-            html { font-size: 115%; }
-        }
-        @media (max-width: 768px) {
-            html { font-size: 120%; }
-        }
-        @media (max-width: 480px) {
-            html { font-size: 128%; }
+            html { font-size: 112%; }
         }
         body { margin: 0; background-color: #000; overflow: hidden; font-family: 'Outfit', system-ui, -apple-system, sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -590,6 +584,29 @@
             return `${p} ${n}`.trim();
         };
 
+        /** Si el STT repite la frase entera 2+ veces (p. ej. "a b c a b c"), deja una sola copia. */
+        const collapseFullPhraseRepeat = (s) => {
+            if (!s || typeof s !== 'string') return '';
+            const w = s.trim().split(/\s+/).filter(Boolean);
+            if (w.length < 2) return s.trim();
+            for (let period = 1; period <= Math.floor(w.length / 2); period++) {
+                if (w.length % period !== 0) continue;
+                const unit = w.slice(0, period);
+                let ok = true;
+                for (let rep = 1; rep < w.length / period; rep++) {
+                    for (let i = 0; i < period; i++) {
+                        if (w[rep * period + i].toLowerCase() !== unit[i].toLowerCase()) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if (!ok) break;
+                }
+                if (ok) return unit.join(' ');
+            }
+            return s.trim();
+        };
+
         /** Limpieza extra: colapsa triples+ y pasa dedupe consecutivo. */
         const collapseStutterRepeats = (s) => {
             if (!s || typeof s !== 'string') return '';
@@ -599,6 +616,8 @@
                 prev = t;
                 t = t.replace(/\b(\S+)(?:\s+\1)+\b/gi, '$1').trim();
             }
+            t = dedupeConsecutiveWords(t);
+            t = collapseFullPhraseRepeat(t);
             return dedupeConsecutiveWords(t);
         };
 
@@ -2015,16 +2034,34 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   setPronunciationFeedback([]);
               };
               recognition.onresult = (event) => {
+                  const finals = [];
                   let interim = "";
                   for (let i = event.resultIndex; i < event.results.length; i++) {
                       const res = event.results[i];
                       const alt = pickAlt(res);
                       const raw = (alt.transcript || "").trim();
                       if (!raw) continue;
-                      if (res.isFinal) {
-                          speechFinalRef.current = mergeSpeechFinalChunk(speechFinalRef.current, raw);
+                      if (res.isFinal) finals.push(raw);
+                      else interim = raw;
+                  }
+                  if (finals.length) {
+                      if (mobileStt) {
+                          if (finals.length === 1) {
+                              const f = finals[0];
+                              const cur = speechFinalRef.current || "";
+                              if (!cur) speechFinalRef.current = f;
+                              else if (f.startsWith(cur.trim())) speechFinalRef.current = f;
+                              else if (cur.startsWith(f) && f.length < cur.length) { /* mantener frase más larga */ }
+                              else if (f.length >= cur.length && (f.indexOf(cur) >= 0 || cur.indexOf(f) >= 0)) speechFinalRef.current = f.length >= cur.length ? f : cur;
+                              else speechFinalRef.current = mergeSpeechFinalChunk(cur, f);
+                          } else {
+                              const chunk = finals.join(" ").trim();
+                              speechFinalRef.current = mergeSpeechFinalChunk(speechFinalRef.current, chunk);
+                          }
                       } else {
-                          interim = raw;
+                          for (const f of finals) {
+                              speechFinalRef.current = mergeSpeechFinalChunk(speechFinalRef.current, f);
+                          }
                       }
                   }
                   const display = (speechFinalRef.current + (interim ? (speechFinalRef.current ? " " : "") + interim : "")).trim();
@@ -2246,36 +2283,54 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           const exportScriptPDF = () => {
             const printWindow = window.open('', '_blank');
             if (!printWindow) { alert("Permite las ventanas emergentes para generar el PDF."); return; }
+            const escPdf = (s) => String(s ?? '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const genDate = new Date().toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+            const totalScenes = guionData.length;
             let htmlContent = `
                 <html>
                 <head>
-                    <title>Guion: ${activeScriptTitle}</title>
+                    <title>Guion: ${escPdf(activeScriptTitle)}</title>
                     <style>
-                        body { font-family: 'Segoe UI', sans-serif; color: #1e293b; padding: 30px; line-height: 1.6; max-width: 900px; margin: 0 auto; }
-                        h1 { color: #dc2626; text-align: center; border-bottom: 3px solid #dc2626; padding-bottom: 10px; }
-                        h2 { color: #1e3a8a; border-bottom: 2px solid #93c5fd; padding-bottom: 5px; margin-top: 40px;}
-                        .scene { margin-bottom: 25px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 15px; }
-                        .speaker { font-weight: 900; color: #475569; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
-                        .text-de { font-size: 20px; font-weight: bold; margin: 8px 0; color: #0f172a; }
-                        .text-es { font-size: 16px; font-style: italic; color: #64748b; margin-bottom: 8px; }
-                        .vocab-box { font-size: 13px; color: #b45309; background: #fef3c7; padding: 6px 10px; border-radius: 4px; display: inline-block; font-weight: bold; border: 1px solid #fbbf24;}
+                        body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1e293b; padding: 28px; line-height: 1.55; max-width: 920px; margin: 0 auto; }
+                        h1 { color: #b91c1c; text-align: center; border-bottom: 3px solid #dc2626; padding-bottom: 12px; font-size: 26px; }
+                        .meta { text-align: center; color: #64748b; margin-bottom: 8px; font-size: 13px; }
+                        .meta strong { color: #475569; }
+                        h2 { color: #1e3a8a; border-bottom: 2px solid #93c5fd; padding-bottom: 5px; margin-top: 36px; font-size: 18px; }
+                        .scene { margin-bottom: 28px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06); page-break-inside: avoid; }
+                        .scene-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+                        .scene-num { font-size: 12px; font-weight: 800; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; }
+                        .speaker { font-weight: 900; color: #334155; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; }
+                        .badge-redem { font-size: 11px; background: linear-gradient(90deg,#f97316,#eab308); color: white; padding: 3px 10px; border-radius: 999px; font-weight: 800; }
+                        .block-de { margin-bottom: 14px; }
+                        .label-row { font-size: 11px; font-weight: 800; color: #1e40af; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+                        .label-es { color: #047857; }
+                        .text-de { font-size: 19px; font-weight: 700; margin: 0; color: #0f172a; line-height: 1.45; }
+                        .block-es { background: linear-gradient(90deg, #ecfdf5 0%, #f8fafc 100%); border-left: 4px solid #059669; padding: 12px 14px; border-radius: 0 8px 8px 0; margin-top: 4px; }
+                        .text-es { font-size: 16px; color: #166534; margin: 0; line-height: 1.5; font-style: normal; font-weight: 500; }
+                        .text-es-empty { color: #94a3b8; font-style: italic; font-weight: 400; }
+                        .vocab-box { font-size: 12px; color: #92400e; background: #fffbeb; padding: 8px 12px; border-radius: 6px; margin-top: 12px; font-weight: 600; border: 1px solid #fcd34d; line-height: 1.4; }
                         .hl-vocab { background-color: #fef08a; border-bottom: 2px solid #eab308; padding: 0 4px; border-radius: 2px; }
                         .hl-conn { color: #7e22ce; text-decoration: underline; text-decoration-color: #a855f7; text-decoration-thickness: 2px; }
                         .hl-dat { color: #1d4ed8; text-decoration: underline; text-decoration-color: #3b82f6; text-decoration-thickness: 2px; }
                         .hl-akk { color: #b91c1c; text-decoration: underline; text-decoration-color: #ef4444; text-decoration-thickness: 2px; }
                         .hl-wech { color: #d97706; text-decoration: underline; text-decoration-color: #f59e0b; text-decoration-thickness: 2px; }
                         .hl-verbprep { background-color: #cffafe; border-bottom: 2px solid #06b6d4; padding: 0 4px; border-radius: 2px; color: #0891b2; }
-                        .tempus-tag { font-size: 11px; color: #4338ca; font-family: monospace; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; border: 1px solid #a5b4fc; margin-left: 5px; font-weight: normal; }
-                        .grammar-summary { background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 20px; }
-                        .footer { text-align: center; margin-top: 50px; font-size: 12px; color: #64748b; }
+                        .tempus-tag { font-size: 10px; color: #4338ca; font-family: ui-monospace, monospace; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; border: 1px solid #a5b4fc; margin-left: 4px; font-weight: 500; }
+                        .grammar-summary { background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 28px; page-break-inside: avoid; }
+                        .legend { background: #f1f5f9; padding: 16px 18px; border-radius: 10px; margin-top: 32px; font-size: 12px; color: #475569; border: 1px solid #e2e8f0; page-break-inside: avoid; }
+                        .legend h3 { margin: 0 0 10px 0; font-size: 14px; color: #0f172a; }
+                        .legend ul { margin: 0; padding-left: 18px; }
+                        .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #64748b; }
+                        @media print { body { padding: 16px; } .scene { box-shadow: none; } }
                     </style>
                 </head>
                 <body>
-                    <h1>📜 ${activeScriptTitle}</h1>
-                    <p style="text-align:center; color:#64748b; margin-bottom: 40px;">Entrenador Definitivo - Profesor Müller</p>
+                    <h1>📜 ${escPdf(activeScriptTitle)}</h1>
+                    <p class="meta"><strong>Müller</strong> · Entrenador alemán TELC · ${escPdf(genDate)} · ${totalScenes} escena${totalScenes === 1 ? '' : 's'}</p>
             `;
             let uniqueGrammarRules = new Set();
-            guionData.forEach(scene => {
+            guionData.forEach((scene, sceneIdx) => {
                 let deText = scene.text;
                 const feedback = generateTutorFeedback(deText);
                 if (feedback && !feedback.includes("Estructura estándar perfecta")) {
@@ -2304,12 +2359,26 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                 deText = deText.replace(akkRegex, `<span class="hl-akk">$1</span>`);
                 const wechRegex = new RegExp(`(?![^<]*>)\\b(${PREP_WECHSEL.join('|')})\\b`, 'gi');
                 deText = deText.replace(wechRegex, `<span class="hl-wech">$1</span>`);
+                const tr = scene.translation && String(scene.translation).trim();
+                const trBlock = tr
+                    ? `<div class="block-es"><div class="label-row label-es">Español · traducción</div><p class="text-es">${escPdf(tr)}</p></div>`
+                    : `<div class="block-es"><div class="label-row label-es">Español · traducción</div><p class="text-es text-es-empty">(Sin traducción en esta línea del guion — puedes añadirla en Biblioteca al editar.)</p></div>`;
+                const vocabHtml = scene.vocab && scene.vocab.length > 0
+                    ? `<div class="vocab-box">📖 Vocabulario: ${scene.vocab.map((v) => `${escPdf(v.de)} → ${escPdf(v.es)}`).join(' · ')}</div>`
+                    : '';
                 htmlContent += `
                     <div class="scene">
-                        <div class="speaker">${scene.speaker}</div>
-                        <div class="text-de">${deText}</div>
-                        <div class="text-es">Traducción: "${scene.translation || ''}"</div>
-                        ${scene.vocab && scene.vocab.length > 0 ? `<div class="vocab-box">📖 Vocabulario: ${scene.vocab.map(v => `${v.de} = ${v.es}`).join(' | ')}</div>` : ''}
+                        <div class="scene-head">
+                            <span class="scene-num">Szene ${sceneIdx + 1} / ${totalScenes}</span>
+                            <span class="speaker">${escPdf(scene.speaker)}</span>
+                            ${scene.isRedemittel ? '<span class="badge-redem">Redemittel</span>' : ''}
+                        </div>
+                        <div class="block-de">
+                            <div class="label-row">Deutsch</div>
+                            <div class="text-de">${deText}</div>
+                        </div>
+                        ${trBlock}
+                        ${vocabHtml}
                     </div>
                 `;
             });
@@ -2318,7 +2387,18 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                 uniqueGrammarRules.forEach(rule => { let cleanRule = rule.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); htmlContent += `<li>${cleanRule}</li>`; });
                 htmlContent += `</ul></div>`;
             }
-            htmlContent += `<div class="footer">¡Viel Erfolg beim Deutschlernen!</div><script>window.onload = function() { window.print(); }<\/script></body></html>`;
+            htmlContent += `
+                <div class="legend">
+                    <h3>Leyenda de marcas en el alemán</h3>
+                    <ul>
+                        <li><strong>Resaltado amarillo:</strong> ítems del vocabulario de la escena.</li>
+                        <li><strong>Cyan (fondo):</strong> verbos con preposición detectados.</li>
+                        <li><strong>Subrayados de color:</strong> conectores; preposiciones con Dativ / Akkusativ / Wechsel.</li>
+                        <li><strong>Etiquetas moradas (Tempus):</strong> referencia de formas verbales (Prät/Perf).</li>
+                    </ul>
+                </div>
+                <div class="footer">Müller · TELC · ¡Viel Erfolg beim Deutschlernen!</div>
+                <script>window.onload = function() { window.print(); }<\/script></body></html>`;
             printWindow.document.write(htmlContent);
             printWindow.document.close();
           };
@@ -4231,7 +4311,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                         </button>
                         <button onClick={handleNext} className={`muller-icon-nav p-2 md:p-3 bg-gray-900 rounded-full transition text-white border border-gray-700 shadow-md ${podcastMode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`} disabled={podcastMode}><Icon name="chevron-right" className="w-4 h-4 md:w-6 md:h-6 text-white" /></button>
                       </div>
-                      <button onClick={exportScriptPDF} className="hidden sm:flex bg-red-700 hover:bg-red-600 border border-red-500 px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-white font-bold items-center gap-2 shadow-lg transition text-xs md:text-sm"><Icon name="file-down" className="w-3 h-3 md:w-4 md:h-4" /> PDF Guion</button>
+                      <button type="button" onClick={exportScriptPDF} className="flex bg-red-700 hover:bg-red-600 border border-red-500 px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-white font-bold items-center gap-2 shadow-lg transition text-xs md:text-sm shrink-0" title="PDF con alemán, traducción al español, vocabulario y análisis"><Icon name="file-down" className="w-3 h-3 md:w-4 md:h-4" /> PDF Guion</button>
                       <div className="flex items-center justify-center gap-2 md:gap-3 bg-black/50 px-2 md:px-4 py-1 md:py-2 rounded-xl border border-gray-800 w-full sm:w-auto">
                           <Icon name="sliders" className="w-3 h-3 md:w-4 md:h-4 text-gray-400" />
                           <input type="range" min="0.50" max="1.50" step="0.01" value={playbackRate} onChange={(e) => setPlaybackRate(parseFloat(e.target.value))} className="w-20 md:w-32 accent-blue-500 cursor-pointer"/>
