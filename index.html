@@ -31,6 +31,8 @@
     
     <!-- Lucide Icons (versión fija: API estable para data-lucide + createIcons) -->
     <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+    <!-- Supabase JS (plan gratuito): expone self.supabase.createClient -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.js"></script>
 
     <style>
         html {
@@ -213,6 +215,10 @@
 
     <script type="text/babel">
         const { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } = React;
+
+        /** Supabase (gratis): Dashboard → Project Settings → API → Project URL y anon public key */
+        window.MULLER_SUPABASE_URL = window.MULLER_SUPABASE_URL || '';
+        window.MULLER_SUPABASE_ANON_KEY = window.MULLER_SUPABASE_ANON_KEY || '';
 
         // --- COMPONENTE AISLANTE DE ICONOS (Lucide + contenedor “premium” opcional) ---
         const Icon = ({ name, className, nav = false }) => {
@@ -516,6 +522,38 @@
             rows.sort((a, b) => b.score - a.score);
             rows.forEach((r, i) => { r.rank = i + 1; });
             return { week, rows };
+        }
+
+        function mullerSupabaseConfigured() {
+            const u = window.MULLER_SUPABASE_URL && String(window.MULLER_SUPABASE_URL).trim();
+            const k = window.MULLER_SUPABASE_ANON_KEY && String(window.MULLER_SUPABASE_ANON_KEY).trim();
+            return !!(u && k);
+        }
+
+        function mullerGetSupabaseClient() {
+            if (!mullerSupabaseConfigured()) return null;
+            if (window.__mullerSbClient) return window.__mullerSbClient;
+            const g = typeof self !== 'undefined' ? self : window;
+            const mod = g.supabase;
+            const createClient = mod && typeof mod.createClient === 'function' ? mod.createClient : null;
+            if (!createClient) return null;
+            try {
+                window.__mullerSbClient = createClient(
+                    String(window.MULLER_SUPABASE_URL).trim(),
+                    String(window.MULLER_SUPABASE_ANON_KEY).trim(),
+                    {
+                        auth: {
+                            persistSession: true,
+                            autoRefreshToken: true,
+                            detectSessionInUrl: true,
+                            storage: typeof localStorage !== 'undefined' ? localStorage : undefined,
+                        },
+                    }
+                );
+            } catch (err) {
+                return null;
+            }
+            return window.__mullerSbClient;
         }
 
         function tryBxUserOverlay() {
@@ -1124,7 +1162,7 @@
             nav_lexikon: { title: 'Lexikon', what: 'Traducción de palabras o frases (detección automática de idioma hacia alemán o español que elijas); opción aparte para solo Wiktionary; guardar pares en las mismas lecciones que en Biblioteca → Vocab.', tips: ['En “Palabra → traducción” elige ES→DE si buscas cómo se dice en alemán una palabra en español.', 'En el traductor usa “→ Alemán” o “→ Español” para forzar el sentido (incluye palabras malsonantes: el servicio puede devolver equivalentes o censura según el motor).', 'Si el desplegable de lecciones está vacío, crea lecciones en Biblioteca → Vocab; al abrir Lexikon se vuelve a leer el almacenamiento local.'] },
             nav_telc: { title: 'Día del examen TELC', what: 'Checklist estática: qué llevar, tiempos orientativos y consejos. No sustituye la convocatoria oficial.', tips: ['Imprime o exporta la lista la noche anterior.', 'Llega con margen para el registro.', 'Hidrátate y duerme bien: el examen es resistencia.'] },
             nav_ia: { title: 'IA Story Builder', what: 'Genera un guion nuevo con nivel y tema; útil cuando quieres vocabulario fresco sin pegar texto manual.', tips: ['Indica bien el nivel (B1/B2) y el tema.', 'Tras generar, guarda y estudia en Historia.', 'Combina con vocab propio en el campo de palabras si existe.'] },
-            nav_comunidad: { title: 'Comunidad', what: 'Registro e inicio de sesión gratuitos solo en este navegador (contraseña con cifrado local). Directorio con estudiantes de ejemplo y bots. Liga semanal: tu puntuación depende de XP, monedas, racha y práctica; los bots tienen resultados simulados por semana.', tips: ['No hay servidor: usa HTTPS o localhost para el registro seguro (Web Crypto).', 'El directorio de cuentas reales solo muestra perfiles creados en este dispositivo.', 'Para competir contigo mismo entre equipos, exporta/importa backup desde el menú de perfil.', 'Tecla O para abrir Comunidad.'] },
+            nav_comunidad: { title: 'Comunidad', what: 'Opción A: cuenta solo en el navegador (PBKDF2 local). Opción B (gratis): Supabase — mismo registro pero con sesión en la nube, directorio de perfiles y tabla de liga semanal compartida; bots siguen siendo simulados en tu ranking.', tips: ['Pega URL y anon key de Supabase en index.html (Project Settings → API) y ejecuta supabase/schema.sql en el SQL Editor.', 'El plan gratuito de Supabase suele bastar para estudio; revisa límites en el dashboard.', 'Si no configuras Supabase, todo sigue funcionando en modo local.', 'Tecla O para abrir Comunidad.'] },
             historia_base: { title: 'Historia — vista general', what: 'Escuchas y lees escenas; el vocabulario resaltado enlaza con las tarjetas. Abajo tienes play, escenas y velocidad.', tips: ['Primero escucha, luego muestra traducción.', 'Sube o baja la velocidad según el nivel del día.', 'PDF del guion sirve para repaso offline.'] },
             historia_podcast: { title: 'Modo Podcast', what: 'Reproduce el guion actual escena a escena sin tener que pulsar “siguiente”. Con “Todos los guiones” (barra superior) pasa al siguiente guion guardado al terminar el actual — útil en coche para encadenar varios.', tips: ['Elige el guion en el menú “Guion en Historia” (arriba a la izquierda).', 'Podcast solo afecta al guion cargado; “Todos los guiones” encadena tus guiones de Biblioteca en orden.', 'Combina con Solo audio y velocidad para manos libres.'] },
             historia_interview: { title: 'Simulación oral (Teil 2)', what: 'Pregunta tipo examen; mantienes pulsado el micrófono para responder y recibes feedback por palabras.', tips: ['Responde en frases completas, no solo sí/no.', 'Mira el feedback de palabras para afinar pronunciación.', 'Relájate: es entrenamiento, no evaluación oficial.'] },
@@ -1319,8 +1357,78 @@
           const [authBusy, setAuthBusy] = useState(false);
           const [authError, setAuthError] = useState('');
           const [authMode, setAuthMode] = useState('login');
-          const authSession = useMemo(() => { void authTick; return mullerAuthGetSession(); }, [authTick]);
-          const leagueBoard = useMemo(() => mullerLeagueBuildRanking(userStats, userStats.username, authSession), [userStats, authSession]);
+          const [supabaseUser, setSupabaseUser] = useState(null);
+          const [supabaseProfile, setSupabaseProfile] = useState(null);
+          const [remoteLeagueRows, setRemoteLeagueRows] = useState(null);
+          const [remoteProfiles, setRemoteProfiles] = useState(null);
+          const unifiedAuth = useMemo(() => {
+              void authTick;
+              if (mullerSupabaseConfigured() && supabaseUser) {
+                  const dn = supabaseProfile && supabaseProfile.display_name
+                      ? supabaseProfile.display_name
+                      : (supabaseUser.user_metadata && supabaseUser.user_metadata.display_name) || 'Estudiante';
+                  return {
+                      source: 'supabase',
+                      email: supabaseUser.email,
+                      displayName: dn,
+                      userId: supabaseUser.id,
+                  };
+              }
+              const loc = mullerAuthGetSession();
+              if (loc) return { source: 'local', ...loc };
+              return null;
+          }, [authTick, supabaseUser, supabaseProfile]);
+          const leagueBoard = useMemo(() => {
+              const week = mullerIsoWeekMonday();
+              const bots = MULLER_BOT_PLAYERS.map((b) => ({
+                  id: b.id,
+                  name: b.name,
+                  isBot: true,
+                  isSelf: false,
+                  score: mullerBotWeekScore(b.id, week),
+                  sub: `${b.tag} · ${b.lvl}`,
+                  rank: 0,
+              }));
+              const meScore = mullerLeagueComputeUserScore(userStats);
+              const meName = userStats.username || 'Estudiante';
+              const ua = unifiedAuth;
+              let humans = [];
+              if (remoteLeagueRows && Array.isArray(remoteLeagueRows) && remoteLeagueRows.length > 0) {
+                  humans = remoteLeagueRows.map((r) => ({
+                      id: String(r.user_id),
+                      name: r.display_name || 'Estudiante',
+                      isBot: false,
+                      isSelf: !!(ua && ua.userId && r.user_id === ua.userId),
+                      score: Number(r.score) || 0,
+                      sub: 'Liga global (Supabase)',
+                      rank: 0,
+                  }));
+                  if (ua && ua.source === 'supabase' && !humans.some((h) => h.isSelf)) {
+                      humans.push({
+                          id: ua.userId,
+                          name: meName,
+                          isBot: false,
+                          isSelf: true,
+                          score: meScore,
+                          sub: 'Tu puntuación (se sube al jugar)',
+                          rank: 0,
+                      });
+                  }
+              } else {
+                  humans = [{
+                      id: 'local_player',
+                      name: meName,
+                      isBot: false,
+                      isSelf: true,
+                      score: meScore,
+                      sub: ua ? mullerMaskEmail(ua.email) : 'Invitado (sin cuenta)',
+                      rank: 0,
+                  }];
+              }
+              const rows = [...humans, ...bots].sort((a, b) => b.score - a.score);
+              rows.forEach((r, i) => { r.rank = i + 1; });
+              return { week, rows };
+          }, [userStats, unifiedAuth, remoteLeagueRows]);
           const directoryLocals = useMemo(() => {
               void authTick;
               const m = mullerAccountsLoad();
@@ -1555,6 +1663,76 @@
                   document.removeEventListener('touchstart', close);
               };
           }, [userMenuOpen]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client) return undefined;
+              client.auth.getSession().then(({ data: { session } }) => {
+                  setSupabaseUser(session && session.user ? session.user : null);
+              });
+              const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+                  setSupabaseUser(session && session.user ? session.user : null);
+                  setAuthTick((x) => x + 1);
+              });
+              return () => { try { subscription.unsubscribe(); } catch (err) {} };
+          }, []);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || !supabaseUser || !supabaseUser.id) {
+                  setSupabaseProfile(null);
+                  return undefined;
+              }
+              let cancelled = false;
+              client.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle().then(({ data, error }) => {
+                  if (cancelled || error) return;
+                  if (data) setSupabaseProfile(data);
+              });
+              return () => { cancelled = true; };
+          }, [supabaseUser]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || !supabaseUser || !supabaseUser.id) return undefined;
+              const week = mullerIsoWeekMonday();
+              const score = mullerLeagueComputeUserScore(userStats);
+              const t = window.setTimeout(() => {
+                  client.from('league_scores').upsert(
+                      {
+                          user_id: supabaseUser.id,
+                          week_key: week,
+                          score,
+                          display_name: userStats.username || 'Estudiante',
+                          updated_at: new Date().toISOString(),
+                      },
+                      { onConflict: 'user_id,week_key' }
+                  ).then(() => {});
+              }, 2800);
+              return () => window.clearTimeout(t);
+          }, [userStats, supabaseUser]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || activeTab !== 'comunidad' || communitySubTab !== 'ligas') return undefined;
+              const week = mullerIsoWeekMonday();
+              let cancelled = false;
+              client.from('league_scores').select('user_id, week_key, score, display_name, updated_at').eq('week_key', week).order('score', { ascending: false }).limit(80).then(({ data, error }) => {
+                  if (cancelled || error) return;
+                  setRemoteLeagueRows(data || []);
+              });
+              return () => { cancelled = true; };
+          }, [activeTab, communitySubTab, authTick, supabaseUser]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || activeTab !== 'comunidad' || communitySubTab !== 'directorio') return undefined;
+              let cancelled = false;
+              client.from('profiles').select('id, display_name, updated_at').order('updated_at', { ascending: false }).limit(120).then(({ data, error }) => {
+                  if (cancelled || error) return;
+                  setRemoteProfiles(data || []);
+              });
+              return () => { cancelled = true; };
+          }, [activeTab, communitySubTab, authTick]);
 
           useEffect(() => {
               const onBip = (e) => {
@@ -5037,7 +5215,11 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                               <div>
                                   <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3 mb-2"><Icon name="trophy" className="w-9 h-9 md:w-12 md:h-12 text-violet-400" /> Comunidad</h1>
-                                  <p className="text-gray-400 text-sm md:text-base max-w-2xl">Cuenta local gratuita, directorio y liga semanal con bots. Sin servidor: los datos de registro solo están en este navegador.</p>
+                                  <p className="text-gray-400 text-sm md:text-base max-w-2xl">
+                                      {mullerSupabaseConfigured()
+                                          ? 'Modo Supabase activo: directorio y liga global (plan gratuito). Si no hay URL/key, todo sigue en local.'
+                                          : 'Cuenta local o Supabase (gratis): configura URL y clave anon en index.html y el SQL del proyecto. Liga semanal con bots simulados.'}
+                                  </p>
                               </div>
                               <ExerciseHelpBtn helpId="nav_comunidad" />
                           </div>
@@ -5060,17 +5242,28 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 
                           {communitySubTab === 'cuenta' && (
                               <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-5 md:p-6 shadow-xl">
-                                  {authSession ? (
+                                  {unifiedAuth ? (
                                       <div className="space-y-4">
                                           <p className="text-white font-bold text-lg flex items-center gap-2"><Icon name="check-circle" className="w-5 h-5 text-emerald-400" /> Sesión iniciada</p>
-                                          <p className="text-sm text-gray-400"><span className="text-gray-300 font-semibold">Nombre:</span> {authSession.displayName}</p>
-                                          <p className="text-sm text-gray-400"><span className="text-gray-300 font-semibold">Email:</span> {mullerMaskEmail(authSession.email)}</p>
+                                          <p className="text-[11px] font-bold uppercase tracking-wider text-violet-400">{unifiedAuth.source === 'supabase' ? 'Cuenta Supabase (nube · gratis)' : 'Cuenta solo en este navegador'}</p>
+                                          <p className="text-sm text-gray-400"><span className="text-gray-300 font-semibold">Nombre:</span> {unifiedAuth.displayName}</p>
+                                          <p className="text-sm text-gray-400"><span className="text-gray-300 font-semibold">Email:</span> {mullerMaskEmail(unifiedAuth.email)}</p>
                                           <button
                                               type="button"
                                               className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold text-sm border border-white/10"
-                                              onClick={() => { mullerAuthLogout(); setAuthTick((x) => x + 1); setAuthPassword(''); }}
+                                              onClick={async () => {
+                                                  const client = mullerGetSupabaseClient();
+                                                  if (unifiedAuth.source === 'supabase' && client) {
+                                                      try { await client.auth.signOut(); } catch (err) {}
+                                                      setSupabaseUser(null);
+                                                      setSupabaseProfile(null);
+                                                  }
+                                                  mullerAuthLogout();
+                                                  setAuthTick((x) => x + 1);
+                                                  setAuthPassword('');
+                                              }}
                                           >
-                                              Cerrar sesión (esta sesión del navegador)
+                                              Cerrar sesión
                                           </button>
                                       </div>
                                   ) : (
@@ -5105,7 +5298,43 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                                       BAD_CREDENTIALS: 'Email o contraseña incorrectos.',
                                                   };
                                                   try {
-                                                      if (authMode === 'register') {
+                                                      const client = mullerGetSupabaseClient();
+                                                      if (client) {
+                                                          const em = authEmail.trim();
+                                                          if (authMode === 'register') {
+                                                              const dn = (authDisplayName || userStats.username || 'Estudiante').trim();
+                                                              const { data, error } = await client.auth.signUp({
+                                                                  email: em,
+                                                                  password: authPassword,
+                                                                  options: { data: { display_name: dn } },
+                                                              });
+                                                              if (error) throw new Error(error.message);
+                                                              saveProgress({ username: dn });
+                                                              if (data.session && data.session.user) {
+                                                                  setSupabaseUser(data.session.user);
+                                                                  try {
+                                                                      await client.from('profiles').upsert({
+                                                                          id: data.session.user.id,
+                                                                          display_name: dn,
+                                                                          updated_at: new Date().toISOString(),
+                                                                      }, { onConflict: 'id' });
+                                                                  } catch (pe) {}
+                                                              } else if (data.user) {
+                                                                  setSupabaseUser(data.user);
+                                                              }
+                                                              if (!data.session) {
+                                                                  alert('Si Supabase pide confirmar el email, revisa tu bandeja. En Authentication → Providers → Email puedes desactivar “Confirm email” para pruebas. El perfil se crea al confirmar.');
+                                                              }
+                                                          } else {
+                                                              const { data, error } = await client.auth.signInWithPassword({ email: em, password: authPassword });
+                                                              if (error) throw new Error(error.message);
+                                                              if (data.user) {
+                                                                  setSupabaseUser(data.user);
+                                                                  const meta = data.user.user_metadata && data.user.user_metadata.display_name;
+                                                                  if (meta) saveProgress({ username: String(meta) });
+                                                              }
+                                                          }
+                                                      } else if (authMode === 'register') {
                                                           const acc = await mullerAuthRegister(authEmail, authPassword, authDisplayName || userStats.username);
                                                           saveProgress({ username: acc.displayName });
                                                       } else {
@@ -5123,7 +5352,11 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                           >
                                               {authBusy ? '…' : authMode === 'register' ? 'Crear cuenta' : 'Entrar'}
                                           </button>
-                                          <p className="text-[11px] text-gray-500 leading-relaxed">La contraseña se procesa con PBKDF2 en tu dispositivo; no enviamos datos a ningún servidor porque no hay servidor en esta versión.</p>
+                                          <p className="text-[11px] text-gray-500 leading-relaxed">
+                                              {mullerGetSupabaseClient()
+                                                  ? 'Con Supabase la contraseña va por Auth seguro de Supabase (gratis). Sin URL/key en index.html se usa cuenta local con PBKDF2 en el dispositivo.'
+                                                  : 'Sin Supabase configurado: la contraseña se procesa con PBKDF2 solo en tu dispositivo; no hay servidor.'}
+                                          </p>
                                       </div>
                                   )}
                               </div>
@@ -5131,8 +5364,30 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 
                           {communitySubTab === 'directorio' && (
                               <div className="space-y-6">
+                                  {mullerSupabaseConfigured() ? (
+                                      <div className="rounded-2xl border border-emerald-500/25 bg-slate-900/80 p-5 overflow-x-auto">
+                                          <h2 className="text-lg font-black text-white mb-3 flex items-center gap-2"><Icon name="globe" className="w-5 h-5 text-emerald-400" /> Directorio global (Supabase)</h2>
+                                          {remoteProfiles === null ? (
+                                              <p className="text-sm text-gray-500">Cargando perfiles…</p>
+                                          ) : remoteProfiles.length === 0 ? (
+                                              <p className="text-sm text-gray-500">Aún no hay filas en <code className="text-emerald-400/90">profiles</code>. Ejecuta el SQL del proyecto y registra un usuario.</p>
+                                          ) : (
+                                              <table className="w-full text-sm text-left">
+                                                  <thead><tr className="text-gray-500 border-b border-white/10"><th className="py-2 pr-2">Nombre</th><th className="py-2">Actualizado</th></tr></thead>
+                                                  <tbody>
+                                                      {remoteProfiles.map((row) => (
+                                                          <tr key={row.id} className="border-b border-white/5 text-gray-300">
+                                                              <td className="py-2 pr-2 font-bold text-white">{row.display_name || '—'}</td>
+                                                              <td className="py-2 text-xs text-gray-500">{row.updated_at ? String(row.updated_at).slice(0, 10) : '—'}</td>
+                                                          </tr>
+                                                      ))}
+                                                  </tbody>
+                                              </table>
+                                          )}
+                                      </div>
+                                  ) : null}
                                   <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-5 overflow-x-auto">
-                                      <h2 className="text-lg font-black text-white mb-3 flex items-center gap-2"><Icon name="users" className="w-5 h-5 text-violet-400" /> Cuentas en este navegador</h2>
+                                      <h2 className="text-lg font-black text-white mb-3 flex items-center gap-2"><Icon name="users" className="w-5 h-5 text-violet-400" /> Cuentas en este navegador (sin Supabase)</h2>
                                       {directoryLocals.length === 0 ? (
                                           <p className="text-sm text-gray-500">Aún no hay registros. Crea una cuenta en la pestaña «Cuenta».</p>
                                       ) : (
@@ -5175,7 +5430,11 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                       <h2 className="text-lg font-black text-white flex items-center gap-2"><Icon name="medal" className="w-6 h-6 text-amber-400" /> Liga semanal Müller</h2>
                                       <span className="text-xs font-mono text-gray-500">Semana (lun): {leagueBoard.week}</span>
                                   </div>
-                                  <p className="text-xs text-gray-500 mb-4">Tu puntuación usa XP, monedas, racha, dictados y práctica oral. Los bots tienen puntuación simulada por semana (cambia cada lunes).</p>
+                                  <p className="text-xs text-gray-500 mb-4">
+                                      {mullerSupabaseConfigured()
+                                          ? 'Puntuación global: se sube a Supabase (tabla league_scores) mientras practicas. Los bots son simulados y se mezclan en la tabla.'
+                                          : 'Tu puntuación usa XP, monedas, racha, dictados y práctica oral. Los bots tienen puntuación simulada por semana (cambia cada lunes).'}
+                                  </p>
                                   <table className="w-full text-sm">
                                       <thead>
                                           <tr className="text-gray-500 border-b border-white/10 text-left">
