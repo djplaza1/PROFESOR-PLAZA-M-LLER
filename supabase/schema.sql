@@ -151,8 +151,6 @@ set search_path = public
 as $$
 declare
   v_uid uuid;
-  v_is_creator boolean := false;
-  v_coins bigint := 0;
 begin
   v_uid := auth.uid();
   if v_uid is null then
@@ -163,15 +161,13 @@ begin
   values (v_uid, 0, now())
   on conflict (user_id) do nothing;
 
-  v_is_creator := public.muller_is_creator(v_uid);
-  if v_is_creator then
-    v_coins := 999999999;
-  else
-    select w.coins into v_coins from public.muller_wallets w where w.user_id = v_uid;
-    v_coins := coalesce(v_coins, 0);
-  end if;
-
-  return query select v_coins, v_is_creator;
+  return query
+    select
+      case
+        when public.muller_is_creator(v_uid) then 999999999::bigint
+        else coalesce((select w.coins from public.muller_wallets w where w.user_id = v_uid), 0)::bigint
+      end as coins,
+      public.muller_is_creator(v_uid) as is_creator;
 end;
 $$;
 
