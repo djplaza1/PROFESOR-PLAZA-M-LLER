@@ -171,18 +171,22 @@ begin
 end;
 $$;
 
+-- Sin SELECT/RETURNING ... INTO: usar asignaciones := (subconsulta) para evitar 42P01 con nombres de salida.
 create or replace function public.muller_claim_reward(p_reward_type text)
 returns table (granted int, balance bigint, reason text)
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $claim$
 declare
   v_uid uuid;
   v_day text := to_char(now(), 'YYYY-MM-DD');
   v_now timestamptz := now();
   v_claims_today int := 0;
   v_last_claim timestamptz := null;
+  v_granted int := 0;
+  v_bal bigint := 0;
+  v_reason text := 'ok';
 begin
   v_uid := auth.uid();
   if v_uid is null then
@@ -202,61 +206,71 @@ begin
   end if;
 
   if p_reward_type not in ('daily_bonus', 'ad_reward') then
+    v_bal := coalesce((
+      select coins::bigint from public.muller_wallets where user_id = v_uid
+    ), 0);
     granted := 0;
-    select coins into balance from public.muller_wallets where user_id = v_uid;
-    balance := coalesce(balance, 0);
+    balance := v_bal;
     reason := 'invalid_reward_type';
     return next;
     return;
   end if;
 
-  select claim_count, last_claim_at
-    into v_claims_today, v_last_claim
-    from public.muller_reward_claims
-    where user_id = v_uid and reward_type = p_reward_type and day_key = v_day;
+  v_claims_today := coalesce((
+    select claim_count from public.muller_reward_claims
+    where user_id = v_uid and reward_type = p_reward_type and day_key = v_day
+  ), 0);
+  v_last_claim := (
+    select last_claim_at from public.muller_reward_claims
+    where user_id = v_uid and reward_type = p_reward_type and day_key = v_day
+  );
 
-  v_claims_today := coalesce(v_claims_today, 0);
-  granted := 0;
-  reason := 'ok';
+  v_granted := 0;
+  v_reason := 'ok';
 
   if p_reward_type = 'daily_bonus' then
     if v_claims_today >= 1 then
-      reason := 'already_claimed_today';
+      v_reason := 'already_claimed_today';
     else
-      granted := 40;
+      v_granted := 40;
     end if;
   elsif p_reward_type = 'ad_reward' then
     if v_claims_today >= 6 then
-      reason := 'daily_limit_reached';
+      v_reason := 'daily_limit_reached';
     elsif v_last_claim is not null and v_last_claim > (v_now - interval '15 minutes') then
-      reason := 'cooldown_15m';
+      v_reason := 'cooldown_15m';
     else
-      granted := 18;
+      v_granted := 18;
     end if;
   end if;
 
-  if granted > 0 then
+  if v_granted > 0 then
     update public.muller_wallets
-      set coins = coins + granted,
+      set coins = coins + v_granted,
           updated_at = v_now
-      where user_id = v_uid
-      returning coins into balance;
+      where user_id = v_uid;
+    v_bal := coalesce((
+      select coins::bigint from public.muller_wallets where user_id = v_uid
+    ), 0);
 
     insert into public.muller_reward_claims (user_id, reward_type, day_key, claim_count, last_claim_at)
     values (v_uid, p_reward_type, v_day, 1, v_now)
     on conflict (user_id, reward_type, day_key)
     do update set claim_count = public.muller_reward_claims.claim_count + 1,
                   last_claim_at = excluded.last_claim_at;
-    reason := 'ok';
+    v_reason := 'ok';
   else
-    select coins into balance from public.muller_wallets where user_id = v_uid;
+    v_bal := coalesce((
+      select coins::bigint from public.muller_wallets where user_id = v_uid
+    ), 0);
   end if;
 
-  balance := coalesce(balance, 0);
+  granted := v_granted;
+  balance := coalesce(v_bal, 0);
+  reason := v_reason;
   return next;
-  return;
 end;
-$$;
+$claim$;
 
 create or replace function public.muller_spend_coins(p_amount int, p_reason text default 'spend')
 returns table (ok boolean, balance bigint, reason text)
