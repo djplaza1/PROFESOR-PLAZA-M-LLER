@@ -2065,6 +2065,50 @@ const [placementFinished, setPlacementFinished] = useState(false);
                       { title: 'Presentación profesional', topic: 'trabajo', grammarTip: 'Abrir, estructurar y cerrar exposición con naturalidad.', phrases: [{ de: 'Im Folgenden präsentiere ich drei zentrale Punkte.', es: 'A continuación presento tres puntos centrales.' }, { de: 'Abschließend lässt sich festhalten, dass ...', es: 'Para concluir, puede sostenerse que...' }, { de: 'Gern beantworte ich anschließend Ihre Fragen.', es: 'Con gusto respondo después sus preguntas.' }], fill: { prompt: 'Completa: ___ präsentiere ich drei zentrale Punkte.', answer: 'Im Folgenden', hint: 'Inicio formal de exposición.' }, speak: { target: 'Abschließend lässt sich festhalten, dass nachhaltige Strategien nötig sind.' } }
                   ]
               };
+              const premiumTopicPlan = {
+                  A0: ['presentacion', 'pronunciacion', 'numeros', 'clase', 'familia', 'alimentos', 'rutina', 'vivienda', 'viajes', 'salud', 'trabajo', 'tramites'],
+                  A1: ['presentacion', 'familia', 'vivienda', 'alimentos', 'compras', 'trabajo', 'rutina', 'tiempo_libre', 'viajes', 'salud', 'tramites', 'conectores'],
+                  A2: ['pasado', 'conectores', 'trabajo', 'familia', 'vivienda', 'viajes', 'salud', 'tramites', 'compras', 'tiempo_libre', 'telefonia', 'gramatica'],
+                  B1: ['argumentacion', 'trabajo', 'cv', 'entrevista', 'viajes', 'incidencias', 'relativsatz', 'konjunktiv2', 'conectores', 'salud', 'tramites', 'presentacion'],
+                  B2: ['debate', 'correo_formal', 'nominalizacion', 'noticias', 'trabajo', 'universidad', 'presentacion', 'conectores', 'pasiva', 'grafico', 'negociacion', 'medios'],
+                  C1: ['precision', 'argumentacion', 'registro', 'academico', 'presentacion', 'negociacion', 'conectores', 'resumen', 'analisis', 'matiz', 'retorica', 'debate']
+              };
+              const topicLabel = {
+                  presentacion: 'Presentación', pronunciacion: 'Pronunciación', numeros: 'Números', clase: 'Clase', familia: 'Familia', alimentos: 'Alimentos',
+                  rutina: 'Rutina', vivienda: 'Vivienda', viajes: 'Viajes', salud: 'Salud', trabajo: 'Trabajo', tramites: 'Trámites', compras: 'Compras',
+                  tiempo_libre: 'Tiempo libre', conectores: 'Conectores', pasado: 'Pasado', telefonia: 'Teléfono', gramatica: 'Gramática',
+                  argumentacion: 'Argumentación', cv: 'CV', entrevista: 'Entrevista', incidencias: 'Incidencias', relativsatz: 'Relativos', konjunktiv2: 'Konjunktiv II',
+                  debate: 'Debate', correo_formal: 'Correo formal', nominalizacion: 'Nominalización', noticias: 'Noticias', universidad: 'Universidad', pasiva: 'Pasiva',
+                  grafico: 'Describir gráficos', negociacion: 'Negociación', medios: 'Medios', precision: 'Precisión léxica', registro: 'Registro', academico: 'Académico',
+                  resumen: 'Resumen', analisis: 'Análisis', matiz: 'Matiz', retorica: 'Retórica'
+              };
+              const mkPremiumUnit = (levelKey, topic, idx) => {
+                  const label = topicLabel[topic] || topic;
+                  const topicForUi = ({ pronunciacion: 'presentacion', numeros: 'tramites', pasado: 'gramatica', telefonia: 'tramites', argumentacion: 'conectores', cv: 'trabajo', entrevista: 'trabajo', incidencias: 'viajes', relativsatz: 'gramatica', konjunktiv2: 'gramatica', debate: 'conectores', correo_formal: 'tramites', nominalizacion: 'gramatica', noticias: 'trabajo', universidad: 'trabajo', pasiva: 'gramatica', grafico: 'trabajo', negociacion: 'trabajo', medios: 'trabajo', precision: 'gramatica', registro: 'gramatica', academico: 'gramatica', resumen: 'gramatica', analisis: 'gramatica', matiz: 'gramatica', retorica: 'conectores' }[topic]) || topic;
+                  const sentenceBank = {
+                      A0: [{ de: 'Ich bin neu hier.', es: 'Soy nuevo aqui.' }, { de: 'Das ist meine Familie.', es: 'Esta es mi familia.' }, { de: 'Ich lerne jeden Tag.', es: 'Aprendo cada dia.' }],
+                      A1: [{ de: 'Ich möchte im Restaurant bestellen.', es: 'Quiero pedir en el restaurante.' }, { de: 'Am Wochenende treffe ich Freunde.', es: 'El fin de semana quedo con amigos.' }, { de: 'Wir fahren morgen mit dem Zug.', es: 'Viajamos manana en tren.' }],
+                      A2: [{ de: 'Letzte Woche habe ich viel gearbeitet.', es: 'La semana pasada trabaje mucho.' }, { de: 'Ich lerne Deutsch, weil ich umziehen möchte.', es: 'Aprendo aleman porque quiero mudarme.' }, { de: 'Können Sie mir bitte weiterhelfen?', es: 'Puede ayudarme, por favor?' }],
+                      B1: [{ de: 'Meiner Meinung nach ist das sinnvoll.', es: 'En mi opinion eso tiene sentido.' }, { de: 'Wenn ich mehr Zeit hätte, würde ich reisen.', es: 'Si tuviera mas tiempo, viajaria.' }, { de: 'Das ist ein Punkt, den wir beachten müssen.', es: 'Es un punto que debemos considerar.' }],
+                      B2: [{ de: 'Die Maßnahme sollte schrittweise umgesetzt werden.', es: 'La medida deberia aplicarse gradualmente.' }, { de: 'Darüber hinaus sind die Kosten zu berücksichtigen.', es: 'Ademas hay que considerar los costes.' }, { de: 'Ich beziehe mich auf die vorliegenden Daten.', es: 'Me refiero a los datos disponibles.' }],
+                      C1: [{ de: 'Insofern erscheint die Kritik nachvollziehbar.', es: 'En ese sentido, la critica resulta comprensible.' }, { de: 'Der Autor differenziert zwischen Ursache und Wirkung.', es: 'El autor diferencia entre causa y efecto.' }, { de: 'Nichtsdestotrotz bleibt die Kernfrage offen.', es: 'No obstante, la cuestion central sigue abierta.' }]
+                  };
+                  const sample = sentenceBank[levelKey] || sentenceBank.A1;
+                  const answerMap = { A0: 'bin', A1: 'möchte', A2: 'habe', B1: 'würde', B2: 'werden', C1: 'bleibt' };
+                  return {
+                      title: `${label} · práctica ${idx + 1}`,
+                      topic: topicForUi,
+                      grammarTip: `Nivel ${levelKey}: bloque de ${label.toLowerCase()} con enfoque comunicativo y corrección gramatical.`,
+                      phrases: [sample[idx % sample.length], sample[(idx + 1) % sample.length], sample[(idx + 2) % sample.length]],
+                      fill: { prompt: `Completa (${levelKey}): Ich ___ weiter Deutsch.`, answer: answerMap[levelKey] || 'lerne', hint: `Forma habitual de ${levelKey}.` },
+                      speak: { target: sample[idx % sample.length].de }
+                  };
+              };
+              Object.keys(premiumTopicPlan).forEach((levelKey) => {
+                  const generated = (premiumTopicPlan[levelKey] || []).map((topic, idx) => mkPremiumUnit(levelKey, topic, idx));
+                  const curr = Array.isArray(curriculumByLevel[levelKey]) ? curriculumByLevel[levelKey] : [];
+                  curriculumByLevel[levelKey] = [...curr, ...generated];
+              });
               const byLevel = { A0: [], A1: [], A2: [], B1: [], B2: [], C1: [] };
               (rutaVerbDb.verbs || []).forEach((v) => {
                   const lv = String(v && v.level ? v.level : '').toUpperCase();
