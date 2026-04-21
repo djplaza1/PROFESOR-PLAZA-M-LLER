@@ -1047,6 +1047,67 @@
             { de: "Ich freue mich auf das Wochenende.", es: "Me alegro por el fin de semana." },
             { de: "Das Museum ist heute geschlossen.", es: "El museo está cerrado hoy." }
         ];
+        const WRITING_TELC_TASKS = [
+            {
+                title: 'TELC B1 · E-Mail informal (invitar/cancelar)',
+                level: 'B1',
+                promptEs: 'Escribe un email a una amiga alemana. Debes: saludar, explicar por qué escribes, dar 2 detalles (fecha/lugar), pedir confirmación y despedirte.',
+                scaffoldDe: [
+                    'Betreff: Einladung am Samstag',
+                    'Liebe Anna,',
+                    'ich schreibe dir, weil ...',
+                    'Am ... um ... treffen wir uns in/bei ...',
+                    'Kannst du mir bitte bis ... antworten?',
+                    'Liebe Grüße',
+                    'Dein/Deine ...'
+                ],
+                checklist: ['Anrede + saludo', 'Motivo claro', '2 datos concretos', 'Petición/pregunta', 'Despedida']
+            },
+            {
+                title: 'TELC B1 · Beschwerde (correo formal corto)',
+                level: 'B1',
+                promptEs: 'Reclamación simple por un problema con una compra online. Incluye: qué compraste, qué problema hay, qué solución quieres.',
+                scaffoldDe: [
+                    'Betreff: Reklamation meiner Bestellung',
+                    'Sehr geehrte Damen und Herren,',
+                    'am ... habe ich ... bestellt.',
+                    'Leider habe ich folgendes Problem: ...',
+                    'Ich bitte Sie um ... (Ersatz/Rückerstattung).',
+                    'Mit freundlichen Grüßen'
+                ],
+                checklist: ['Registro formal (Sie)', 'Problema descrito', 'Solicitud explícita', 'Cierre formal']
+            },
+            {
+                title: 'TELC B2 · E-Mail formal (petición argumentada)',
+                level: 'B2',
+                promptEs: 'Escribe a una institución para solicitar un cambio de fecha. Justifica, propone alternativa y muestra cortesía formal.',
+                scaffoldDe: [
+                    'Betreff: Bitte um Terminverschiebung',
+                    'Sehr geehrte Damen und Herren,',
+                    'hiermit möchte ich höflich um ... bitten.',
+                    'Aus folgenden Gründen ist der ursprüngliche Termin schwierig: ...',
+                    'Als Alternative schlage ich ... vor.',
+                    'Für Ihr Verständnis bedanke ich mich im Voraus.',
+                    'Mit freundlichen Grüßen'
+                ],
+                checklist: ['Objetivo claro', 'Justificación desarrollada', 'Alternativa concreta', 'Registro B2 formal']
+            },
+            {
+                title: 'TELC B2 · Carta al periódico (opinión)',
+                level: 'B2',
+                promptEs: 'Carta de opinión sobre el uso del móvil en clase/trabajo. Estructura: introducción, postura, 2 argumentos, cierre.',
+                scaffoldDe: [
+                    'Betreff: Stellungnahme zum Thema ...',
+                    'Sehr geehrte Redaktion,',
+                    'mit Interesse habe ich Ihren Artikel über ... gelesen.',
+                    'Meiner Meinung nach ...',
+                    'Erstens ... / Zweitens ...',
+                    'Zusammenfassend bin ich der Auffassung, dass ...',
+                    'Mit freundlichen Grüßen'
+                ],
+                checklist: ['Introducción referida al tema', 'Opinión explícita', '2 argumentos conectados', 'Conclusión clara']
+            }
+        ];
         const LETTER_DRILLS = [
             { title: "Umlaute Ä Ö Ü und ß", sample: "Äpfel · Öl · Über · Straße", practice: "Äpfel Öl Über Straße" },
             { title: "Alltag", sample: "schön · müde · hören · groß", practice: "Schön müde hören groß" },
@@ -2067,6 +2128,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const [writingStroke, setWritingStroke] = useState(4);
           const [writingCopyIdx, setWritingCopyIdx] = useState(0);
           const [writingPromptIdx, setWritingPromptIdx] = useState(0);
+          const [writingTelcIdx, setWritingTelcIdx] = useState(0);
           const [writingDictIdx, setWritingDictIdx] = useState(0);
           const [writingLetterIdx, setWritingLetterIdx] = useState(0);
           const [writingGuionWriteIdx, setWritingGuionWriteIdx] = useState(0);
@@ -5780,11 +5842,12 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   if (!writingDictationPool.length) return null;
                   return writingDictationPool[writingDictIdx % writingDictationPool.length].de;
               }
+              if (writingMode === 'telc' && WRITING_TELC_TASKS.length) return WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length].dePrompt;
               if (writingMode === 'letters') return LETTER_DRILLS[writingLetterIdx % LETTER_DRILLS.length].practice;
               if (writingMode === 'guion' && guionData.length) return guionData[Math.min(writingGuionWriteIdx, guionData.length - 1)]?.text || null;
               if (writingMode === 'vocab' && currentVocabList.length) return currentVocabList[writingVocabIdx % currentVocabList.length].de;
               return null;
-          }, [activeTab, writingMode, writingCopyIdx, writingDictIdx, writingLetterIdx, writingGuionWriteIdx, writingVocabIdx, guionData, currentVocabList, writingDictationPool]);
+          }, [activeTab, writingMode, writingCopyIdx, writingDictIdx, writingLetterIdx, writingGuionWriteIdx, writingVocabIdx, guionData, currentVocabList, writingDictationPool, writingTelcIdx]);
 
           const persistDailyPatch = (patch) => {
               const k = 'muller_daily_v1_' + new Date().toISOString().slice(0, 10);
@@ -7708,6 +7771,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   { id: 'copy', label: 'Copia', sub: 'caligrafía' },
                                   { id: 'dictation', label: 'Dictado', sub: 'oír y escribir' },
                                   { id: 'prompt', label: 'Tema', sub: 'redacción' },
+                                  { id: 'telc', label: 'TELC', sub: 'carta/email examen' },
                                   { id: 'letters', label: 'Letras DE', sub: 'ÄÖÜß' },
                                   { id: 'guion', label: 'Guion', sub: 'misma historia' },
                                   { id: 'vocab', label: 'Palabra', sub: 'del vocab' }
@@ -7861,6 +7925,53 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   <p className="text-base md:text-lg text-white font-semibold">{WRITING_PROMPTS_DE[writingPromptIdx % WRITING_PROMPTS_DE.length].de}</p>
                                   <p className="text-xs text-gray-500 italic">{WRITING_PROMPTS_DE[writingPromptIdx % WRITING_PROMPTS_DE.length].es}</p>
                                   <button type="button" onClick={() => { setWritingPromptIdx((i) => (i + 1) % WRITING_PROMPTS_DE.length); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-900/80 hover:bg-rose-800 border border-rose-600/40 mt-2">Otro tema</button>
+                              </div>
+                          )}
+
+                          {writingMode === 'telc' && (
+                              <div className="mb-4 rounded-xl bg-black/35 border border-orange-500/30 p-3 md:p-4 space-y-3">
+                                  <p className="text-orange-200/95 text-sm font-black flex items-center gap-2">
+                                      <Icon name="mail" className="w-4 h-4" /> TELC Schreiben a mano (carta / email)
+                                  </p>
+                                  <p className="text-[11px] text-gray-500">
+                                      Redacta a mano como en examen real con bolígrafo óptico. Cubre todos los puntos del enunciado.
+                                  </p>
+                                  <p className="text-[10px] text-rose-200/75">
+                                      Tarea {Math.min(writingTelcIdx + 1, Math.max(1, WRITING_TELC_TASKS.length))} de {Math.max(1, WRITING_TELC_TASKS.length)} · {WRITING_TELC_TASKS[writingTelcIdx % Math.max(1, WRITING_TELC_TASKS.length)]?.level || 'TELC'}
+                                  </p>
+                                  <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3 space-y-2">
+                                      <p className="text-[11px] font-black uppercase tracking-wider text-rose-300">{WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length].title}</p>
+                                      <p className="text-sm md:text-base text-white leading-relaxed">{WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length].promptDe}</p>
+                                      <p className="text-[11px] text-gray-400 italic">{WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length].promptEs}</p>
+                                      <div className="rounded-lg border border-emerald-700/35 bg-emerald-950/30 p-2">
+                                          <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider mb-1">Checklist del encargo</p>
+                                          <ul className="text-[11px] text-emerald-100/90 space-y-1">
+                                              {WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length].checklist.map((item, i) => (
+                                                  <li key={i}>• {item}</li>
+                                              ))}
+                                          </ul>
+                                      </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                      <button
+                                          type="button"
+                                          onClick={() => {
+                                              if (!WRITING_TELC_TASKS.length) return;
+                                              setWritingTelcIdx((i) => (i + 1) % WRITING_TELC_TASKS.length);
+                                              setWritingCanvasKey((k) => k + 1);
+                                          }}
+                                          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-violet-800 hover:bg-violet-700 border border-violet-500/40"
+                                      >
+                                          Siguiente tarea TELC
+                                      </button>
+                                      <button
+                                          type="button"
+                                          onClick={() => speakRutaDe(WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length].dePrompt)}
+                                          className="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10 inline-flex items-center gap-1.5"
+                                      >
+                                          <Icon name="volume-2" className="w-3.5 h-3.5" /> Escuchar enunciado
+                                      </button>
+                                  </div>
                               </div>
                           )}
 
