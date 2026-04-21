@@ -1979,6 +1979,49 @@ const [placementFinished, setPlacementFinished] = useState(false);
               loadVerbDb();
               return () => { cancelled = true; };
           }, []);
+          const rutaLevels = useMemo(() => {
+              const base = Array.isArray(window.MULLER_RUTA_LEVELS) ? window.MULLER_RUTA_LEVELS : [];
+              const byLevel = { A0: [], A1: [], A2: [], B1: [], B2: [], C1: [] };
+              (rutaVerbDb.verbs || []).forEach((v) => {
+                  const lv = String(v && v.level ? v.level : '').toUpperCase();
+                  if (byLevel[lv]) byLevel[lv].push(v);
+              });
+              const mkLesson = (levelKey, chunk, idx) => {
+                  const title = `${levelKey} · Verbos ${idx + 1}`;
+                  const phrases = chunk.slice(0, 3).map((v) => ({
+                      de: (v && v.examples && v.examples[0] && v.examples[0].de) || `Ich ${v.lemma}.`,
+                      es: (v && v.examples && v.examples[0] && v.examples[0].es) || (v.es || '—')
+                  }));
+                  const p = chunk[0] || {};
+                  return {
+                      id: `auto-${levelKey.toLowerCase()}-${idx + 1}`,
+                      title,
+                      rewardCoins: 16 + Math.min(16, idx),
+                      rewardXp: 22 + Math.min(20, idx * 2),
+                      grammarTip: `Nivel ${levelKey}: práctica de verbos frecuentes y sus formas.`,
+                      phrases,
+                      fill: {
+                          prompt: `Completa: Ich ___ (${p.lemma || 'lernen'}).`,
+                          answer: (p.forms && p.forms.praesens && p.forms.praesens.ich) || p.lemma || 'lerne',
+                          hint: `Forma de 1ª persona (Präsens) de «${p.lemma || 'lernen'}».`
+                      },
+                      speak: { target: (phrases[0] && phrases[0].de) || 'Ich lerne Deutsch.' }
+                  };
+              };
+              const mkLevel = (levelKey, title, badge, sourceVerbs) => {
+                  const chunks = [];
+                  const size = 8;
+                  for (let i = 0; i < sourceVerbs.length; i += size) chunks.push(sourceVerbs.slice(i, i + size));
+                  const lessons = chunks.map((c, i) => mkLesson(levelKey, c, i));
+                  return { id: `auto-${levelKey.toLowerCase()}`, title, badge, lessons };
+              };
+              const dynamic = [];
+              if (byLevel.A2.length) dynamic.push(mkLevel('A2', 'Nivel A2 · Consolidación', 'A2', byLevel.A2));
+              if (byLevel.B1.length) dynamic.push(mkLevel('B1', 'Nivel B1 · Intermedio', 'B1', byLevel.B1));
+              if (byLevel.B2.length) dynamic.push(mkLevel('B2', 'Nivel B2 · Avanzado', 'B2', byLevel.B2));
+              if (byLevel.C1.length) dynamic.push(mkLevel('C1', 'Nivel C1 · Dominio', 'C1', byLevel.C1));
+              return [...base, ...dynamic];
+          }, [rutaVerbDb]);
           useEffect(() => {
               const onToast = (ev) => {
                   const d = (ev && ev.detail) || {};
@@ -2773,7 +2816,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
           };
 
           const completeRutaLesson = (levelIdx, lessonIdx) => {
-              const levels = window.MULLER_RUTA_LEVELS || [];
+              const levels = rutaLevels || [];
               const lesson = levels[levelIdx] && levels[levelIdx].lessons[lessonIdx];
               if (!lesson) return;
               if (rutaProgress.completed && rutaProgress.completed[lesson.id]) {
@@ -7392,7 +7435,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   </div>
                                   {rutaSubTab === 'camino' && (
                                       <div className="space-y-6">
-                                          {(window.MULLER_RUTA_LEVELS || []).map((lv, levelIdx) => (
+                                          {(rutaLevels || []).map((lv, levelIdx) => (
                                               <div key={lv.id} className="rounded-2xl border border-fuchsia-500/25 bg-slate-900/50 p-4 md:p-5">
                                                   <div className="flex flex-wrap items-baseline justify-between gap-2 mb-3">
                                                       <h3 className="text-lg font-black text-white">{lv.title}</h3>
@@ -7400,7 +7443,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                                   </div>
                                                   <div className="flex flex-col gap-2">
                                                       {lv.lessons.map((lesson, lessonIdx) => {
-                                                          const unlocked = typeof window.mullerRutaIsLessonUnlocked === 'function' && window.mullerRutaIsLessonUnlocked(window.MULLER_RUTA_LEVELS, levelIdx, lessonIdx, rutaProgress.completed || {});
+                                                          const unlocked = typeof window.mullerRutaIsLessonUnlocked === 'function' && window.mullerRutaIsLessonUnlocked(rutaLevels || [], levelIdx, lessonIdx, rutaProgress.completed || {});
                                                           const done = !!(rutaProgress.completed && rutaProgress.completed[lesson.id]);
                                                           return (
                                                               <button key={lesson.id} type="button" disabled={!unlocked} onClick={() => { if (!unlocked) return; setRutaRun({ levelIdx, lessonIdx, step: 0 }); setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr(''); }} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-left transition ${!unlocked ? 'opacity-40 cursor-not-allowed border-white/5' : done ? 'border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/40' : 'border-white/15 bg-black/30 hover:bg-fuchsia-950/40'}`}>
@@ -7493,7 +7536,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 )}
                               </>
                           ) : (() => {
-                              const L = window.MULLER_RUTA_LEVELS || [];
+                              const L = rutaLevels || [];
                               const lv = L[rutaRun.levelIdx];
                               const lesson = lv && lv.lessons[rutaRun.lessonIdx];
                               if (!lesson) return null;
