@@ -3603,7 +3603,7 @@ const finishPlacementWithLevel = (finalLevel) => {
               setTempusVerbList(foundVerbs);
           };
 
-          const resolveTempusVerbInfo = (rawWord) => {
+          function resolveTempusVerbInfo(rawWord) {
               const clean = String(rawWord || '').toLowerCase().replace(/[.,!?;:()"]/g, '').trim();
               if (!clean) return null;
               if (TEMPUS_DICT[clean]) {
@@ -3621,16 +3621,16 @@ const finishPlacementWithLevel = (finalLevel) => {
                   return { touched: clean, infinitive: clean, forms: `Prät: ${base}te | Perf: hat ${clean} (regular estimado)` };
               }
               return null;
-          };
+          }
 
-          const inferTempusContextLabel = (word) => {
+          function inferTempusContextLabel(word) {
               const w = String(word || '').toLowerCase();
               if (!w) return '';
               if (w.startsWith('ge') && (w.endsWith('t') || w.endsWith('en'))) return 'Forma probable: Partizip II (Perfekt/Plusquamperfekt).';
               if (/(te|test|ten|tet)$/.test(w)) return 'Forma probable: Präteritum (regular).';
               if (/(st|t|en)$/.test(w)) return 'Forma probable: Präsens (según contexto/persona).';
               return 'Tiempo/persona: revisa contexto de la frase.';
-          };
+          }
 
           useEffect(() => {
               const actualIdx = getActualSceneIndex();
