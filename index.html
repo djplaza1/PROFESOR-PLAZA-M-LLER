@@ -2010,30 +2010,30 @@
                       rank: 0,
                   }];
               }
-              const rows = [...humans, ...bots].sort((a, b) => b.score - a.score);
+                   const rows = [...humans, ...bots].sort((a, b) => b.score - a.score);
               rows.forEach((r, i) => { r.rank = i + 1; });
               return { week, rows };
           }, [userStats, unifiedAuth, remoteLeagueRows]);
           const directoryLocals = useMemo(() => {
               void authTick;
               const m = mullerAccountsLoad();
-                 const directoryLocals = useMemo(() => {
-                     void authTick;
-                     const m = mullerAccountsLoad();
-                     // ↓↓ AQUÍ VAN LAS 11 LÍNEAS ↓↓
-                     return Object.keys(m).map((email) => ({ email, displayName: m[email].displayName, userId: m[email].userId, createdAt: m[email].createdAt }));
-                 }, [authTick]);
-                 const [mainDailyGoal, setMainDailyGoal] = useState(() => mullerGetMainDailyGoalCards());
-                 const [oralQIdx, setOralQIdx] = useState(0);
-                 const [oralSecs, setOralSecs] = useState(90);
-                 const [oralDeadline, setOralDeadline] = useState(null);
-                 const [oralClock, setOralClock] = useState(0);
-                 const [pwaDeferredPrompt, setPwaDeferredPrompt] = useState(null);
-                 const [tourStep, setTourStep] = useState(0);
-                 const [dailyChallenges, setDailyChallenges] = useState(() => {
-                     try {
-                         // (aquí continúa el resto del código que ya tenías)
-                 const [vocabSrsEpoch, setVocabSrsEpoch] = useState(0);
+              return Object.keys(m).map((email) => ({ email, displayName: m[email].displayName, userId: m[email].userId, createdAt: m[email].createdAt }));
+          }, [authTick]);
+          const [mainDailyGoal, setMainDailyGoal] = useState(() => mullerGetMainDailyGoalCards());
+          const [oralQIdx, setOralQIdx] = useState(0);
+          const [oralSecs, setOralSecs] = useState(90);
+          const [oralDeadline, setOralDeadline] = useState(null);
+          const [oralClock, setOralClock] = useState(0);
+          const [pwaDeferredPrompt, setPwaDeferredPrompt] = useState(null);
+          const [tourStep, setTourStep] = useState(0);
+          const [dailyChallenges, setDailyChallenges] = useState(() => {
+              try {
+                  const k = 'muller_daily_v1_' + new Date().toISOString().slice(0, 10);
+                  const j = localStorage.getItem(k);
+                  return j ? JSON.parse(j) : { vocab: false, shadow: false, write: false };
+              } catch (e) { return { vocab: false, shadow: false, write: false }; }
+          });
+          const [vocabSrsEpoch, setVocabSrsEpoch] = useState(0);
           const vocabSrsMap = useMemo(() => mullerGetVocabSrsMap(), [vocabSrsEpoch]);
           const vocabSrsDueCount = useMemo(() => {
               if (!currentVocabList.length) return 0;
