@@ -2021,10 +2021,75 @@ const [placementFinished, setPlacementFinished] = useState(false);
           }, []);
           const rutaLevels = useMemo(() => {
               const base = Array.isArray(window.MULLER_RUTA_LEVELS) ? window.MULLER_RUTA_LEVELS : [];
+              const curriculumByLevel = {
+                  A0: [
+                      { title: 'Alfabeto y sonidos base', topic: 'presentacion', grammarTip: 'Prioriza pronunciación de vocales largas/cortas y combinaciones ch, sch, ei, ie.', phrases: [{ de: 'Ich heiße Leo.', es: 'Me llamo Leo.' }, { de: 'Das ist Anna.', es: 'Esta es Anna.' }, { de: 'Wir lernen Deutsch.', es: 'Aprendemos alemán.' }], fill: { prompt: 'Completa: Ich ___ Leo.', answer: 'heiße', hint: 'Verbo «heißen», 1ª persona.' }, speak: { target: 'Ich heiße Leo.' } },
+                      { title: 'Números y datos personales', topic: 'tramites', grammarTip: 'Practica deletrear nombre, edad, teléfono y país.', phrases: [{ de: 'Ich bin 24 Jahre alt.', es: 'Tengo 24 años.' }, { de: 'Meine Nummer ist null eins sieben.', es: 'Mi número es 017.' }, { de: 'Ich komme aus Spanien.', es: 'Vengo de España.' }], fill: { prompt: 'Completa: Ich bin 24 Jahre ___.', answer: 'alt', hint: 'Expresión fija para la edad.' }, speak: { target: 'Ich bin 24 Jahre alt.' } },
+                      { title: 'Aula y objetos cotidianos', topic: 'clase', grammarTip: 'Memoriza sustantivo con artículo: der Stift, die Tasche, das Heft.', phrases: [{ de: 'Das ist ein Stift.', es: 'Eso es un bolígrafo.' }, { de: 'Die Tasche ist neu.', es: 'La mochila es nueva.' }, { de: 'Wo ist das Heft?', es: '¿Dónde está el cuaderno?' }], fill: { prompt: 'Completa: Das ist ___ Stift.', answer: 'ein', hint: 'Indefinido masculino.' }, speak: { target: 'Das ist ein Stift.' } },
+                      { title: 'Familia inmediata', topic: 'familia', grammarTip: 'Usa posesivos básicos: mein/meine y dein/deine.', phrases: [{ de: 'Das ist meine Mutter.', es: 'Esta es mi madre.' }, { de: 'Mein Bruder ist hier.', es: 'Mi hermano está aquí.' }, { de: 'Hast du Geschwister?', es: '¿Tienes hermanos?' }], fill: { prompt: 'Completa: Das ist ___ Mutter.', answer: 'meine', hint: 'Sustantivo femenino.' }, speak: { target: 'Das ist meine Mutter.' } },
+                      { title: 'Comidas y compras simples', topic: 'alimentos', grammarTip: 'Pide con «Ich möchte ...» + Akkusativ.', phrases: [{ de: 'Ich möchte Wasser.', es: 'Quiero agua.' }, { de: 'Wir kaufen Brot.', es: 'Compramos pan.' }, { de: 'Der Kaffee ist heiß.', es: 'El café está caliente.' }], fill: { prompt: 'Completa: Ich ___ Wasser.', answer: 'möchte', hint: 'Forma de cortesía común.' }, speak: { target: 'Ich möchte Wasser.' } },
+                      { title: 'Rutina mínima diaria', topic: 'rutina', grammarTip: 'Separable verbs: «aufstehen» separa en presente.', phrases: [{ de: 'Ich stehe um sieben auf.', es: 'Me levanto a las siete.' }, { de: 'Ich arbeite am Montag.', es: 'Trabajo el lunes.' }, { de: 'Abends lerne ich.', es: 'Por la noche estudio.' }], fill: { prompt: 'Completa: Ich ___ um sieben auf.', answer: 'stehe', hint: 'Verbo separable «aufstehen».' }, speak: { target: 'Ich stehe um sieben auf.' } }
+                  ],
+                  A1: [
+                      { title: 'Presentarse con detalle', topic: 'presentacion', grammarTip: 'Amplía presentación con profesión, ciudad y lenguas.', phrases: [{ de: 'Ich bin Ingenieurin und wohne in Madrid.', es: 'Soy ingeniera y vivo en Madrid.' }, { de: 'Ich spreche Spanisch und etwas Deutsch.', es: 'Hablo español y algo de alemán.' }, { de: 'Seit einem Jahr lerne ich Deutsch.', es: 'Desde hace un año estudio alemán.' }], fill: { prompt: 'Completa: Ich ___ in Madrid.', answer: 'wohne', hint: 'Verbo wohnen.' }, speak: { target: 'Ich spreche Spanisch und etwas Deutsch.' } },
+                      { title: 'Casa y habitaciones', topic: 'vivienda', grammarTip: 'Preposiciones de lugar frecuentes: in, auf, unter.', phrases: [{ de: 'Die Küche ist klein.', es: 'La cocina es pequeña.' }, { de: 'Das Buch liegt auf dem Tisch.', es: 'El libro está sobre la mesa.' }, { de: 'Wir wohnen in einer Wohnung.', es: 'Vivimos en un piso.' }], fill: { prompt: 'Completa: Das Buch liegt ___ dem Tisch.', answer: 'auf', hint: 'Relación «encima de».' }, speak: { target: 'Das Buch liegt auf dem Tisch.' } },
+                      { title: 'Trabajo y horarios', topic: 'trabajo', grammarTip: 'Preguntar y responder horarios con «von ... bis ...».', phrases: [{ de: 'Ich arbeite von neun bis fünf.', es: 'Trabajo de nueve a cinco.' }, { de: 'Wann beginnt dein Kurs?', es: '¿Cuándo empieza tu curso?' }, { de: 'Heute habe ich frei.', es: 'Hoy tengo libre.' }], fill: { prompt: 'Completa: Ich arbeite von neun ___ fünf.', answer: 'bis', hint: 'Expresión de intervalo.' }, speak: { target: 'Ich arbeite von neun bis fünf.' } },
+                      { title: 'Restaurante y pedidos', topic: 'alimentos', grammarTip: 'Usa «ich hätte gern» para sonar natural y cortés.', phrases: [{ de: 'Ich hätte gern eine Suppe.', es: 'Quisiera una sopa.' }, { de: 'Wir zahlen zusammen.', es: 'Pagamos juntos.' }, { de: 'Die Rechnung, bitte.', es: 'La cuenta, por favor.' }], fill: { prompt: 'Completa: Ich hätte ___ eine Suppe.', answer: 'gern', hint: 'Partícula fija en la fórmula.' }, speak: { target: 'Die Rechnung, bitte.' } },
+                      { title: 'Salud y farmacia', topic: 'salud', grammarTip: 'Estructura típica: «Ich habe + síntoma».', phrases: [{ de: 'Ich habe Kopfschmerzen.', es: 'Tengo dolor de cabeza.' }, { de: 'Ich brauche einen Termin.', es: 'Necesito una cita.' }, { de: 'Nehmen Sie diese Tabletten.', es: 'Tome estas pastillas.' }], fill: { prompt: 'Completa: Ich ___ Kopfschmerzen.', answer: 'habe', hint: 'Verbo haben.' }, speak: { target: 'Ich habe Kopfschmerzen.' } },
+                      { title: 'Tiempo libre y planes', topic: 'tiempo_libre', grammarTip: 'Con «am Wochenende» y «mit Freunden» hablas de ocio.', phrases: [{ de: 'Am Wochenende spiele ich Fußball.', es: 'El fin de semana juego al fútbol.' }, { de: 'Heute Abend gehe ich ins Kino.', es: 'Esta tarde voy al cine.' }, { de: 'Morgen treffe ich Freunde.', es: 'Mañana quedo con amigos.' }], fill: { prompt: 'Completa: Heute Abend ___ ich ins Kino.', answer: 'gehe', hint: 'Verbo gehen, 1ª persona.' }, speak: { target: 'Heute Abend gehe ich ins Kino.' } }
+                  ],
+                  A2: [
+                      { title: 'Narrar pasado con Perfekt', topic: 'gramatica', grammarTip: 'Combina auxiliares haben/sein y participio al final.', phrases: [{ de: 'Letztes Jahr habe ich in Berlin gearbeitet.', es: 'El año pasado trabajé en Berlín.' }, { de: 'Wir sind spät angekommen.', es: 'Llegamos tarde.' }, { de: 'Sie hat viel gelernt.', es: 'Ella ha estudiado mucho.' }], fill: { prompt: 'Completa: Wir sind spät ___.', answer: 'angekommen', hint: 'Participio de ankommen.' }, speak: { target: 'Wir sind spät angekommen.' } },
+                      { title: 'Conectores de causa y contraste', topic: 'conectores', grammarTip: 'weil + verbo final; aber/deshalb en frase principal.', phrases: [{ de: 'Ich bleibe zu Hause, weil ich krank bin.', es: 'Me quedo en casa porque estoy enfermo.' }, { de: 'Es regnet, aber wir gehen raus.', es: 'Llueve, pero salimos.' }, { de: 'Ich bin müde, deshalb schlafe ich früh.', es: 'Estoy cansado, por eso duermo pronto.' }], fill: { prompt: 'Completa: Ich bleibe zu Hause, ___ ich krank bin.', answer: 'weil', hint: 'Conector causal con verbo al final.' }, speak: { target: 'Ich bin müde, deshalb schlafe ich früh.' } },
+                      { title: 'Viajes y transporte', topic: 'viajes', grammarTip: 'Bloques útiles: Fahrkarte, umsteigen, Abfahrt, Ankunft.', phrases: [{ de: 'Wo kann ich eine Fahrkarte kaufen?', es: '¿Dónde puedo comprar un billete?' }, { de: 'Der Zug hat Verspätung.', es: 'El tren tiene retraso.' }, { de: 'Wir müssen in Köln umsteigen.', es: 'Tenemos que hacer transbordo en Colonia.' }], fill: { prompt: 'Completa: Der Zug hat ___.', answer: 'Verspätung', hint: 'Retraso.' }, speak: { target: 'Wir müssen in Köln umsteigen.' } },
+                      { title: 'Trámites y oficina', topic: 'tramites', grammarTip: 'Practica frases formales cortas en ventanilla.', phrases: [{ de: 'Ich möchte dieses Formular abgeben.', es: 'Quiero entregar este formulario.' }, { de: 'Welche Unterlagen brauche ich?', es: '¿Qué documentos necesito?' }, { de: 'Können Sie mir helfen?', es: '¿Puede ayudarme?' }], fill: { prompt: 'Completa: Welche ___ brauche ich?', answer: 'Unterlagen', hint: 'Documentos.' }, speak: { target: 'Ich möchte dieses Formular abgeben.' } },
+                      { title: 'Relaciones personales', topic: 'familia', grammarTip: 'Opinión básica: «Ich finde..., weil...»', phrases: [{ de: 'Ich finde meinen Job interessant.', es: 'Encuentro mi trabajo interesante.' }, { de: 'Mit meiner Schwester spreche ich oft.', es: 'Hablo mucho con mi hermana.' }, { de: 'Wir verstehen uns gut.', es: 'Nos llevamos bien.' }], fill: { prompt: 'Completa: Wir ___ uns gut.', answer: 'verstehen', hint: 'Verbo separable no, forma plural.' }, speak: { target: 'Wir verstehen uns gut.' } },
+                      { title: 'A2 oral práctico', topic: 'trabajo', grammarTip: 'Entrena respuestas completas de 2-3 frases.', phrases: [{ de: 'In meiner Firma arbeite ich im Team.', es: 'En mi empresa trabajo en equipo.' }, { de: 'Meine Aufgaben sind klar.', es: 'Mis tareas están claras.' }, { de: 'Ich möchte mich verbessern.', es: 'Quiero mejorar.' }], fill: { prompt: 'Completa: Ich arbeite ___ Team.', answer: 'im', hint: 'in + dem = im.' }, speak: { target: 'In meiner Firma arbeite ich im Team.' } }
+                  ],
+                  B1: [
+                      { title: 'Opinión y argumentación', topic: 'conectores', grammarTip: 'Conecta ideas con außerdem, jedoch, deshalb.', phrases: [{ de: 'Meiner Meinung nach ist Homeoffice sinnvoll.', es: 'En mi opinión, el teletrabajo tiene sentido.' }, { de: 'Einerseits spart man Zeit, andererseits fehlt Kontakt.', es: 'Por un lado ahorras tiempo, por otro falta contacto.' }, { de: 'Deshalb brauche ich einen Mix.', es: 'Por eso necesito un equilibrio.' }], fill: { prompt: 'Completa: Einerseits ..., ___ ...', answer: 'andererseits', hint: 'Conector correlativo.' }, speak: { target: 'Meiner Meinung nach ist Homeoffice sinnvoll.' } },
+                      { title: 'B1 trabajo y CV', topic: 'trabajo', grammarTip: 'Pasado relevante y logros concretos en frases breves.', phrases: [{ de: 'Ich habe drei Jahre im Kundenservice gearbeitet.', es: 'Trabajé tres años en atención al cliente.' }, { de: 'Ich bin zuverlässig und flexibel.', es: 'Soy fiable y flexible.' }, { de: 'Ich möchte mich beruflich weiterentwickeln.', es: 'Quiero desarrollarme profesionalmente.' }], fill: { prompt: 'Completa: Ich habe drei Jahre im Kundenservice ___.', answer: 'gearbeitet', hint: 'Participio regular.' }, speak: { target: 'Ich möchte mich beruflich weiterentwickeln.' } },
+                      { title: 'Relativsätze útiles', topic: 'gramatica', grammarTip: 'der/die/das + verbo al final para añadir información.', phrases: [{ de: 'Das ist der Kollege, der mir hilft.', es: 'Ese es el compañero que me ayuda.' }, { de: 'Die Stadt, in der ich wohne, ist ruhig.', es: 'La ciudad donde vivo es tranquila.' }, { de: 'Ich suche ein Buch, das leicht ist.', es: 'Busco un libro que sea fácil.' }], fill: { prompt: 'Completa: Das ist der Kollege, ___ mir hilft.', answer: 'der', hint: 'Relativo masculino nominativo.' }, speak: { target: 'Die Stadt, in der ich wohne, ist ruhig.' } },
+                      { title: 'B1 viajes e incidencias', topic: 'viajes', grammarTip: 'Describe problemas, pide solución y confirma pasos.', phrases: [{ de: 'Mein Flug wurde annulliert.', es: 'Mi vuelo fue cancelado.' }, { de: 'Können Sie mir eine Alternative anbieten?', es: '¿Puede ofrecerme una alternativa?' }, { de: 'Ich brauche eine Bestätigung per E-Mail.', es: 'Necesito una confirmación por correo.' }], fill: { prompt: 'Completa: Mein Flug wurde ___.', answer: 'annulliert', hint: 'Participio de annullieren.' }, speak: { target: 'Können Sie mir eine Alternative anbieten?' } },
+                      { title: 'Konjunktiv II cotidiano', topic: 'gramatica', grammarTip: 'Usa würde + infinitivo para hipótesis y deseos.', phrases: [{ de: 'Ich würde gern in Deutschland arbeiten.', es: 'Me gustaría trabajar en Alemania.' }, { de: 'Wenn ich Zeit hätte, würde ich mehr lesen.', es: 'Si tuviera tiempo, leería más.' }, { de: 'Könnten Sie das bitte wiederholen?', es: '¿Podría repetirlo, por favor?' }], fill: { prompt: 'Completa: Wenn ich Zeit hätte, ___ ich mehr lesen.', answer: 'würde', hint: 'Estructura condicional.' }, speak: { target: 'Wenn ich Zeit hätte, würde ich mehr lesen.' } }
+                  ],
+                  B2: [
+                      { title: 'Debate estructurado B2', topic: 'conectores', grammarTip: 'Estructura: tesis, argumentos, contraargumento, cierre.', phrases: [{ de: 'Ich vertrete die Auffassung, dass ...', es: 'Defiendo la postura de que...' }, { de: 'Zudem sprechen mehrere Gründe dafür.', es: 'Además hay varias razones a favor.' }, { de: 'Dennoch müssen Risiken berücksichtigt werden.', es: 'No obstante, deben considerarse riesgos.' }], fill: { prompt: 'Completa: ___ müssen Risiken berücksichtigt werden.', answer: 'Dennoch', hint: 'Conector concesivo.' }, speak: { target: 'Ich vertrete die Auffassung, dass digitale Bildung wichtig ist.' } },
+                      { title: 'Correo formal y registro', topic: 'tramites', grammarTip: 'Registro formal: Sehr geehrte..., ich möchte..., mit freundlichen Grüßen.', phrases: [{ de: 'Ich möchte mich über den Kurs informieren.', es: 'Quiero informarme sobre el curso.' }, { de: 'Für eine Rückmeldung wäre ich dankbar.', es: 'Agradecería una respuesta.' }, { de: 'Mit freundlichen Grüßen', es: 'Atentamente' }], fill: { prompt: 'Completa: Für eine Rückmeldung wäre ich ___.', answer: 'dankbar', hint: 'Adjetivo típico en carta formal.' }, speak: { target: 'Ich möchte mich über den Kurs informieren.' } },
+                      { title: 'Nominalización B2', topic: 'gramatica', grammarTip: 'Convierte verbos en sustantivos para estilo académico.', phrases: [{ de: 'Die Entscheidung wurde gestern getroffen.', es: 'La decisión se tomó ayer.' }, { de: 'Die Verbesserung der Prozesse ist notwendig.', es: 'La mejora de procesos es necesaria.' }, { de: 'Nach der Analyse folgte die Umsetzung.', es: 'Tras el análisis siguió la implementación.' }], fill: { prompt: 'Completa: Die ___ der Prozesse ist notwendig.', answer: 'Verbesserung', hint: 'Sustantivo de verbessern.' }, speak: { target: 'Die Entscheidung wurde gestern getroffen.' } },
+                      { title: 'Comprensión de noticias', topic: 'trabajo', grammarTip: 'Extrae idea principal, datos y postura del autor.', phrases: [{ de: 'Laut dem Bericht steigt die Inflation.', es: 'Según el informe, sube la inflación.' }, { de: 'Die Experten fordern schnelle Maßnahmen.', es: 'Los expertos piden medidas rápidas.' }, { de: 'Die Folgen betreffen vor allem Haushalte.', es: 'Las consecuencias afectan sobre todo a los hogares.' }], fill: { prompt: 'Completa: Laut dem Bericht ___ die Inflation.', answer: 'steigt', hint: 'Verbo de la oración principal.' }, speak: { target: 'Die Experten fordern schnelle Maßnahmen.' } }
+                  ],
+                  C1: [
+                      { title: 'Matiz y precisión léxica', topic: 'gramatica', grammarTip: 'Selecciona verbo por intención: behaupten, erläutern, einräumen.', phrases: [{ de: 'Die Autorin räumt ein, dass die Daten begrenzt sind.', es: 'La autora reconoce que los datos son limitados.' }, { de: 'Der Bericht legt nahe, dass Reformen nötig sind.', es: 'El informe sugiere que las reformas son necesarias.' }, { de: 'Er erläutert die Ursachen differenziert.', es: 'Explica las causas de forma matizada.' }], fill: { prompt: 'Completa: Der Bericht ___ nahe, dass Reformen nötig sind.', answer: 'legt', hint: 'Expresión fija «nahelegen».' }, speak: { target: 'Die Autorin räumt ein, dass die Daten begrenzt sind.' } },
+                      { title: 'Argumentación avanzada C1', topic: 'conectores', grammarTip: 'Conectores de alta precisión: demzufolge, insofern, wohingegen.', phrases: [{ de: 'Die Maßnahme ist teuer, demzufolge braucht sie klare Ziele.', es: 'La medida es costosa; por consiguiente, necesita metas claras.' }, { de: 'Insofern ist die Kritik nachvollziehbar.', es: 'En ese sentido, la crítica es comprensible.' }, { de: 'Wohingegen kurzfristige Lösungen selten nachhaltig sind.', es: 'Mientras que las soluciones a corto plazo rara vez son sostenibles.' }], fill: { prompt: 'Completa: Die Maßnahme ist teuer, ___ braucht sie klare Ziele.', answer: 'demzufolge', hint: 'Conector de consecuencia formal.' }, speak: { target: 'Insofern ist die Kritik nachvollziehbar.' } },
+                      { title: 'Presentación profesional', topic: 'trabajo', grammarTip: 'Abrir, estructurar y cerrar exposición con naturalidad.', phrases: [{ de: 'Im Folgenden präsentiere ich drei zentrale Punkte.', es: 'A continuación presento tres puntos centrales.' }, { de: 'Abschließend lässt sich festhalten, dass ...', es: 'Para concluir, puede sostenerse que...' }, { de: 'Gern beantworte ich anschließend Ihre Fragen.', es: 'Con gusto respondo después sus preguntas.' }], fill: { prompt: 'Completa: ___ präsentiere ich drei zentrale Punkte.', answer: 'Im Folgenden', hint: 'Inicio formal de exposición.' }, speak: { target: 'Abschließend lässt sich festhalten, dass nachhaltige Strategien nötig sind.' } }
+                  ]
+              };
               const byLevel = { A0: [], A1: [], A2: [], B1: [], B2: [], C1: [] };
               (rutaVerbDb.verbs || []).forEach((v) => {
                   const lv = String(v && v.level ? v.level : '').toUpperCase();
                   if (byLevel[lv]) byLevel[lv].push(v);
+              });
+              const normalizeRutaLevelKey = (value) => {
+                  const s = String(value || '').toUpperCase();
+                  if (s.startsWith('A0')) return 'A0';
+                  if (s.startsWith('A1')) return 'A1';
+                  if (s.startsWith('A2')) return 'A2';
+                  if (s.startsWith('B1')) return 'B1';
+                  if (s.startsWith('B2')) return 'B2';
+                  if (s.startsWith('C1')) return 'C1';
+                  return s;
+              };
+              const mkCurriculumLesson = (levelKey, unit, idx) => ({
+                  id: `curr-${levelKey.toLowerCase()}-${idx + 1}`,
+                  title: `${levelKey} · ${unit.title}`,
+                  topic: unit.topic || 'general',
+                  rewardCoins: 14 + Math.min(20, idx * 2),
+                  rewardXp: 20 + Math.min(26, idx * 2),
+                  grammarTip: unit.grammarTip || `Práctica guiada ${levelKey}.`,
+                  phrases: Array.isArray(unit.phrases) && unit.phrases.length ? unit.phrases.slice(0, 3) : [{ de: 'Ich lerne Deutsch.', es: 'Aprendo alemán.' }],
+                  fill: unit.fill || { prompt: 'Completa: Ich ___ Deutsch.', answer: 'lerne', hint: 'Verbo en presente.' },
+                  speak: unit.speak || { target: (unit.phrases && unit.phrases[0] && unit.phrases[0].de) || 'Ich lerne Deutsch.' }
               });
               const mkLesson = (levelKey, chunk, idx) => {
                   const topicCycle = ['familia', 'trabajo', 'alimentos', 'viajes', 'vivienda', 'salud', 'tiempo_libre', 'tramites'];
@@ -2107,8 +2172,17 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   };
               };
               const dynamic = [];
+              const baseEnriched = (base || []).map((lv) => {
+                  const key = normalizeRutaLevelKey((lv && lv.badge) || (lv && lv.title) || '');
+                  const extra = (curriculumByLevel[key] || []).map((unit, idx) => mkCurriculumLesson(key, unit, idx));
+                  const existingIds = new Set((lv.lessons || []).map((x) => x.id));
+                  const mergedLessons = [...(lv.lessons || []), ...extra.filter((x) => !existingIds.has(x.id))];
+                  return { ...lv, lessons: mergedLessons };
+              });
               const mkMergedLevel = (levelKey, title, badge, sourceVerbs) => {
                   const lv = mkLevel(levelKey, title, badge, sourceVerbs);
+                  const curriculumExtra = (curriculumByLevel[levelKey] || []).map((unit, idx) => mkCurriculumLesson(levelKey, unit, idx));
+                  lv.lessons.push(...curriculumExtra);
                   const arts = getArticleByLevel(levelKey);
                   for (let i = 0; i < arts.length; i += 10) lv.lessons.push(mkArticleLesson(levelKey, arts.slice(i, i + 10), Math.floor(i / 10)));
                   const cc = connectorByLevel[levelKey] || [];
@@ -2119,7 +2193,22 @@ const [placementFinished, setPlacementFinished] = useState(false);
               if (byLevel.B1.length || getArticleByLevel('B1').length) dynamic.push(mkMergedLevel('B1', 'Nivel B1 · Intermedio', 'B1', byLevel.B1));
               if (byLevel.B2.length || getArticleByLevel('B2').length) dynamic.push(mkMergedLevel('B2', 'Nivel B2 · Avanzado', 'B2', byLevel.B2));
               if (byLevel.C1.length || getArticleByLevel('C1').length) dynamic.push(mkMergedLevel('C1', 'Nivel C1 · Dominio', 'C1', byLevel.C1));
-              return [...base, ...dynamic];
+              const existingKeys = new Set([...baseEnriched, ...dynamic].map((lv) => normalizeRutaLevelKey((lv && lv.badge) || (lv && lv.title) || '')));
+              const fallbackTitles = {
+                  A0: { id: 'a0-ext', title: 'Nivel 0 · Fundamentos', badge: 'A0' },
+                  A1: { id: 'a1-ext', title: 'Nivel A1 · Comunicación básica', badge: 'A1' },
+                  A2: { id: 'a2-ext', title: 'Nivel A2 · Consolidación', badge: 'A2' },
+                  B1: { id: 'b1-ext', title: 'Nivel B1 · Intermedio', badge: 'B1' },
+                  B2: { id: 'b2-ext', title: 'Nivel B2 · Avanzado', badge: 'B2' },
+                  C1: { id: 'c1-ext', title: 'Nivel C1 · Dominio', badge: 'C1' }
+              };
+              Object.keys(curriculumByLevel).forEach((k) => {
+                  if (existingKeys.has(k)) return;
+                  const meta = fallbackTitles[k];
+                  const lessons = (curriculumByLevel[k] || []).map((unit, idx) => mkCurriculumLesson(k, unit, idx));
+                  dynamic.push({ id: meta.id, title: meta.title, badge: meta.badge, lessons });
+              });
+              return [...baseEnriched, ...dynamic];
           }, [rutaVerbDb, rutaArticleDb]);
           useEffect(() => {
               const onToast = (ev) => {
