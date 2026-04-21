@@ -1374,7 +1374,7 @@
             practice_mazos: { title: 'Entrenamiento rápido (mazos)', what: 'Repasas tarjetas guardadas como difícil, normal o gramática: audio, revelar traducción, siguiente.', tips: ['No mires revelar hasta haber intentado recordar.', 'Haz lotes cortos varias veces al día.', 'Cuando vacíe un mazo, vuelve a Historia para añadir nuevas frases.'] },
             advanced_menu: { title: 'Entrenamiento avanzado', what: 'Práctica guiada de artículos, verbos con preposición, preposiciones puras, conectores y simulacro tipo examen con cronómetro.', tips: ['Empieza por la categoría con peor porcentaje en el dashboard.', 'El modo examen entrena gestión de tiempo, no solo aciertos.', 'Cierra sesiones cortas para fijar mejor.', 'Artículos (JSON): usa "levels": ["A1","A2","B1"] para que la misma palabra salga en varios mazos; si repites la misma "de" con otro "level", la app une los niveles automáticamente.'] },
             advanced_exam: { title: 'Simulacro TELC (avanzado)', what: 'Cronómetro orientativo, pistas limitadas y mezcla de ítems según lo que elijas.', tips: ['Elige duración realista (20–30 min al principio).', 'Usa pistas solo cuando lleves bloqueado más de un minuto.', 'Al terminar, repasa solo los fallos en modo categoría.'] },
-            nav_ruta: { title: 'Ruta A1 → A2', what: 'Camino guiado desde cero: lecciones con frases, huecos, lectura en voz alta y recompensas. Pestaña Gramática resume reglas por nivel. Test de nivel sugiere por dónde empezar.', tips: ['Tecla R para abrir Ruta.', 'Elige mentor (voz) arriba: Frau Lena, Herr Tom o Lina.', 'Cada 3 lecciones completadas hay bonus extra de monedas.', 'El contenido se ampliará con el tiempo: la estructura ya está lista.'] },
+            nav_ruta: { title: 'Ruta A0 → A2', what: 'Camino guiado desde cero real: lecciones con frases, huecos, lectura en voz alta y recompensas. Pestaña Gramática resume reglas por nivel. Test de nivel sugiere por dónde empezar.', tips: ['Tecla R para abrir Ruta.', 'Elige mentor (voz) arriba: Frau Lena, Herr Tom o Lina.', 'Cada 3 lecciones completadas hay bonus extra de monedas.', 'El contenido se ampliará con el tiempo: la estructura ya está lista.'] },
             ruta_gramatica: { title: 'Ruta — Gramática', what: 'Resumen por niveles (A1, A2, B1) con explicaciones claras. No sustituye un libro de texto: combínalo con Historia y ejercicios.', tips: ['Abre el bloque del nivel que estudies en el camino.', 'Copia un ejemplo a Escritura para fijarlo.', 'Si algo no cuadra, pregunta a tu tutor o al foro.'] },
             nav_inicio: { title: 'Inicio', what: 'Pantalla principal con accesos rápidos y pendientes de repaso (SRS). Desde aquí saltas a Historia, vocab, shadowing, etc.', tips: ['Tecla I para volver al Inicio.', 'El número en Vocab indica tarjetas prioritarias del SRS.', 'Tras la bienvenida (banderas), eliges qué practicar.'] },
             hub_centro: { title: 'Centro Müller', what: 'Voces del sistema, ayuda, IA Chrome local; el plan del día y el resumen rápido están en Progreso.', tips: ['Configura voces antes de sesiones largas.', 'Pestaña “IA Chrome”: resumen local con Gemini Nano si tu Chrome lo permite.', 'Esc para cerrar el panel.', 'Repite el tour si te pierdes.'] },
@@ -1499,6 +1499,41 @@
         };
 
         window.MULLER_RUTA_LEVELS = [
+            {
+                id: 'a0-1',
+                title: 'Nivel 0 · Base absoluta',
+                badge: 'A0',
+                lessons: [
+                    {
+                        id: 'a0-1-l1',
+                        title: 'Sonidos + presentaciones mínimas',
+                        rewardCoins: 12,
+                        rewardXp: 18,
+                        grammarTip: 'En alemán, la frase base suele ir con verbo en 2ª posición: Ich bin Ana.',
+                        phrases: [
+                            { de: 'Ich bin Ana.', es: 'Soy Ana.' },
+                            { de: 'Ich komme aus Sevilla.', es: 'Vengo de Sevilla.' },
+                            { de: 'Ich lerne Deutsch.', es: 'Aprendo alemán.' }
+                        ],
+                        fill: { prompt: 'Completa: Ich ___ Ana.', answer: 'bin', hint: 'Verbo «sein», 1ª persona.' },
+                        speak: { target: 'Ich bin Ana.' }
+                    },
+                    {
+                        id: 'a0-1-l2',
+                        title: 'Clase y objetos básicos',
+                        rewardCoins: 12,
+                        rewardXp: 18,
+                        grammarTip: 'Memoriza sustantivo + artículo como bloque: der Tisch, die Tür, das Buch.',
+                        phrases: [
+                            { de: 'Das ist ein Buch.', es: 'Eso es un libro.' },
+                            { de: 'Die Tür ist offen.', es: 'La puerta está abierta.' },
+                            { de: 'Der Tisch ist groß.', es: 'La mesa es grande.' }
+                        ],
+                        fill: { prompt: 'Completa: Das ist ___ Buch.', answer: 'ein', hint: 'Artículo indefinido neutro.' },
+                        speak: { target: 'Das ist ein Buch.' }
+                    }
+                ]
+            },
             {
                 id: 'a1-1',
                 title: 'Nivel 1 · Primeros pasos',
@@ -1733,6 +1768,7 @@
           const [rutaSubTab, setRutaSubTab] = useState('camino');
           const [rutaProgress, setRutaProgress] = useState(() => (typeof window.mullerRutaLoad === 'function' ? window.mullerRutaLoad() : { completed: {}, placementDone: false, suggestedLevelIdx: 0, playTimeMs: 0, lessonsCompleted: 0 }));
           const [rutaRun, setRutaRun] = useState(null);
+          const [rutaVerbDb, setRutaVerbDb] = useState({ meta: null, verbs: [] });
           // --- NUEVOS ESTADOS PARA TEST ADAPTATIVO (30 PREGUNTAS) ---
 const [placementQuestions, setPlacementQuestions] = useState([]);
 const [placementAnswers, setPlacementAnswers] = useState([]);
@@ -1905,6 +1941,31 @@ const [placementFinished, setPlacementFinished] = useState(false);
               };
               window.addEventListener('muller-open-profile-settings', openSettings);
               return () => window.removeEventListener('muller-open-profile-settings', openSettings);
+          }, []);
+
+          useEffect(() => {
+              let cancelled = false;
+              const GIST_VERB_DB = 'https://gist.githubusercontent.com/djplaza1/239d6ac0a999c5729b3cf133627771f7/raw/gistfile1.txt';
+              const loadVerbDb = async () => {
+                  const urls = [
+                      `${GIST_VERB_DB}?nocache=${Date.now()}`,
+                      './verbos-db.json'
+                  ];
+                  for (const u of urls) {
+                      try {
+                          const r = await fetch(u, { cache: 'no-cache' });
+                          if (!r.ok) continue;
+                          const data = await r.json();
+                          const verbs = Array.isArray(data) ? data : (Array.isArray(data.verbs) ? data.verbs : []);
+                          if (!verbs.length) continue;
+                          if (cancelled) return;
+                          setRutaVerbDb({ meta: data.meta || null, verbs });
+                          return;
+                      } catch (e) {}
+                  }
+              };
+              loadVerbDb();
+              return () => { cancelled = true; };
           }, []);
           useEffect(() => {
               const onToast = (ev) => {
@@ -5771,7 +5832,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                           <ul className="text-sm text-gray-400 space-y-2">
                               <li><kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/20 text-xs">?</kbd> — esta ayuda</li>
                               <li><kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/20 text-xs">I</kbd> — Inicio</li>
-                              <li><kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/20 text-xs">R</kbd> — Ruta (A1→A2)</li>
+                              <li><kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/20 text-xs">R</kbd> — Ruta (A0→A2)</li>
                               <li><kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/20 text-xs">H</kbd> — Historia</li>
                               <li><kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/20 text-xs">V</kbd> — Vocabulario</li>
                               <li><kbd className="px-1.5 py-0.5 rounded bg-black/50 border border-white/20 text-xs">P</kbd> — Progreso</li>
@@ -7271,7 +7332,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                       <div className="flex-1 flex flex-col overflow-y-auto hide-scrollbar p-4 md:p-8 max-w-4xl mx-auto w-full animate-in fade-in duration-500">
                           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                               <div>
-                                  <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3 mb-2"><Icon name="map" className="w-9 h-9 md:w-12 md:h-12 text-fuchsia-400" /> Ruta A1 → A2</h1>
+                              <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3 mb-2"><Icon name="map" className="w-9 h-9 md:w-12 md:h-12 text-fuchsia-400" /> Ruta A0 → A2</h1>
                                   <p className="text-gray-400 text-sm md:text-base max-w-2xl">Camino desde cero: frases, huecos, voz y recompensas. Tecla <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/15 font-mono text-xs">R</kbd>.</p>
                               </div>
                               <ExerciseHelpBtn helpId="nav_ruta" />
@@ -7293,6 +7354,19 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                               </button>
                           </div>
                           <p className="text-[11px] text-gray-500 mb-4">Tiempo en Ruta (aprox.): {Math.round((rutaProgress.playTimeMs || 0) / 60000)} min · Lecciones completadas: {rutaProgress.lessonsCompleted || 0}</p>
+                          <div className="mb-4 rounded-2xl border border-fuchsia-500/30 bg-gradient-to-r from-slate-900/80 via-fuchsia-950/45 to-slate-900/80 p-3 md:p-4 flex flex-wrap items-center gap-3">
+                              <div className={`relative w-14 h-14 md:w-16 md:h-16 rounded-full border border-white/20 overflow-hidden bg-gradient-to-br from-amber-200 via-rose-200 to-violet-200 ${rutaListening || isListening ? 'animate-pulse' : ''}`}>
+                                  <div className="absolute inset-x-0 bottom-0 h-4 bg-rose-300/70" />
+                                  <div className="absolute left-3 top-5 w-2 h-2 rounded-full bg-slate-700" />
+                                  <div className="absolute right-3 top-5 w-2 h-2 rounded-full bg-slate-700" />
+                                  <div className={`absolute left-1/2 -translate-x-1/2 bottom-2 rounded-full bg-slate-700 ${rutaListening || isListening ? 'w-4 h-2' : 'w-3 h-1'}`} />
+                              </div>
+                              <div className="min-w-[220px]">
+                                  <p className="text-[10px] font-black uppercase tracking-wider text-fuchsia-300">Tutor Ruta</p>
+                                  <p className="text-sm font-bold text-white">Entrenador guiado desde cero (A0 → C1)</p>
+                                  <p className="text-[11px] text-gray-400">Banco de verbos detectado: <strong className="text-fuchsia-300">{(rutaVerbDb.verbs || []).length}</strong> entradas.</p>
+                              </div>
+                          </div>
                           {!rutaRun ? (
                               <>
                                   <div className="flex flex-wrap gap-2 mb-6">
@@ -7473,7 +7547,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                           ) : null}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                               {[
-                                  { id: 'ruta', label: 'Ruta A1→A2', sub: 'Desde cero, gramática, test', icon: 'map', go: () => { setActiveTab('ruta'); } },
+                                  { id: 'ruta', label: 'Ruta A0→A2', sub: 'Desde cero, gramática, test', icon: 'map', go: () => { setActiveTab('ruta'); } },
                                   { id: 'historia', label: 'Historia', sub: 'Guion, audio, modos', icon: 'play', go: () => { setActiveTab('historia'); setMode('dialogue'); } },
                                   { id: 'vocab', label: 'Vocabulario', sub: 'SRS y tarjetas', icon: 'book-open', go: () => setActiveTab('vocabulario') },
                                   { id: 'shadow', label: 'Shadowing', sub: 'Pronunciación', icon: 'audio-lines', go: () => setActiveTab('shadowing') },
