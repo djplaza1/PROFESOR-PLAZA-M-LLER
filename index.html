@@ -6610,17 +6610,25 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           window.speechSynthesis.speak(u);
         }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 font-bold text-sm">
         <Icon name="volume-2" className="w-4 h-4" /> Escuchar dictado
-      </button>
-      <button type="button" onClick={() => {
-          setWritingDictIdx((i) => (i + 1) % WRITING_DICTATION_LINES.length);
-          setWritingDictReveal(false);
-          setWritingCanvasKey((k) => k + 1); // Solo aquí se limpia el canvas
-        }} className="text-xs font-bold px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10">
-        Otro dictado
-      </button>
-      <button type="button" onClick={() => setWritingDictReveal((r) => !r)} className="text-xs font-bold px-3 py-2 rounded-lg bg-amber-900/60 hover:bg-amber-800/80 border border-amber-600/40">
-        {writingDictReveal ? 'Ocultar solución' : 'Mostrar solución'}
-      </button>
+   // Fragmento corregido en la sección de Escritura > Dictado
+<button
+  type="button"
+  onClick={() => {
+    setWritingDictIdx((i) => (i + 1) % WRITING_DICTATION_LINES.length);
+    setWritingDictReveal(false);
+    setWritingCanvasKey((k) => k + 1); // Solo aquí se limpia el canvas
+  }}
+  className="text-xs font-bold px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/10"
+>
+  Otro dictado
+</button>
+<button
+  type="button"
+  onClick={() => setWritingDictReveal((r) => !r)}
+  className="text-xs font-bold px-3 py-2 rounded-lg bg-amber-900/60 hover:bg-amber-800/80 border border-amber-600/40"
+>
+  {writingDictReveal ? 'Ocultar solución' : 'Mostrar solución'}
+</button>
     </div>
     {/* ... */}
   </div>
