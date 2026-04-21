@@ -255,7 +255,7 @@
             flex-wrap: wrap;
         }
         :root {
-            --muller-mobile-header-h: 12rem;
+            --muller-mobile-header-h: 10rem;
             --muller-mobile-bottom-nav-h: 5rem;
         }
         @media (min-width: 768px) {
@@ -352,6 +352,28 @@
         .muller-theme-light .muller-app-main [class*="bg-black/45"],
         .muller-theme-light .muller-app-main [class*="bg-black/50"] {
             background-color: rgba(241, 245, 249, 0.96) !important;
+        }
+
+        /* Barra de reproducción historia: fija en móvil para no solaparse con tabs */
+        @media (max-width: 1024px) {
+            .muller-historia-player-bar {
+                position: fixed;
+                bottom: var(--muller-mobile-bottom-nav-h);
+                left: 0;
+                right: 0;
+                z-index: 90;
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }
+            /* Espacio extra cuando la barra historia está visible */
+            .muller-main-historia-pb {
+                padding-bottom: calc(var(--muller-mobile-bottom-nav-h) + 7rem) !important;
+            }
+        }
+        /* Navegación superior alineada a la derecha en desktop */
+        @media (min-width: 1025px) {
+            .muller-nav-row {
+                justify-content: flex-end;
+            }
         }
     </style>
 </head>
@@ -5600,7 +5622,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               </nav>
 
               {/* CONTENIDO PRINCIPAL */}
-              <div className={`muller-app-main flex-1 overflow-y-auto relative flex flex-col hide-scrollbar pt-[var(--muller-mobile-header-h)] pb-[calc(var(--muller-mobile-bottom-nav-h)+max(0.5rem,env(safe-area-inset-bottom,0px)))] ${uiTheme === 'light' ? 'text-slate-900' : ''}`}>
+              <div className={`muller-app-main flex-1 overflow-y-auto relative flex flex-col hide-scrollbar pt-[var(--muller-mobile-header-h)] pb-[calc(var(--muller-mobile-bottom-nav-h)+max(0.5rem,env(safe-area-inset-bottom,0px)))] ${activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !practiceActive ? 'muller-main-historia-pb' : ''} ${uiTheme === 'light' ? 'text-slate-900' : ''}`}>
                   
                   {activeTab === 'telc' && !practiceActive && (() => {
                       const telcPack = (window.MULLER_TELC_BY_LEVEL && window.MULLER_TELC_BY_LEVEL[telcLevel]) || (window.MULLER_TELC_BY_LEVEL && window.MULLER_TELC_BY_LEVEL.B1);
@@ -7631,7 +7653,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 
               {/* REPRODUCTOR CONTROLES INFERIORES */}
               {activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !practiceActive && (
-                  <div className="bg-gray-950 p-3 md:p-6 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 border-t border-gray-800 z-20">
+                  <div className="muller-historia-player-bar bg-gray-950 p-3 md:p-6 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 border-t border-gray-800 z-20">
                       <div className="flex flex-col text-xs md:text-sm text-gray-400 w-full sm:w-auto text-center sm:text-left">
                         <span className="font-bold text-white text-sm md:text-base truncate sm:max-w-[200px]">{activeScriptTitle}</span>
                         <span>Szene {isReviewing ? reviewIndexPointer + 1 : sceneIndex + 1} von {isReviewing ? userStats.failedDiktatScenes.length : guionData.length} {isReviewing && "(Repaso)"}</span>
