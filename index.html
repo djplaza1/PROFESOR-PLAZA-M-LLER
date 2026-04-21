@@ -6946,25 +6946,43 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                           <p className="text-xs text-gray-500">Ampliaremos con más temas y ejemplos conforme añadas contenido al camino.</p>
                                       </div>
                                   )}
-                                  {rutaSubTab === 'test' && (
-                                      <div className="rounded-2xl border border-sky-500/30 bg-sky-950/30 p-5 md:p-6 space-y-4">
-                                          <p className="text-white font-bold">Responde las 4 preguntas. Al final te sugerimos un nivel de inicio.</p>
-                                          {(window.MULLER_PLACEMENT_Q || []).map((q, qi) => (
-                                              <div key={qi} className="rounded-xl border border-white/10 bg-black/30 p-4">
-                                                  <p className="text-white font-semibold mb-2">{qi + 1}. {q.q}</p>
-                                                  <div className="flex flex-col gap-2">
-                                                      {q.opts.map((o, oi) => (
-                                                          <label key={oi} className={`flex items-center gap-2 cursor-pointer rounded-lg px-3 py-2 text-sm ${placementSel[qi] === oi ? 'bg-fuchsia-800/50 border border-fuchsia-500/50' : 'bg-black/20 border border-transparent hover:border-white/10'}`}>
-                                                              <input type="radio" name={`place-q-${qi}`} checked={placementSel[qi] === oi} onChange={() => { const n = [...placementSel]; n[qi] = oi; setPlacementSel(n); if (window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(oi === q.ok); }} className="accent-fuchsia-500" />
-                                                              <span className="text-gray-200">{o}</span>
-                                                          </label>
-                                                      ))}
-                                                  </div>
-                                              </div>
-                                          ))}
-                                          <button type="button" onClick={finishPlacementTest} className="w-full rounded-xl bg-sky-600 hover:bg-sky-500 font-black py-3 text-white shadow-lg">Ver resultado y recomendación</button>
-                                      </div>
-                                  )}
+                                {rutaSubTab === 'test' && (
+  <div className="rounded-2xl border border-sky-500/30 bg-sky-950/30 p-5 md:p-6 space-y-4">
+    {!placementQuestions.length ? (
+      <>
+        <p className="text-white font-bold text-lg">Test de nivel adaptativo</p>
+        <p className="text-gray-300 text-sm">Responde unas preguntas para evaluar tu nivel de alemán. El test se adapta a tus respuestas.</p>
+        <button type="button" onClick={startPlacementTest} className="w-full rounded-xl bg-sky-600 hover:bg-sky-500 font-black py-3 text-white shadow-lg">Comenzar test (30 preguntas aprox.)</button>
+      </>
+    ) : (
+      <>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-bold text-sky-300">Nivel actual: {placementLevel}</span>
+          <span className="text-xs text-gray-400">Pregunta {placementIndex + 1} de {placementQuestions.length}</span>
+        </div>
+        <div className="w-full bg-gray-700 rounded-full h-2 mb-4">
+          <div className="bg-sky-500 h-2 rounded-full" style={{ width: `${((placementIndex + 1) / placementQuestions.length) * 100}%` }}></div>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+          <p className="text-white font-semibold text-lg mb-4">{placementQuestions[placementIndex].q}</p>
+          <div className="grid grid-cols-1 gap-2">
+            {placementQuestions[placementIndex].opts.map((opt, oi) => (
+              <button
+                key={oi}
+                type="button"
+                onClick={() => handlePlacementAnswer(oi)}
+                className="text-left px-4 py-3 rounded-lg bg-slate-800 hover:bg-sky-900 text-white border border-white/10 transition"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">Responde con sinceridad. El test se adapta para encontrar tu nivel real.</p>
+      </>
+    )}
+  </div>
+)}
                               </>
                           ) : (() => {
                               const L = window.MULLER_RUTA_LEVELS || [];
