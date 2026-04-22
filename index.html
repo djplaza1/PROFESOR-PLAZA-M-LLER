@@ -3553,6 +3553,13 @@ const finishPlacementWithLevel = (finalLevel) => {
               setShowPuzzleResult(true);
           }, [guionData, getActualSceneIndex, puzzleAnswer]);
 
+          const handleOralNextQuestion = useCallback(() => {
+              setOralQIdx((i) => (i + 1) % MULLER_ORAL_B1_QUESTIONS.length);
+              setSpokenText('');
+              setOralDeadline(Date.now() + oralSecs * 1000);
+              setOralClock(0);
+          }, [oralSecs]);
+
           useEffect(() => {
               if (!(mode === 'dialogue' && puzzleMode)) return;
               const onKey = (e) => {
@@ -3590,6 +3597,13 @@ const finishPlacementWithLevel = (finalLevel) => {
               window.addEventListener('keydown', onKey);
               return () => window.removeEventListener('keydown', onKey);
           }, [activeTab, rutaRun, rutaListening, handleExerciseEnterSubmit, checkRutaSpeakAnswer, completeRutaLesson]);
+
+          useEffect(() => {
+              if (mode !== 'interview' || !spokenText) return;
+              const onKey = (e) => handleExerciseEnterSubmit(e, 'oral-next-question', handleOralNextQuestion);
+              window.addEventListener('keydown', onKey);
+              return () => window.removeEventListener('keydown', onKey);
+          }, [mode, spokenText, handleExerciseEnterSubmit, handleOralNextQuestion]);
 
           const loadPdfStudyFile = useCallback(async (file) => {
               if (!file) return;
@@ -10042,7 +10056,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                                 </div>
                                             )}
                                             <div className="flex flex-wrap gap-2 justify-center mt-4">
-                                                <button type="button" onClick={() => { setOralQIdx((i) => (i + 1) % MULLER_ORAL_B1_QUESTIONS.length); setSpokenText(''); setOralDeadline(Date.now() + oralSecs * 1000); setOralClock(0); }} className="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm">Siguiente pregunta</button>
+                                                <button type="button" onClick={() => runSingleSubmitAction('oral-next-question', handleOralNextQuestion)} className="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm">Siguiente pregunta</button>
                                                 <button type="button" onClick={() => { setMode('dialogue'); setOralDeadline(null); setSpokenText(''); saveProgress({ activityByDay: mergeActivityPoints(20) }); }} className="bg-white text-black px-4 py-2 rounded-xl font-black text-sm hover:bg-gray-200">Salir del simulacro</button>
                                             </div>
                                         </div>
