@@ -1,6 +1,14 @@
 /* Müller — Service Worker: red primero; caché de app + metadatos offline (último guion vía Cache API) */
-const CACHE = 'muller-sw-v3';
-const PRECACHE_URLS = ['./', './index.html', './manifest.json', './b1-b2-database.json', './vocab-packs/reise-mini.json'];
+const CACHE = 'muller-sw-v4';
+const PRECACHE_URLS = [
+    './',
+    './index.html',
+    './manifest.json',
+    './icons/icon-192.png',
+    './icons/icon-512.png',
+    './b1-b2-database.json',
+    './vocab-packs/reise-mini.json',
+];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
