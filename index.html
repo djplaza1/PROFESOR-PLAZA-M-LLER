@@ -9073,7 +9073,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   <p className="text-rose-200/90 text-sm font-bold">{LETTER_DRILLS[writingLetterIdx % LETTER_DRILLS.length].title}</p>
                                   <p className="text-xs text-amber-200/80">{LETTER_DRILLS[writingLetterIdx % LETTER_DRILLS.length].sample}</p>
                                   <p className="text-lg md:text-xl text-white tracking-wide font-medium">Práctica: {LETTER_DRILLS[writingLetterIdx % LETTER_DRILLS.length].practice}</p>
-                                  <button type="button" onClick={() => { setWritingLetterIdx((i) => (i + 1) % LETTER_DRILLS.length); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-900/80 hover:bg-rose-800 border border-rose-600/40">Siguiente bloque</button>
+                                  <button type="button" onClick={() => runSingleSubmitAction('writing-letters-next', () => { setWritingLetterIdx((i) => (i + 1) % LETTER_DRILLS.length); setWritingCanvasKey((k) => k + 1); })} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-900/80 hover:bg-rose-800 border border-rose-600/40">Siguiente bloque</button>
                               </div>
                           )}
 
@@ -9088,8 +9088,8 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                           <p className="text-lg md:text-xl text-white leading-relaxed">{guionData[writingGuionWriteIdx]?.text}</p>
                                           {guionData[writingGuionWriteIdx]?.translation && <p className="text-xs text-gray-500 italic border-t border-white/10 pt-2">({guionData[writingGuionWriteIdx].translation})</p>}
                                           <div className="flex flex-wrap gap-2 pt-2">
-                                              <button type="button" disabled={writingGuionWriteIdx <= 0} onClick={() => { setWritingGuionWriteIdx((i) => Math.max(0, i - 1)); setWritingCanvasKey((k) => k + 1); }} className="muller-icon-nav inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 font-bold text-xs text-white border border-white/10 disabled:opacity-30"><Icon name="chevron-left" className="w-3.5 h-3.5 text-white shrink-0" /> Anterior</button>
-                                              <button type="button" disabled={writingGuionWriteIdx >= guionData.length - 1} onClick={() => { setWritingGuionWriteIdx((i) => Math.min(guionData.length - 1, i + 1)); setWritingCanvasKey((k) => k + 1); }} className="muller-icon-nav inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 font-bold text-xs text-white border border-white/10 disabled:opacity-30">Siguiente <Icon name="chevron-right" className="w-3.5 h-3.5 text-white shrink-0" /></button>
+                                              <button type="button" disabled={writingGuionWriteIdx <= 0} onClick={() => runSingleSubmitAction('writing-guion-prev', () => { setWritingGuionWriteIdx((i) => Math.max(0, i - 1)); setWritingCanvasKey((k) => k + 1); })} className="muller-icon-nav inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 font-bold text-xs text-white border border-white/10 disabled:opacity-30"><Icon name="chevron-left" className="w-3.5 h-3.5 text-white shrink-0" /> Anterior</button>
+                                              <button type="button" disabled={writingGuionWriteIdx >= guionData.length - 1} onClick={() => runSingleSubmitAction('writing-guion-next', () => { setWritingGuionWriteIdx((i) => Math.min(guionData.length - 1, i + 1)); setWritingCanvasKey((k) => k + 1); })} className="muller-icon-nav inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 font-bold text-xs text-white border border-white/10 disabled:opacity-30">Siguiente <Icon name="chevron-right" className="w-3.5 h-3.5 text-white shrink-0" /></button>
                                           </div>
                                       </>
                                   )}
@@ -9105,7 +9105,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                       <>
                                           <p className="text-xl md:text-2xl text-amber-100 font-black">{currentVocabList[writingVocabIdx % currentVocabList.length].de}</p>
                                           <p className="text-sm text-gray-500">{currentVocabList[writingVocabIdx % currentVocabList.length].es}</p>
-                                          <button type="button" onClick={() => { setWritingVocabIdx((i) => (i + 1) % currentVocabList.length); setWritingCanvasKey((k) => k + 1); }} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-900/50 hover:bg-amber-800/70 border border-amber-600/40">Otra palabra</button>
+                                          <button type="button" onClick={() => runSingleSubmitAction('writing-vocab-next', () => { setWritingVocabIdx((i) => (i + 1) % currentVocabList.length); setWritingCanvasKey((k) => k + 1); })} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-900/50 hover:bg-amber-800/70 border border-amber-600/40">Otra palabra</button>
                                       </>
                                   )}
                               </div>
