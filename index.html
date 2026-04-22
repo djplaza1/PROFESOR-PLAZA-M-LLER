@@ -6414,22 +6414,22 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   <div className="fixed inset-0 z-[300] overflow-hidden" role="dialog" aria-modal="true" aria-label="Pantalla de inicio Profesor Plaza Müller">
                       <div className="absolute inset-0 flex flex-col">
                           <div className="flex-1" style={{ background: 'linear-gradient(180deg, #000000 0%, #000000 33%, #DD0000 33%, #DD0000 67%, #FFCE00 67%, #FFCE00 100%)' }} aria-hidden="true" />
-                          <div className="h-[160px] md:h-[192px] bg-white border-y-2 border-black/20 shadow-[0_8px_25px_rgba(0,0,0,0.25)] flex items-center px-3 md:px-6">
+                          <div className="h-[160px] md:h-[192px] bg-white border-y-2 border-black/20 shadow-[0_8px_25px_rgba(0,0,0,0.25)] flex items-stretch px-2 md:px-4">
                               <button
                                   type="button"
                                   onClick={() => setShowSplash(false)}
-                                  className={`shrink-0 rounded-xl p-1.5 md:p-2 bg-black/5 border border-black/20 h-[130px] w-[130px] md:h-[160px] md:w-[160px] flex items-center justify-center ${splashLogoBlink ? 'animate-pulse ring-4 ring-amber-400/75' : ''}`}
+                                  className={`shrink-0 rounded-none p-0 bg-transparent border-0 h-full w-[160px] md:w-[192px] flex items-center justify-center ${splashLogoBlink ? 'animate-pulse ring-4 ring-amber-400/75' : ''}`}
                                   aria-label="Entrar a la aplicación pulsando el logo"
                                   title="Pulsa el logo para entrar"
                               >
                                   <img
                                       src="./icons/profesor-plaza-muller-logo.jpg"
                                       alt="Logo Profesor Plaza Müller"
-                                      className="h-full w-full object-contain"
+                                      className="h-full w-full object-cover"
                                   />
                               </button>
-                              <div className="ml-3 md:ml-5 flex-1 h-full flex items-center justify-center overflow-hidden">
-                                  <p className="w-full text-center text-black font-black uppercase tracking-[0.06em] whitespace-nowrap text-[clamp(1.1rem,4.4vw,3.3rem)] leading-none">
+                              <div className="ml-2 md:ml-3 flex-1 h-full flex items-center justify-center overflow-hidden">
+                                  <p className="w-full text-center text-black font-black uppercase tracking-[0.04em] whitespace-nowrap text-[clamp(1.35rem,5.4vw,4.15rem)] leading-none">
                                       PROFESOR PLAZA MÜLLER
                                   </p>
                               </div>
