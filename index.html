@@ -2283,6 +2283,8 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const [pdfStudyOcrBusy, setPdfStudyOcrBusy] = useState(false);
           const [pdfStudyLastApplied, setPdfStudyLastApplied] = useState('');
           const [pdfStudyFullscreen, setPdfStudyFullscreen] = useState(false);
+          const [pdfStudyFsView, setPdfStudyFsView] = useState('split');
+          const [pdfFsScrollPdf, setPdfFsScrollPdf] = useState(false);
           const [pdfStudyInkNonce, setPdfStudyInkNonce] = useState(0);
           const [pdfStudyOcrBatching, setPdfStudyOcrBatching] = useState(false);
           const [pdfStudyNotesByPage, setPdfStudyNotesByPage] = useState(() => {
@@ -4500,10 +4502,12 @@ const finishPlacementWithLevel = (finalLevel) => {
               const idx = Math.max(0, (Number(pageNumber) || 1) - 1);
               setPdfStudyPageIdx(idx);
               setPdfStudyInkNonce(0);
+              setPdfFsScrollPdf(false);
               setPdfStudyFullscreen(true);
           }, [pdfStudyDoc]);
           const closePdfStudyFullscreen = useCallback(() => {
               setPdfStudyFullscreen(false);
+              setPdfFsScrollPdf(false);
           }, []);
           const startRutaListen = async () => {
               const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -6522,7 +6526,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           const currentPracticeItem = currentPracticeList ? currentPracticeList[practiceIndex] : null;
 
           /** Lienzo para lápiz óptico / dedo: pointer capture, sin scroll al trazar. Herramientas: lápiz, goma, marcador, subrayado + deshacer. */
-          const TabletWritingCanvas = ({ padKey, grid, strokeW, compareTarget, onOcrCompared, snapshotData, snapshotPadKey, onSnapshotChange, backgroundImageData = '' }) => {
+          const TabletWritingCanvas = ({ padKey, grid, strokeW, compareTarget, onOcrCompared, snapshotData, snapshotPadKey, onSnapshotChange, backgroundImageData = '', overlayMode = false, hideOcrUi = false }) => {
               const wrapRef = useRef(null);
               const canvasRef = useRef(null);
               const ctxRef = useRef(null);
@@ -6554,14 +6558,24 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   orange: 'rgba(251, 146, 60, 0.42)',
                   blue: 'rgba(96, 165, 250, 0.45)',
                   cyan: 'rgba(34, 211, 238, 0.42)',
+                  purple: 'rgba(192, 132, 252, 0.42)',
+                  red: 'rgba(248, 113, 113, 0.38)',
+                  gray: 'rgba(148, 163, 184, 0.4)',
               }), []);
 
               const layoutCanvas = useCallback(() => {
                   const canvas = canvasRef.current;
                   const wrap = wrapRef.current;
                   if (!canvas || !wrap) return;
-                  const w = wrap.clientWidth;
-                  const h = Math.max(360, Math.min(680, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 700) * 0.52)));
+                  const iw = typeof window !== 'undefined' ? window.innerWidth : 400;
+                  const ih = typeof window !== 'undefined' ? window.innerHeight : 700;
+                  const w = Math.max(8, wrap.clientWidth || (overlayMode ? Math.min(920, iw - 24) : iw - 24));
+                  let h;
+                  if (!overlayMode) {
+                      h = Math.max(360, Math.min(680, Math.floor(ih * 0.52)));
+                  } else {
+                      h = Math.max(200, wrap.clientHeight || 0, Math.floor(ih * 0.38));
+                  }
                   const dpr = window.devicePixelRatio || 1;
                   sizeRef.current = { w, h };
                   canvas.width = w * dpr;
@@ -6576,7 +6590,16 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   ctxRef.current = ctx;
                   undoStackRef.current = [];
                   setCanUndo(false);
-              }, [padKey]);
+              }, [padKey, overlayMode]);
+
+              useEffect(() => {
+                  if (!overlayMode) return;
+                  const wrap = wrapRef.current;
+                  if (!wrap || typeof ResizeObserver === 'undefined') return;
+                  const ro = new ResizeObserver(() => { layoutCanvas(); });
+                  ro.observe(wrap);
+                  return () => { try { ro.disconnect(); } catch (e) {} };
+              }, [overlayMode, layoutCanvas]);
 
               useEffect(() => { layoutCanvas(); }, [layoutCanvas]);
               useEffect(() => {
@@ -6633,7 +6656,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                       ctx.lineWidth = hlWidth;
                       ctx.globalAlpha = 1;
                   } else if (tool === 'underline') {
-                      ctx.strokeStyle = '#38bdf8';
+                      ctx.strokeStyle = penColor;
                       ctx.lineWidth = 3;
                   } else {
                       ctx.strokeStyle = penColor;
@@ -6662,7 +6685,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                   applyStrokeStyle(ctx, tool);
                   ctx.beginPath();
                   if (tool === 'underline') {
-                      ctx.fillStyle = '#38bdf8';
+                      ctx.fillStyle = penColor;
                       ctx.arc(x, y + 12, 1.4, 0, Math.PI * 2);
                       ctx.fill();
                       ctx.restore();
@@ -6878,9 +6901,9 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               const canvasCursor = writingTool === 'eraser' ? 'cell' : writingTool === 'highlighter' ? 'copy' : 'crosshair';
 
               return (
-                  <div className="space-y-3">
-                      <div className="rounded-xl border border-white/10 bg-black/25 p-2 md:p-3 space-y-2">
-                          <p className="text-[10px] font-bold text-rose-300/90 uppercase tracking-wider text-center md:text-left">Herramientas</p>
+                  <div className={overlayMode ? 'flex flex-col h-full min-h-0 w-full' : 'space-y-3'}>
+                      <div className={`rounded-xl border border-white/10 bg-black/25 space-y-2 ${overlayMode ? 'p-2 shrink-0' : 'p-2 md:p-3'}`}>
+                          <p className="text-[10px] font-bold text-rose-300/90 uppercase tracking-wider text-center md:text-left">{overlayMode ? 'Herram. · PDF' : 'Herramientas'}</p>
                           <div className="flex flex-wrap gap-1.5 justify-center md:justify-start">
                               {[
                                   { id: 'pen', label: 'Lápiz', icon: 'pen-line', title: 'Trazo normal (usa el grosor de abajo)' },
@@ -6900,16 +6923,33 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   </button>
                               ))}
                           </div>
-                          {writingTool === 'pen' && (
-                              <div className="flex flex-wrap items-center gap-2 justify-center md:justify-start pt-1 border-t border-white/5">
+                          {(writingTool === 'pen' || writingTool === 'underline') && (
+                              <div className="flex flex-wrap items-center gap-1.5 justify-center md:justify-start pt-1 border-t border-white/5">
                                   <span className="text-[10px] text-slate-500">Tinta:</span>
                                   {[
+                                      { c: '#000000', lab: 'Negro' },
+                                      { c: '#0f172a', lab: 'Grafito' },
                                       { c: '#f1f5f9', lab: 'Blanco' },
+                                      { c: '#94a3b8', lab: 'Gris' },
                                       { c: '#60a5fa', lab: 'Azul' },
+                                      { c: '#22c55e', lab: 'Verde' },
+                                      { c: '#14b8a6', lab: 'Verde agua' },
+                                      { c: '#eab308', lab: 'Amarillo' },
+                                      { c: '#f97316', lab: 'Naranja' },
                                       { c: '#f87171', lab: 'Rojo' },
-                                      { c: '#c4b5fd', lab: 'Violeta' },
+                                      { c: '#ec4899', lab: 'Rosa' },
+                                      { c: '#a855f7', lab: 'Violeta' },
+                                      { c: '#c4b5fd', lab: 'Lila' },
+                                      { c: '#2dd4bf', lab: 'Turquesa' },
                                   ].map((x) => (
-                                      <button key={x.c} type="button" title={x.lab} onClick={() => setPenColor(x.c)} className={`w-7 h-7 rounded-full border-2 shrink-0 ${penColor === x.c ? 'border-white ring-2 ring-rose-400/80' : 'border-white/20'}`} style={{ background: x.c }} />
+                                      <button
+                                          key={x.c}
+                                          type="button"
+                                          title={x.lab}
+                                          onClick={() => setPenColor(x.c)}
+                                          className={`w-7 h-7 rounded-full border-2 shrink-0 ${penColor === x.c ? 'border-white ring-2 ring-rose-400/80' : 'border-white/30'} ${x.c === '#000000' || x.c === '#0f172a' ? 'ring-1 ring-white/50' : ''}`}
+                                          style={{ background: x.c }}
+                                      />
                                   ))}
                               </div>
                           )}
@@ -6934,6 +6974,9 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                       { id: 'orange', bg: 'bg-orange-400' },
                                       { id: 'blue', bg: 'bg-blue-400' },
                                       { id: 'cyan', bg: 'bg-cyan-400' },
+                                      { id: 'purple', bg: 'bg-purple-400' },
+                                      { id: 'red', bg: 'bg-red-400' },
+                                      { id: 'gray', bg: 'bg-slate-400' },
                                   ].map((h) => (
                                       <button key={h.id} type="button" onClick={() => setHlPreset(h.id)} className={`w-8 h-5 rounded border-2 ${h.bg} ${hlPreset === h.id ? 'border-white ring-1 ring-rose-300' : 'border-white/20'}`} title={h.id} />
                                   ))}
@@ -6946,10 +6989,19 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                               </div>
                           )}
                           {writingTool === 'underline' && (
-                              <p className="text-[9px] text-sky-400/90 text-center md:text-left pt-1 border-t border-white/5">Subrayado: traza encima de la línea; la raya azul sale un poco más abajo (como subrayar en papel).</p>
+                              <p className="text-[9px] text-sky-400/90 text-center md:text-left pt-1 border-t border-white/5">Subrayado: traza encima; la raya usa el <strong className="text-sky-200">color de tinta</strong> (elige arriba).</p>
                           )}
-                      </div>
-                      <div ref={wrapRef} className={grid ? 'writing-pad-wrap' : 'rounded-xl border-2 border-slate-600 bg-[#0c1222] overflow-hidden'}>
+                          </div>
+                      <div
+                          ref={wrapRef}
+                          className={
+                              overlayMode
+                                  ? 'relative w-full flex-1 min-h-[120px] overflow-hidden rounded-lg border border-white/15 bg-transparent'
+                                  : grid
+                                  ? 'writing-pad-wrap'
+                                  : 'rounded-xl border-2 border-slate-600 bg-[#0c1222] overflow-hidden'
+                          }
+                      >
                           <canvas
                               ref={canvasRef}
                               className="writing-lab-canvas"
@@ -6961,22 +7013,33 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                               onPointerCancel={endDraw}
                           />
                       </div>
-                      <div className="flex flex-wrap gap-2 justify-center items-center">
-                          <button type="button" onClick={undoLastStroke} disabled={!canUndo} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 disabled:opacity-35 disabled:pointer-events-none text-sm font-bold" title="Deshacer el último trazo">
-                              <span className="inline-flex items-center gap-1.5"><Icon name="undo-2" className="w-4 h-4" /> Deshacer trazo</span>
+                      <div className={`flex flex-wrap gap-2 justify-center items-center ${overlayMode ? 'shrink-0 pt-1' : ''}`}>
+                          <button type="button" onClick={undoLastStroke} disabled={!canUndo} className={`rounded-lg bg-slate-600 hover:bg-slate-500 disabled:opacity-35 disabled:pointer-events-none font-bold ${overlayMode ? 'px-2 py-1 text-[11px]' : 'px-4 py-2 text-sm'}`} title="Deshacer el último trazo">
+                              <span className="inline-flex items-center gap-1.5"><Icon name="undo-2" className="w-4 h-4" /> Deshacer</span>
                           </button>
-                          <button type="button" onClick={clearPad} className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-bold" title="Vacía todo el lienzo">Borrar lienzo</button>
-                          <button type="button" onClick={savePng} className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-bold">Guardar PNG</button>
-                          <button
-                              type="button"
-                              disabled={ocrLoading}
-                              onClick={runHandwritingOcr}
-                              className="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-sm font-bold flex items-center gap-2"
-                              title="OCR gratuito en tu dispositivo (Tesseract). La primera vez descarga el idioma alemán."
-                          >
-                              {ocrLoading ? <span className="animate-pulse">⏳ OCR…</span> : <><Icon name="scan-line" className="w-4 h-4" /> Reconocer texto</>}
-                          </button>
+                          <button type="button" onClick={clearPad} className={`rounded-lg bg-slate-700 hover:bg-slate-600 font-bold ${overlayMode ? 'px-2 py-1 text-[11px]' : 'px-4 py-2 text-sm'}`} title="Vacía todo el lienzo">Borrar</button>
+                          {!hideOcrUi && (
+                              <>
+                                  <button type="button" onClick={savePng} className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-bold">Guardar PNG</button>
+                                  <button
+                                      type="button"
+                                      disabled={ocrLoading}
+                                      onClick={runHandwritingOcr}
+                                      className="px-4 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-sm font-bold flex items-center gap-2"
+                                      title="OCR gratuito en tu dispositivo (Tesseract). La primera vez descarga el idioma alemán."
+                                  >
+                                      {ocrLoading ? <span className="animate-pulse">⏳ OCR…</span> : <><Icon name="scan-line" className="w-4 h-4" /> Reconocer texto</>}
+                                  </button>
+                              </>
+                          )}
+                          {hideOcrUi && (
+                              <button type="button" onClick={savePng} className={`rounded-lg bg-emerald-800/90 hover:bg-emerald-700 font-bold ${overlayMode ? 'px-2 py-1 text-[11px]' : 'px-3 py-2 text-sm'}`} title="Exportar anotación">
+                                  PNG
+                              </button>
+                          )}
                       </div>
+                      {!hideOcrUi && (
+                          <>
                       <p className="text-[10px] text-center text-slate-500 px-1">
                           Motor: <strong className="text-slate-400">Tesseract.js</strong> (alemán, local). El manuscrito es aproximado; la letra muy ligada o muy pequeña empeora el resultado.
                       </p>
@@ -6996,6 +7059,11 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   readOnly={ocrLoading}
                               />
                           </div>
+                      )}
+                          </>
+                      )}
+                      {hideOcrUi && overlayMode && (
+                          <p className="text-[9px] text-cyan-200/80 text-center px-1">Se guarda en esta página (local). Activa &quot;Desplazar PDF&quot; para mover el documento.</p>
                       )}
                   </div>
               );
@@ -11202,8 +11270,38 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                               </button>
                           </div>
                       </div>
-                      <div className="flex-1 overflow-y-auto p-3 md:p-5 grid grid-cols-1 xl:grid-cols-2 gap-4 bg-gradient-to-b from-slate-950 to-slate-900">
-                          <section className="rounded-2xl border border-cyan-500/25 bg-black/35 p-3 md:p-4 space-y-3">
+                      <div className={`flex-1 min-h-0 overflow-y-auto p-3 md:p-5 gap-4 bg-gradient-to-b from-slate-950 to-slate-900 ${pdfStudyFsView === 'split' ? 'grid grid-cols-1 xl:grid-cols-2' : 'grid grid-cols-1'}`}>
+                          <div className="col-span-1 xl:col-span-2 flex flex-wrap items-center gap-2 -mt-0.5 pb-2 border-b border-cyan-500/20">
+                              <span className="text-[10px] font-black text-cyan-200/95 uppercase tracking-wider">Vista</span>
+                              {[
+                                  { id: 'split', label: 'Dividida' },
+                                  { id: 'stack', label: 'PDF grande' },
+                                  { id: 'overlay', label: 'Anotar en PDF' },
+                              ].map((m) => (
+                                  <button
+                                      key={m.id}
+                                      type="button"
+                                      onClick={() => {
+                                          setPdfStudyFsView(m.id);
+                                          if (m.id !== 'overlay') setPdfFsScrollPdf(false);
+                                      }}
+                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${pdfStudyFsView === m.id ? 'border-emerald-400/70 bg-emerald-900/50 text-emerald-100' : 'border-white/10 bg-slate-900/60 text-cyan-100/80 hover:bg-slate-800/80'}`}
+                                  >
+                                      {m.label}
+                                  </button>
+                              ))}
+                              {pdfStudyFsView === 'overlay' ? (
+                                  <button
+                                      type="button"
+                                      onClick={() => setPdfFsScrollPdf((v) => !v)}
+                                      className="px-2.5 py-1 rounded-lg text-[10px] font-bold border border-amber-400/50 bg-amber-950/60 text-amber-100"
+                                  >
+                                      {pdfFsScrollPdf ? '✏ Dibujar' : '↔ Desplazar PDF'}
+                                  </button>
+                              ) : null}
+                              <span className="text-[9px] text-cyan-500/80 hidden sm:inline">Dibujar: guarda en la página. «Desplazar» para mover el documento.</span>
+                          </div>
+                          <section className="rounded-2xl border border-cyan-500/25 bg-black/35 p-3 md:p-4 space-y-3 min-h-0">
                               <div className="flex flex-wrap items-center gap-2">
                                   <button
                                       type="button"
@@ -11246,12 +11344,37 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                       Detener OCR
                                   </button>
                               </div>
-                              {pdfStudyBlobUrl ? (
+                              {pdfStudyFsView === 'overlay' && pdfStudyBlobUrl ? (
+                                  <div
+                                      className="relative w-full h-[min(78vh,860px)] min-h-[min(52vh,520px)] rounded-xl border border-white/10 overflow-hidden bg-slate-900/40"
+                                  >
+                                      <iframe
+                                          title="PDF estudio overlay"
+                                          src={`${pdfStudyBlobUrl}#page=${activePdfPageData.page || 1}&view=FitH`}
+                                          className="absolute inset-0 w-full h-full border-0 z-0"
+                                          style={{ pointerEvents: pdfFsScrollPdf ? 'auto' : 'none' }}
+                                      />
+                                      <div className="absolute inset-0 z-[3] flex h-full min-h-0 flex-col" style={{ pointerEvents: pdfFsScrollPdf ? 'none' : 'auto' }}>
+                                          <TabletWritingCanvas
+                                              padKey={pdfStudyCanvasPadKey}
+                                              grid={false}
+                                              strokeW={4}
+                                              compareTarget={activePdfPageData.text || ''}
+                                              snapshotData={activePdfPageNotes.drawing}
+                                              snapshotPadKey={pdfStudyCanvasPadKey}
+                                              onSnapshotChange={(dataUrl) => updatePdfPageNotes(activePdfPageData.page || 1, { drawing: dataUrl || '' })}
+                                              onOcrCompared={() => {}}
+                                              overlayMode
+                                              hideOcrUi
+                                          />
+                                      </div>
+                                  </div>
+                              ) : pdfStudyBlobUrl ? (
                                   <div className="rounded-xl border border-white/10 overflow-hidden bg-black/45">
                                       <iframe
                                           title="PDF estudio fullscreen"
                                           src={`${pdfStudyBlobUrl}#page=${activePdfPageData.page || 1}&view=FitH`}
-                                          className="w-full h-[52vh] md:h-[64vh] border-0"
+                                          className={`w-full border-0 ${pdfStudyFsView === 'stack' ? 'h-[min(74vh,880px)] min-h-[52vh]' : 'h-[52vh] md:h-[64vh]'}`}
                                       />
                                   </div>
                               ) : (
@@ -11266,18 +11389,27 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                   placeholder="Texto detectado de esta página."
                               />
                           </section>
-                          <section className="rounded-2xl border border-rose-500/25 bg-black/35 p-3 md:p-4 space-y-3">
-                              <p className="text-xs font-black text-rose-200 uppercase tracking-wider">Notas de estudio por página (stylus + teclado)</p>
-                              <TabletWritingCanvas
-                                  padKey={pdfStudyCanvasPadKey}
-                                  grid={true}
-                                  strokeW={4}
-                                  compareTarget={activePdfPageData.text || ''}
-                                  snapshotData={activePdfPageNotes.drawing}
-                                  snapshotPadKey={pdfStudyCanvasPadKey}
-                                  onSnapshotChange={(dataUrl) => updatePdfPageNotes(activePdfPageData.page || 1, { drawing: dataUrl || '' })}
-                                  onOcrCompared={() => {}}
-                              />
+                          <section className="rounded-2xl border border-rose-500/25 bg-black/35 p-3 md:p-4 space-y-3 min-h-0">
+                              {pdfStudyFsView === 'overlay' ? (
+                                  <>
+                                      <p className="text-xs font-black text-rose-200 uppercase tracking-wider">Notas teclado (misma página)</p>
+                                      <p className="text-[10px] text-rose-300/80">El trazo del modo «Anotar en PDF» se guarda automáticamente con la página (local). Cambia a «Dividida» si prefieres el lienzo al lado.</p>
+                                  </>
+                              ) : (
+                                  <>
+                                      <p className="text-xs font-black text-rose-200 uppercase tracking-wider">Notas de estudio por página (stylus + teclado)</p>
+                                      <TabletWritingCanvas
+                                          padKey={pdfStudyCanvasPadKey}
+                                          grid={true}
+                                          strokeW={4}
+                                          compareTarget={activePdfPageData.text || ''}
+                                          snapshotData={activePdfPageNotes.drawing}
+                                          snapshotPadKey={pdfStudyCanvasPadKey}
+                                          onSnapshotChange={(dataUrl) => updatePdfPageNotes(activePdfPageData.page || 1, { drawing: dataUrl || '' })}
+                                          onOcrCompared={() => {}}
+                                      />
+                                  </>
+                              )}
                               <label className="block text-[11px] font-bold text-rose-200 uppercase tracking-wider">
                                   Notas rápidas (teclado)
                                   <textarea
