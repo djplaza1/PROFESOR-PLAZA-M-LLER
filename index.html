@@ -2098,6 +2098,8 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const [readingSource, setReadingSource] = useState('current_story');
           const [readingScriptId, setReadingScriptId] = useState('__current__');
           const [readingTextInput, setReadingTextInput] = useState('');
+          const [readingPasteReaderOpen, setReadingPasteReaderOpen] = useState(false);
+          const [readingPasteFromPdf, setReadingPasteFromPdf] = useState(false);
           const [readingFontPx, setReadingFontPx] = useState(() => {
               try {
                   const raw = Number(localStorage.getItem(MULLER_READING_FONT_STORAGE));
@@ -3908,6 +3910,8 @@ const finishPlacementWithLevel = (finalLevel) => {
               }
               setReadingSource('paste');
               setReadingTextInput(txt);
+              setReadingPasteFromPdf(true);
+              setReadingPasteReaderOpen(true);
               setPdfStudyBusyMsg(`Página ${page.page} enviada a Lectura.`);
               setPdfStudyLastApplied(`✓ Página ${page.page} cargada en Lectura`);
           }, [pdfStudyDoc]);
@@ -3915,6 +3919,8 @@ const finishPlacementWithLevel = (finalLevel) => {
           const clearPdfStudyTextFromReading = useCallback(() => {
               setReadingTextInput('');
               setReadingSource('current_story');
+              setReadingPasteFromPdf(false);
+              setReadingPasteReaderOpen(false);
               setReadingSelectedSnippet('');
               setReadingWordInfo(null);
               setPdfStudyBusyMsg('Texto quitado de Lectura. Vuelves al guion actual.');
@@ -8962,10 +8968,21 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                               <label className="text-xs font-bold text-sky-200/90 uppercase tracking-wider">
                                   Fuente
-                                  <select value={readingSource} onChange={(e) => setReadingSource(e.target.value)} className="mt-1 w-full bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-sm text-white normal-case">
+                                  <select
+                                      value={readingSource}
+                                      onChange={(e) => {
+                                          const v = e.target.value;
+                                          setReadingSource(v);
+                                          if (v !== 'paste') {
+                                              setReadingPasteFromPdf(false);
+                                              setReadingPasteReaderOpen(false);
+                                          }
+                                      }}
+                                      className="mt-1 w-full bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-sm text-white normal-case"
+                                  >
                                       <option value="current_story">Historia actual</option>
                                       <option value="one_saved">Guion guardado</option>
-                                      <option value="paste">Texto pegado</option>
+                                      <option value="paste">Texto pegado o PDF (Lectura)</option>
                                   </select>
                               </label>
                               {readingSource === 'one_saved' && (
@@ -8979,7 +8996,85 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                               )}
                           </div>
                           {readingSource === 'paste' && (
-                              <textarea value={readingTextInput} onChange={(e) => setReadingTextInput(e.target.value)} placeholder="Pega aquí tu texto en alemán…" className="w-full h-40 bg-black/35 border border-sky-500/30 rounded-xl p-3 text-sm md:text-base text-white mb-3" />
+                              <div className="mb-3 rounded-xl border border-sky-500/30 bg-sky-950/20 p-3 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <p className="text-xs font-bold text-sky-200">
+                                          {readingPasteFromPdf ? 'Texto desde PDF (editable)' : 'Texto libre o pegado'}
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                          <button
+                                              type="button"
+                                              onClick={() => setReadingPasteReaderOpen(true)}
+                                              className="px-3 py-1.5 rounded-lg border border-emerald-500/50 bg-emerald-900/50 text-xs font-bold text-emerald-100 hover:bg-emerald-800/60"
+                                          >
+                                              Ver en grande
+                                          </button>
+                                          {readingPasteFromPdf ? (
+                                              <button
+                                                  type="button"
+                                                  onClick={clearPdfStudyTextFromReading}
+                                                  className="px-3 py-1.5 rounded-lg border border-slate-500/50 bg-slate-900/55 text-xs font-bold text-slate-100 hover:bg-slate-800/65"
+                                              >
+                                                  Quitar de Lectura
+                                              </button>
+                                          ) : null}
+                                      </div>
+                                  </div>
+                                  <textarea
+                                      value={readingTextInput}
+                                      onChange={(e) => setReadingTextInput(e.target.value)}
+                                      placeholder="Pega o edita tu texto en alemán…"
+                                      className="w-full min-h-[min(42vh,22rem)] max-h-[min(55vh,32rem)] overflow-y-auto bg-black/40 border border-sky-500/35 rounded-xl p-3 md:p-4 text-sm md:text-[15px] leading-relaxed text-white"
+                                  />
+                              </div>
+                          )}
+
+                          {readingSource === 'paste' && readingPasteReaderOpen && (
+                              <div
+                                  className="fixed inset-0 z-[240] flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-sm"
+                                  role="dialog"
+                                  aria-modal="true"
+                                  aria-labelledby="muller-reading-reader-title"
+                                  onClick={(e) => { if (e.target === e.currentTarget) setReadingPasteReaderOpen(false); }}
+                              >
+                                  <div
+                                      className="relative w-full max-w-4xl max-h-[min(92vh,900px)] flex flex-col rounded-2xl border border-sky-500/40 bg-slate-950 shadow-2xl shadow-sky-900/40"
+                                      onClick={(e) => e.stopPropagation()}
+                                  >
+                                      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-white/10 bg-slate-900/80 rounded-t-2xl">
+                                          <h2 id="muller-reading-reader-title" className="text-base md:text-lg font-black text-sky-100 pr-2">
+                                              Texto para leer{readingPasteFromPdf ? ' (desde PDF)' : ''}
+                                          </h2>
+                                          <div className="flex flex-wrap gap-2">
+                                              {readingPasteFromPdf ? (
+                                                  <button
+                                                      type="button"
+                                                      onClick={clearPdfStudyTextFromReading}
+                                                      className="px-3 py-2 rounded-xl border border-orange-500/45 bg-orange-950/50 text-xs font-bold text-orange-100 hover:bg-orange-900/60"
+                                                  >
+                                                      Quitar de Lectura
+                                                  </button>
+                                              ) : null}
+                                              <button
+                                                  type="button"
+                                                  onClick={() => setReadingPasteReaderOpen(false)}
+                                                  className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-sm font-black text-white"
+                                              >
+                                                  Cerrar
+                                              </button>
+                                          </div>
+                                      </div>
+                                      <div
+                                          className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 text-white whitespace-pre-wrap leading-relaxed"
+                                          style={{ fontSize: `clamp(17px, 2.8vw, ${Math.min(26, (readingFontPx || 19) + 5)}px)` }}
+                                      >
+                                          {(readingTextInput && String(readingTextInput).trim()) ? String(readingTextInput) : 'Sin texto todavía.'}
+                                      </div>
+                                      <p className="px-4 pb-3 text-[11px] text-slate-400 border-t border-white/5 pt-2">
+                                          Cierra este recuadro para usar diccionario por palabra, audio y evaluación en el panel de abajo.
+                                      </p>
+                                  </div>
+                              </div>
                           )}
 
                           <div className="rounded-xl bg-black/35 border border-sky-500/25 p-3 mb-4">
