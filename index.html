@@ -12,9 +12,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="PROFESOR PLAZA MÜLLER" />
     <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="icon" type="image/png" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -2285,6 +2287,11 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const [pdfStudyFullscreen, setPdfStudyFullscreen] = useState(false);
           const [pdfStudyFsView, setPdfStudyFsView] = useState('split');
           const [pdfFsScrollPdf, setPdfFsScrollPdf] = useState(false);
+          const [pdfOverlayBgUrl, setPdfOverlayBgUrl] = useState('');
+          const [pdfOverlayBgBusy, setPdfOverlayBgBusy] = useState(false);
+          const [pdfOverlayDims, setPdfOverlayDims] = useState({ w: 0, h: 0 });
+          const [pdfSessionBufferOk, setPdfSessionBufferOk] = useState(false);
+          const pdfOverlayHostRef = useRef(null);
           const [pdfStudyInkNonce, setPdfStudyInkNonce] = useState(0);
           const [pdfStudyOcrBatching, setPdfStudyOcrBatching] = useState(false);
           const [pdfStudyNotesByPage, setPdfStudyNotesByPage] = useState(() => {
@@ -3739,12 +3746,14 @@ const finishPlacementWithLevel = (finalLevel) => {
               setPdfStudyExtracting(true);
               setPdfStudyErr('');
               setPdfStudyBusyMsg('Leyendo PDF…');
+              setPdfSessionBufferOk(false);
               pdfStudyBufferRef.current = null;
               pdfStudyDocHandleRef.current = null;
               try {
                   window.pdfjsLib.GlobalWorkerOptions.workerSrc = MULLER_PDFJS_WORKER_URL;
                   const buffer = await file.arrayBuffer();
                   pdfStudyBufferRef.current = buffer;
+                  setPdfSessionBufferOk(true);
                   const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
                   pdfStudyDocHandleRef.current = pdf;
                   const totalPages = Math.max(1, Number(pdf.numPages) || 1);
@@ -4436,6 +4445,7 @@ const finishPlacementWithLevel = (finalLevel) => {
                       return '';
                   });
               } catch (e) {}
+              setPdfSessionBufferOk(false);
               pdfStudyBufferRef.current = null;
               pdfStudyDocHandleRef.current = null;
               pdfStudyOcrAbortRef.current = true;
@@ -4472,6 +4482,7 @@ const finishPlacementWithLevel = (finalLevel) => {
               setPdfStudyErr('');
               setPdfStudyLastApplied('');
               setPdfStudyBusyMsg(`PDF cargado desde biblioteca: ${hit.name || 'Libro PDF'}.`);
+              setPdfSessionBufferOk(false);
               pdfStudyBufferRef.current = null;
               pdfStudyDocHandleRef.current = null;
               pdfStudyOcrAbortRef.current = true;
@@ -4508,7 +4519,93 @@ const finishPlacementWithLevel = (finalLevel) => {
           const closePdfStudyFullscreen = useCallback(() => {
               setPdfStudyFullscreen(false);
               setPdfFsScrollPdf(false);
+              setPdfOverlayBgUrl('');
+              setPdfOverlayBgBusy(false);
+              setPdfOverlayDims({ w: 0, h: 0 });
           }, []);
+
+          const renderPdfOverlayPageAsync = useCallback(async (pageNum, tw, th) => {
+              if (!window.pdfjsLib || tw < 16 || th < 16) return '';
+              try {
+                  window.pdfjsLib.GlobalWorkerOptions.workerSrc = MULLER_PDFJS_WORKER_URL;
+                  let pdf = pdfStudyDocHandleRef.current;
+                  if (!pdf && pdfStudyBufferRef.current) {
+                      pdf = await window.pdfjsLib.getDocument({ data: pdfStudyBufferRef.current }).promise;
+                      pdfStudyDocHandleRef.current = pdf;
+                  }
+                  if (!pdf) return '';
+                  const page = await pdf.getPage(Math.max(1, Number(pageNum) || 1));
+                  const v0 = page.getViewport({ scale: 1 });
+                  const scale = Math.min(tw / v0.width, th / v0.height) * 0.994;
+                  const viewport = page.getViewport({ scale });
+                  const rc = document.createElement('canvas');
+                  rc.width = Math.max(1, Math.floor(viewport.width));
+                  rc.height = Math.max(1, Math.floor(viewport.height));
+                  const rctx = rc.getContext('2d', { alpha: false });
+                  if (!rctx) return '';
+                  rctx.fillStyle = '#f8fafc';
+                  rctx.fillRect(0, 0, rc.width, rc.height);
+                  const rt = page.render({ canvasContext: rctx, viewport });
+                  await (rt && rt.promise ? rt.promise : rt);
+                  const out = document.createElement('canvas');
+                  out.width = Math.floor(tw);
+                  out.height = Math.floor(th);
+                  const octx = out.getContext('2d', { alpha: false });
+                  if (!octx) return '';
+                  octx.fillStyle = '#f1f5f9';
+                  octx.fillRect(0, 0, out.width, out.height);
+                  const s = Math.min(tw / rc.width, th / rc.height);
+                  const dw = rc.width * s;
+                  const dh = rc.height * s;
+                  const ox = (tw - dw) / 2;
+                  const oy = (th - dh) / 2;
+                  octx.drawImage(rc, 0, 0, rc.width, rc.height, ox, oy, dw, dh);
+                  return out.toDataURL('image/png');
+              } catch (e) {
+                  return '';
+              }
+          }, []);
+
+          useEffect(() => {
+              if (!pdfStudyFullscreen || pdfStudyFsView !== 'overlay') return;
+              const el = pdfOverlayHostRef.current;
+              if (!el || typeof ResizeObserver === 'undefined') return;
+              const ro = new ResizeObserver((entries) => {
+                  const cr = entries[0] && entries[0].contentRect;
+                  if (!cr) return;
+                  const w = Math.floor(cr.width);
+                  const h = Math.floor(cr.height);
+                  if (w > 8 && h > 8) setPdfOverlayDims({ w, h });
+              });
+              ro.observe(el);
+              return () => { try { ro.disconnect(); } catch (e) {} };
+          }, [pdfStudyFullscreen, pdfStudyFsView]);
+
+          useEffect(() => {
+              if (!pdfStudyFullscreen || pdfStudyFsView !== 'overlay' || pdfFsScrollPdf) {
+                  if (!pdfStudyFullscreen) setPdfOverlayBgUrl('');
+                  setPdfOverlayBgBusy(false);
+                  return;
+              }
+              if (!pdfSessionBufferOk && !pdfStudyBufferRef.current && !pdfStudyDocHandleRef.current) {
+                  setPdfOverlayBgUrl('');
+                  setPdfOverlayBgBusy(false);
+                  return;
+              }
+              const w = pdfOverlayDims.w;
+              const h = pdfOverlayDims.h;
+              if (w < 32 || h < 32) return;
+              const num = activePdfPageData && activePdfPageData.page ? Number(activePdfPageData.page) : 1;
+              let cancelled = false;
+              setPdfOverlayBgBusy(true);
+              renderPdfOverlayPageAsync(num, w, h).then((url) => {
+                  if (!cancelled) {
+                      setPdfOverlayBgUrl(url || '');
+                      setPdfOverlayBgBusy(false);
+                  }
+              });
+              return () => { cancelled = true; };
+          }, [pdfStudyFullscreen, pdfStudyFsView, pdfFsScrollPdf, pdfOverlayDims, pdfSessionBufferOk, activePdfPageData && activePdfPageData.page, pdfStudyPageIdx, renderPdfOverlayPageAsync]);
           const startRutaListen = async () => {
               const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
               if (!SpeechRecognition) { alert('Para leer en voz alta usa Chrome o Edge en escritorio.'); return; }
@@ -11299,7 +11396,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                       {pdfFsScrollPdf ? '✏ Dibujar' : '↔ Desplazar PDF'}
                                   </button>
                               ) : null}
-                              <span className="text-[9px] text-cyan-500/80 hidden sm:inline">Dibujar: guarda en la página. «Desplazar» para mover el documento.</span>
+                              <span className="text-[9px] text-cyan-500/80 hidden sm:inline">Modo anotar: trazo alineado con PDF.js si el PDF está en memoria. «Desplazar» = mover el visor (iframe).</span>
                           </div>
                           <section className="rounded-2xl border border-cyan-500/25 bg-black/35 p-3 md:p-4 space-y-3 min-h-0">
                               <div className="flex flex-wrap items-center gap-2">
@@ -11346,28 +11443,49 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                               </div>
                               {pdfStudyFsView === 'overlay' && pdfStudyBlobUrl ? (
                                   <div
+                                      ref={pdfOverlayHostRef}
                                       className="relative w-full h-[min(78vh,860px)] min-h-[min(52vh,520px)] rounded-xl border border-white/10 overflow-hidden bg-slate-900/40"
                                   >
-                                      <iframe
-                                          title="PDF estudio overlay"
-                                          src={`${pdfStudyBlobUrl}#page=${activePdfPageData.page || 1}&view=FitH`}
-                                          className="absolute inset-0 w-full h-full border-0 z-0"
-                                          style={{ pointerEvents: pdfFsScrollPdf ? 'auto' : 'none' }}
-                                      />
-                                      <div className="absolute inset-0 z-[3] flex h-full min-h-0 flex-col" style={{ pointerEvents: pdfFsScrollPdf ? 'none' : 'auto' }}>
-                                          <TabletWritingCanvas
-                                              padKey={pdfStudyCanvasPadKey}
-                                              grid={false}
-                                              strokeW={4}
-                                              compareTarget={activePdfPageData.text || ''}
-                                              snapshotData={activePdfPageNotes.drawing}
-                                              snapshotPadKey={pdfStudyCanvasPadKey}
-                                              onSnapshotChange={(dataUrl) => updatePdfPageNotes(activePdfPageData.page || 1, { drawing: dataUrl || '' })}
-                                              onOcrCompared={() => {}}
-                                              overlayMode
-                                              hideOcrUi
+                                      {pdfFsScrollPdf ? (
+                                          <iframe
+                                              title="PDF estudio — desplazar"
+                                              src={`${pdfStudyBlobUrl}#page=${activePdfPageData.page || 1}&view=FitH`}
+                                              className="absolute inset-0 w-full h-full border-0"
                                           />
-                                      </div>
+                                      ) : (
+                                          <>
+                                              {pdfSessionBufferOk && pdfOverlayBgBusy ? (
+                                                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/55 text-cyan-100 text-xs md:text-sm font-bold px-4 text-center">Generando imagen con PDF.js (vista alineada)…</div>
+                                              ) : null}
+                                              {!pdfSessionBufferOk ? (
+                                                  <>
+                                                      <iframe
+                                                          title="PDF estudio — referencia"
+                                                          src={`${pdfStudyBlobUrl}#page=${activePdfPageData.page || 1}&view=FitH`}
+                                                          className="absolute inset-0 w-full h-full border-0 z-0 pointer-events-none"
+                                                      />
+                                                      <div className="absolute top-2 left-2 right-2 z-10 rounded-lg bg-amber-950/90 border border-amber-500/50 px-2 py-1.5 text-[10px] text-amber-100 leading-snug">
+                                                          Sin PDF en memoria (p. ej. cargado solo desde biblioteca). <strong>Sube el archivo otra vez</strong> o abre el PDF recién subido para alinear anotación y página con PDF.js.
+                                                      </div>
+                                                  </>
+                                              ) : null}
+                                              <div className="absolute inset-0 z-[3] flex h-full min-h-0 flex-col" style={{ pointerEvents: 'auto' }}>
+                                                  <TabletWritingCanvas
+                                                      padKey={pdfStudyCanvasPadKey}
+                                                      grid={false}
+                                                      strokeW={4}
+                                                      compareTarget={activePdfPageData.text || ''}
+                                                      snapshotData={activePdfPageNotes.drawing}
+                                                      snapshotPadKey={pdfStudyCanvasPadKey}
+                                                      onSnapshotChange={(dataUrl) => updatePdfPageNotes(activePdfPageData.page || 1, { drawing: dataUrl || '' })}
+                                                      onOcrCompared={() => {}}
+                                                      overlayMode
+                                                      hideOcrUi
+                                                      backgroundImageData={pdfSessionBufferOk && pdfOverlayBgUrl ? pdfOverlayBgUrl : ''}
+                                                  />
+                                              </div>
+                                          </>
+                                      )}
                                   </div>
                               ) : pdfStudyBlobUrl ? (
                                   <div className="rounded-xl border border-white/10 overflow-hidden bg-black/45">
