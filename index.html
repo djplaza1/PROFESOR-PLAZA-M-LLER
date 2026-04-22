@@ -1990,7 +1990,7 @@
         // --- COMPONENTE PRINCIPAL ---
         function App() {
           const [activeTab, setActiveTab] = useState(() => { try { return localStorage.getItem('muller_active_tab_v1') || 'inicio'; } catch { return 'inicio'; } });
-          const [showSplash, setShowSplash] = useState(false); 
+         const [showSplash, setShowSplash] = useState(true); 
           const [rutaSubTab, setRutaSubTab] = useState('camino');
           const [rutaProgress, setRutaProgress] = useState(() => (typeof window.mullerRutaLoad === 'function' ? window.mullerRutaLoad() : { completed: {}, placementDone: false, suggestedLevelIdx: 0, playTimeMs: 0, lessonsCompleted: 0 }));
           const [rutaRun, setRutaRun] = useState(null);
