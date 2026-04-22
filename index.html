@@ -3912,6 +3912,15 @@ const finishPlacementWithLevel = (finalLevel) => {
               setPdfStudyLastApplied(`✓ Página ${page.page} cargada en Lectura`);
           }, [pdfStudyDoc]);
 
+          const clearPdfStudyTextFromReading = useCallback(() => {
+              setReadingTextInput('');
+              setReadingSource('current_story');
+              setReadingSelectedSnippet('');
+              setReadingWordInfo(null);
+              setPdfStudyBusyMsg('Texto quitado de Lectura. Vuelves al guion actual.');
+              setPdfStudyLastApplied('✓ Lectura restaurada al guion actual');
+          }, []);
+
           const applyPdfStudyTextToWriting = useCallback((pageNumber) => {
               if (!pdfStudyDoc) return;
               const idx = Math.max(0, (Number(pageNumber) || 1) - 1);
@@ -9138,6 +9147,14 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                                               className="px-3 py-2 rounded-lg border border-emerald-500/35 bg-emerald-900/40 hover:bg-emerald-800/50 disabled:opacity-45 text-xs font-bold text-emerald-100"
                                           >
                                               Usar en Lectura
+                                          </button>
+                                          <button
+                                              type="button"
+                                              onClick={clearPdfStudyTextFromReading}
+                                              disabled={pdfStudyExtracting}
+                                              className="px-3 py-2 rounded-lg border border-slate-500/35 bg-slate-900/45 hover:bg-slate-800/55 disabled:opacity-45 text-xs font-bold text-slate-100"
+                                          >
+                                              Quitar de Lectura
                                           </button>
                                           <button
                                               type="button"
