@@ -1,16 +1,16 @@
-
+﻿
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <title>PROFESOR PLAZA MÜLLER</title>
+    <title>PROFESOR PLAZA MÃœLLER</title>
     <meta name="theme-color" content="#581c87" />
-    <meta name="description" content="PROFESOR PLAZA MÜLLER: historia, vocabulario, B1/B2 y progreso." />
+    <meta name="description" content="PROFESOR PLAZA MÃœLLER: historia, vocabulario, B1/B2 y progreso." />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="PROFESOR PLAZA MÜLLER" />
+    <meta name="apple-mobile-web-app-title" content="PROFESOR PLAZA MÃœLLER" />
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/png" href="icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
@@ -33,7 +33,7 @@
 
     <!-- OCR/PDF se cargan bajo demanda para acelerar arranque -->
     
-    <!-- Lucide Icons (versión fija: API estable para data-lucide + createIcons) -->
+    <!-- Lucide Icons (versiÃ³n fija: API estable para data-lucide + createIcons) -->
     <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
     <!-- Supabase JS (plan gratuito): expone self.supabase.createClient -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.js"></script>
@@ -96,7 +96,7 @@
             -webkit-text-size-adjust: 100%;
             text-size-adjust: 100%;
         }
-        /* Escala base: la fija también el script mullerApplyRootFont (px en <html>) para que funcione igual en pestaña web y PWA */
+        /* Escala base: la fija tambiÃ©n el script mullerApplyRootFont (px en <html>) para que funcione igual en pestaÃ±a web y PWA */
         @media (max-width: 1024px) {
             html { font-size: 100%; }
         }
@@ -123,7 +123,7 @@
         .lucide-wrapper .fill-current svg { fill: currentColor; stroke: none; }
         button.muller-icon-nav .lucide-wrapper,
         button.muller-icon-nav i[data-lucide] { color: #fff; }
-        /* Mic “mantén pulsado” en Shadowing: anillo claro + trazo más grueso para que el icono no se pierda sobre el verde */
+        /* Mic â€œmantÃ©n pulsadoâ€ en Shadowing: anillo claro + trazo mÃ¡s grueso para que el icono no se pierda sobre el verde */
         button.muller-mic-hold-btn {
             position: relative;
             background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.22) 0%, transparent 52%),
@@ -287,7 +287,7 @@
             cursor: crosshair;
             background: transparent;
         }
-        /* Temas UI: se aplican en el contenedor raíz de la app */
+        /* Temas UI: se aplican en el contenedor raÃ­z de la app */
         .muller-theme-light {
             --muller-surface: #f1f5f9;
             --muller-ink: #0f172a;
@@ -399,14 +399,14 @@
             border: 0;
             box-shadow: none;
         }
-        /* Tema claro: el scroll principal tiene fondo claro pero muchos bloques siguen con text-white → forzamos tinta oscura salvo botones/badges con fondo de color */
+        /* Tema claro: el scroll principal tiene fondo claro pero muchos bloques siguen con text-white â†’ forzamos tinta oscura salvo botones/badges con fondo de color */
         .muller-theme-light .muller-app-main {
             color: #0f172a;
         }
         .muller-theme-light .muller-app-main .text-white {
             color: #0f172a !important;
         }
-        /* Botones y chips con fondo sólido o gradiente: mantener texto blanco */
+        /* Botones y chips con fondo sÃ³lido o gradiente: mantener texto blanco */
         .muller-theme-light .muller-app-main .text-white[class*="bg-"]:not([class*="bg-black/"]):not([class*="bg-white/"]):not([class~="bg-transparent"]),
         .muller-theme-light .muller-app-main [class*="from-"][class*="to-"].text-white,
         .muller-theme-light .muller-app-main a.text-white[class*="bg-"]:not([class*="bg-black/"]) {
@@ -431,7 +431,7 @@
             background-color: rgba(241, 245, 249, 0.96) !important;
         }
 
-        /* Barra de reproducción historia: fija en móvil para no solaparse con tabs */
+        /* Barra de reproducciÃ³n historia: fija en mÃ³vil para no solaparse con tabs */
         @media (max-width: 1024px) {
             .muller-historia-player-bar {
                 position: fixed;
@@ -441,7 +441,7 @@
                 z-index: 90;
                 border-top: 1px solid rgba(255,255,255,0.1);
             }
-            /* Espacio extra cuando la barra historia está visible */
+            /* Espacio extra cuando la barra historia estÃ¡ visible */
             .muller-main-historia-pb {
                 padding-bottom: calc(var(--muller-mobile-bottom-nav-h) + 7rem) !important;
             }
@@ -501,15 +501,15 @@
     <div id="muller-preboot" class="muller-preboot" role="status" aria-live="polite">
         <div class="muller-preboot-card">
             <div class="muller-preboot-spin"></div>
-            <p class="muller-preboot-title">CARGANDO PROFESOR PLAZA MÜLLER</p>
+            <p class="muller-preboot-title">CARGANDO PROFESOR PLAZA MÃœLLER</p>
             <p style="margin:8px 0 0;font-size:12px;color:#cbd5e1;">
-                La app tiene bastante contenido (OCR, PDF, rutas y bancos B1-B2) y se está inicializando.
+                La app tiene bastante contenido (OCR, PDF, rutas y bancos B1-B2) y se estÃ¡ inicializando.
             </p>
         </div>
     </div>
     <div id="root"></div>
 
-    <script src="src/app-inline.jsx" type="text/babel"></script>
+    <script type="text/babel" src="src/app-init.jsx"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
@@ -526,3 +526,4 @@
     </script>
 </body>
 </html>
+
