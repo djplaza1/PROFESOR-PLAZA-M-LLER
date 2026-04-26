@@ -6,3 +6,5 @@ function BibliotecaPanel(props) {
             'Aquí podrás gestionar tus guiones guardados.')
     );
 }
+
+window.BibliotecaPanel = BibliotecaPanel;

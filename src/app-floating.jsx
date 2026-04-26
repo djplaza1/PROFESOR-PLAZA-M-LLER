@@ -173,3 +173,5 @@
         </>
     );
 }
+
+window.FloatingButtons = FloatingButtons;

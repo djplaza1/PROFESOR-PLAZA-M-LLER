@@ -6,3 +6,5 @@ function VocabSRS(props) {
             'Usa Lexikon para consultar y practicar vocabulario.')
     );
 }
+
+window.VocabSRS = VocabSRS;

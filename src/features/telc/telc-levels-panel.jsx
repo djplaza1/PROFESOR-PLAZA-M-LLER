@@ -6,3 +6,5 @@ function TelcLevels(props) {
             'Información sobre niveles y preparación para exámenes TELC.')
     );
 }
+
+window.TelcLevels = TelcLevels;
