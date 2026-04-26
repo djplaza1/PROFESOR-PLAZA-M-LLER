@@ -22,7 +22,7 @@
     <link rel="preconnect" href="https://unpkg.com" crossorigin />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="preload" as="image" href="icons/logo-plaza-sin-fondo.png" />
+    <link rel="preload" as="image" href="icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png" />
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -511,7 +511,7 @@
             margin: 0;
         }
         .muller-preboot-de {
-            background: linear-gradient(180deg, #ffffff 0%, #ffffff 18%, #dd0000 18%, #dd0000 48%, #ffce00 48%, #ffce00 80%, #ffce00 100%);
+            background: linear-gradient(180deg, #000000 0%, #000000 33%, #dd0000 33%, #dd0000 66%, #ffce00 66%, #ffce00 100%);
             box-shadow: 0 3px 16px rgba(0,0,0,0.12);
         }
         .muller-preboot-es {
@@ -614,16 +614,15 @@
         /* Logo con glow pulsante elegante y animación suave */
         .muller-preboot-logo-btn img {
             display: block;
-            width: min(82vw, 18.5rem);
-            max-height: min(32vh, 14rem);
+            width: min(92vw, 26rem);
+            max-height: min(38vh, 20rem);
             height: auto;
             object-fit: contain;
             object-position: center;
-            background: #ffffff !important;
+            background: transparent !important;
             border: 0;
             box-shadow: none;
             filter: drop-shadow(0 0 18px rgba(212, 175, 55, 0.5));
-            mix-blend-mode: multiply;
             transition: transform 0.4s ease, filter 0.4s ease;
             animation: preboot-glow-pulse 2.4s infinite ease-in-out;
         }
@@ -649,7 +648,6 @@
         }
         .muller-preboot-logo-btn.muller-preboot-logo--blink img {
             filter: none;
-            mix-blend-mode: multiply;
         }
         /* CTA: texto + flecha hacia el logo (visible a los 3s con el parpadeo) */
         .muller-preboot-cta {
@@ -705,11 +703,11 @@
         <div class="muller-preboot-mid">
             <h1 id="muller-preboot-hero" class="muller-preboot-hero-title">PROFESOR PLAZA <span class="muller-preboot-uml" lang="de">MÜLLER</span></h1>
             <div id="muller-preboot-hint" class="muller-preboot-cta" role="status" aria-live="polite" aria-hidden="true">
-                <span class="muller-preboot-cta-text">Pinche aquí</span>
+                <span class="muller-preboot-cta-text">PULSE AQUÍ</span>
                 <span class="muller-preboot-cta-arrow" aria-hidden="true">↓</span>
             </div>
             <button type="button" id="muller-preboot-logo-btn" class="muller-preboot-logo-btn" title="Pulsa el logo para entrar" aria-label="Pulsa en el logo para abrir la aplicación">
-                <img src="icons/logo-plaza-sin-fondo.png?v=4" alt="" width="400" height="400" loading="eager" fetchpriority="high" decoding="async" class="muller-preboot-logo-img" />
+                <img src="icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png" alt="" width="600" height="600" loading="eager" fetchpriority="high" decoding="async" class="muller-preboot-logo-img" />
             </button>
         </div>
         <div class="muller-preboot-seam muller-preboot-seam--after" aria-hidden="true"></div>
