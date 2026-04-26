@@ -525,7 +525,7 @@
             background: #ffffff;
         }
         .muller-preboot-mid {
-            flex: 1.5;
+            flex: 2;
             min-height: 0;
             display: flex;
             flex-direction: column;
@@ -539,6 +539,77 @@
             padding: clamp(0.1rem, 0.4vw, 0.3rem) clamp(0.2rem, 1vw, 0.45rem);
             background: #ffffff;
             box-shadow: none;
+        }
+        .muller-preboot-mid-inner {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(0.6rem, 2.5vw, 2rem);
+            width: 100%;
+            max-width: 100%;
+            flex-wrap: nowrap;
+        }
+        .muller-preboot-logo-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #f0f4ff 0%, #e2e8f0 100%);
+            border-radius: 1.5rem;
+            padding: clamp(0.4rem, 1.2vw, 0.8rem);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 4px 12px rgba(0,0,0,0.08);
+            flex-shrink: 0;
+        }
+        .muller-preboot-cta-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 0.1rem;
+            flex-shrink: 0;
+        }
+        .muller-preboot-cta {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0;
+            margin: 0;
+            min-height: 0;
+            opacity: 0;
+            transform: translateX(-6px);
+            transition: opacity 0.45s ease, transform 0.45s ease;
+            pointer-events: none;
+        }
+        .muller-preboot-cta--visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .muller-preboot-cta-text {
+            font-family: 'Outfit', system-ui, sans-serif;
+            font-size: clamp(0.85rem, 2.4vw, 1.15rem);
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-align: left;
+            line-height: 1.2;
+            background: linear-gradient(90deg, #a16207, #d97706, #eab308, #b45309);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+        }
+        .muller-preboot-cta-arrow {
+            display: block;
+            font-size: clamp(1.6rem, 5vw, 2.2rem);
+            line-height: 0.9;
+            color: #b45309;
+            margin: 0 0.3rem 0 0;
+        }
+        .muller-preboot-cta--visible .muller-preboot-cta-arrow {
+            animation: mullerPrebootArrowBounce 1.1s ease-in-out infinite;
+        }
+        @keyframes mullerPrebootArrowBounce {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-0.2rem); }
         }
         .muller-preboot-mid::after {
             content: '';
@@ -649,51 +720,6 @@
         .muller-preboot-logo-btn.muller-preboot-logo--blink img {
             filter: none;
         }
-        /* CTA: texto + flecha hacia el logo (visible a los 3s con el parpadeo) */
-        .muller-preboot-cta {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0;
-            margin: 0.1rem 0 0.05rem;
-            min-height: 0;
-            opacity: 0;
-            transform: translateY(6px);
-            transition: opacity 0.45s ease, transform 0.45s ease;
-            pointer-events: none;
-        }
-        .muller-preboot-cta--visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .muller-preboot-cta-text {
-            font-family: 'Outfit', system-ui, sans-serif;
-            font-size: clamp(0.8rem, 2.2vw, 1.05rem);
-            font-weight: 800;
-            letter-spacing: 0.06em;
-            text-align: center;
-            line-height: 1.2;
-            background: linear-gradient(90deg, #a16207, #d97706, #eab308, #b45309);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            -webkit-text-fill-color: transparent;
-        }
-        .muller-preboot-cta-arrow {
-            display: block;
-            font-size: clamp(1.5rem, 4.8vw, 2rem);
-            line-height: 0.9;
-            color: #b45309;
-            margin: 0;
-        }
-        .muller-preboot-cta--visible .muller-preboot-cta-arrow {
-            animation: mullerPrebootArrowBounce 1.1s ease-in-out infinite;
-        }
-        @keyframes mullerPrebootArrowBounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(0.2rem); }
-        }
     </style>
 </head>
 <body>
@@ -702,13 +728,19 @@
         <div class="muller-preboot-seam" aria-hidden="true"></div>
         <div class="muller-preboot-mid">
             <h1 id="muller-preboot-hero" class="muller-preboot-hero-title">PROFESOR PLAZA <span class="muller-preboot-uml" lang="de">MÜLLER</span></h1>
-            <div id="muller-preboot-hint" class="muller-preboot-cta" role="status" aria-live="polite" aria-hidden="true">
-                <span class="muller-preboot-cta-text">PULSE AQUÍ</span>
-                <span class="muller-preboot-cta-arrow" aria-hidden="true">↓</span>
+            <div class="muller-preboot-mid-inner">
+                <div class="muller-preboot-logo-wrap">
+                    <button type="button" id="muller-preboot-logo-btn" class="muller-preboot-logo-btn" title="Pulsa el logo para entrar" aria-label="Pulsa en el logo para abrir la aplicación">
+                        <img src="icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png" alt="" width="600" height="600" loading="eager" fetchpriority="high" decoding="async" class="muller-preboot-logo-img" />
+                    </button>
+                </div>
+                <div class="muller-preboot-cta-wrap">
+                    <div id="muller-preboot-hint" class="muller-preboot-cta" role="status" aria-live="polite" aria-hidden="true">
+                        <span class="muller-preboot-cta-arrow" aria-hidden="true">←</span>
+                        <span class="muller-preboot-cta-text">PULSE AQUÍ</span>
+                    </div>
+                </div>
             </div>
-            <button type="button" id="muller-preboot-logo-btn" class="muller-preboot-logo-btn" title="Pulsa el logo para entrar" aria-label="Pulsa en el logo para abrir la aplicación">
-                <img src="icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png" alt="" width="600" height="600" loading="eager" fetchpriority="high" decoding="async" class="muller-preboot-logo-img" />
-            </button>
         </div>
         <div class="muller-preboot-seam muller-preboot-seam--after" aria-hidden="true"></div>
         <div class="muller-preboot-es" aria-hidden="true"></div>
