@@ -18,6 +18,7 @@
         }
 
         function mullerLeagueBuildRanking(userStats, username, session) {
+            const bots = (typeof window !== 'undefined' && window.MULLER_BOT_PLAYERS) ? window.MULLER_BOT_PLAYERS : [];
             const week = mullerIsoWeekMonday();
             const userScore = mullerLeagueComputeUserScore(userStats);
             const rows = [
@@ -30,7 +31,7 @@
                     sub: session ? mullerMaskEmail(session.email) : 'Invitado (sin email en este dispositivo)',
                     rank: 0
                 },
-                ...MULLER_BOT_PLAYERS.map((b) => ({
+                ...bots.map((b) => ({
                     id: b.id,
                     name: b.name,
                     isBot: true,

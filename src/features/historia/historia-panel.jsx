@@ -1,4 +1,130 @@
-function HistoriaPanel(props) {
+function HistoriaPanel(rawProps) {
+  const noop = () => {};
+  const defaultGuion = (typeof window !== 'undefined' && window.__DEFAULT_GUION__ && window.__DEFAULT_GUION__.length)
+    ? window.__DEFAULT_GUION__
+    : [{ speaker: 'Lukas', text: 'Carga un guion o espera a que se conecte el estado de la app.', translation: '', vocab: [] }];
+
+  const D = {
+    historiaExerciseHelpId: 'historia_main',
+    isDefaultScript: true,
+    activeSavedScriptId: null,
+    loadDefaultGuion: noop,
+    loadSavedScript: noop,
+    savedScripts: [],
+    activeScriptTitle: 'Lektion 17',
+    mode: 'dialogue',
+    podcastMode: false,
+    setFluesternMode: noop,
+    fluesternMode: false,
+    setNoiseEnabled: noop,
+    noiseEnabled: false,
+    setDiktatMode: noop,
+    diktatMode: false,
+    setBlindMode: noop,
+    blindMode: false,
+    setLueckentextMode: noop,
+    lueckentextMode: false,
+    setPuzzleMode: noop,
+    puzzleMode: false,
+    setDeclinaMode: noop,
+    declinaMode: false,
+    setArtikelSniperMode: noop,
+    artikelSniperMode: false,
+    resetModes: noop,
+    stopAudio: noop,
+    setTempusMode: noop,
+    tempusMode: false,
+    roleplayChar: 'none',
+    setRoleplayChar: noop,
+    historiaPlaylistAllScripts: false,
+    oralQIdx: 0,
+    setOralSecs: noop,
+    oralSecs: 90,
+    setOralDeadline: noop,
+    setOralClock: noop,
+    oralLeftSec: null,
+    micMouseDownGuard: (fn) => () => { if (typeof fn === 'function') fn(); },
+    handleVoiceStart: noop,
+    handleVoiceStop: noop,
+    micTouchStartGuard: (fn) => () => { if (typeof fn === 'function') fn(); },
+    isListening: false,
+    spokenText: '',
+    pronunciationFeedback: [],
+    runSingleSubmitAction: (_id, fn) => { if (typeof fn === 'function') fn(); },
+    handleOralNextQuestion: noop,
+    setMode: noop,
+    setSpokenText: noop,
+    saveProgress: noop,
+    mergeActivityPoints: () => ({}),
+    getActualSceneIndex: () => 0,
+    guionData: defaultGuion,
+    renderHighlightedText: (t) => t,
+    setShowCurrentTranslation: noop,
+    showCurrentTranslation: false,
+    playSceneAudio: () => new SpeechSynthesisUtterance(''),
+    sanitizeHistoriaSpeechText: (t) => String(t == null ? '' : t),
+    grammarPolizeiMsg: null,
+    pronunciationScore: null,
+    handleNext: noop,
+    puzzleAnswer: [],
+    setPuzzleAnswer: noop,
+    puzzleWords: [],
+    setPuzzleWords: noop,
+    showPuzzleResult: false,
+    puzzleLastOk: false,
+    handlePuzzleCheck: noop,
+    setIsPlaying: noop,
+    togglePlay: noop,
+    isPlaying: false,
+    isReviewing: false,
+    diktatInput: '',
+    setDiktatInput: noop,
+    handleExerciseEnterSubmit: noop,
+    handleDiktatCheck: noop,
+    showDiktatResult: false,
+    renderDiktatDiff: () => null,
+    diktatMotivationMsg: null,
+    historiaAudioOnly: false,
+    sceneIndex: 0,
+    handlePrev: noop,
+    playbackRate: 1,
+    setPlaybackRate: noop,
+    setHistoriaAudioOnly: noop,
+    tempusVerbList: [],
+    tempusSelectedVerb: null,
+    inferTempusContextLabel: () => '',
+    showAITutor: noop,
+    trySaveGrammarStructure: noop,
+    showTutor: false,
+    setShowTutor: noop,
+    tutorMessage: '',
+    showGrammarPrompt: false,
+    setShowGrammarPrompt: noop,
+    customGrammarInput: '',
+    setCustomGrammarInput: noop,
+    handleCustomGrammarSave: noop,
+  };
+  const props = { ...D, ...(rawProps || {}) };
+  if (rawProps) {
+    const forceArr = (k) => { if (rawProps[k] === null) props[k] = D[k]; };
+    ['savedScripts', 'guionData', 'pronunciationFeedback', 'puzzleAnswer', 'puzzleWords', 'tempusVerbList'].forEach(forceArr);
+  }
+  props.savedScripts = Array.isArray(props.savedScripts) ? props.savedScripts : [];
+  props.guionData = (props.guionData && props.guionData.length) ? props.guionData : defaultGuion;
+  props.pronunciationFeedback = Array.isArray(props.pronunciationFeedback) ? props.pronunciationFeedback : [];
+  props.puzzleAnswer = Array.isArray(props.puzzleAnswer) ? props.puzzleAnswer : [];
+  props.puzzleWords = Array.isArray(props.puzzleWords) ? props.puzzleWords : [];
+  props.tempusVerbList = Array.isArray(props.tempusVerbList) ? props.tempusVerbList : [];
+  if (typeof props.getActualSceneIndex !== 'function') props.getActualSceneIndex = () => 0;
+  if (typeof props.renderHighlightedText !== 'function') props.renderHighlightedText = (t) => t;
+  if (typeof props.renderDiktatDiff !== 'function') props.renderDiktatDiff = () => null;
+  if (typeof props.inferTempusContextLabel !== 'function') props.inferTempusContextLabel = () => '';
+  if (typeof props.playSceneAudio !== 'function') props.playSceneAudio = () => new SpeechSynthesisUtterance('');
+  if (typeof props.sanitizeHistoriaSpeechText !== 'function') props.sanitizeHistoriaSpeechText = (t) => String(t == null ? '' : t);
+  if (typeof props.micMouseDownGuard !== 'function') props.micMouseDownGuard = (fn) => () => { if (typeof fn === 'function') fn(); };
+  if (typeof props.micTouchStartGuard !== 'function') props.micTouchStartGuard = (fn) => () => { if (typeof fn === 'function') fn(); };
+  if (typeof props.runSingleSubmitAction !== 'function') props.runSingleSubmitAction = (_id, fn) => { if (typeof fn === 'function') fn(); };
+
   const {
     historiaExerciseHelpId,
     isDefaultScript,
@@ -123,7 +249,7 @@ function HistoriaPanel(props) {
                                     }}
                                 >
                                     <option value="__default__">Ejemplo integrado (Lektion 17)</option>
-                                    {savedScripts.map((s) => (
+                                    {(savedScripts || []).map((s) => (
                                         <option key={String(s.id)} value={String(s.id)}>{s.title || 'Sin título'}</option>
                                     ))}
                                     {!isDefaultScript && !activeSavedScriptId ? (
@@ -191,7 +317,7 @@ function HistoriaPanel(props) {
                                             <p className="text-yellow-300 font-medium text-base md:text-2xl mb-3 md:mb-4">"{spokenText}"</p>
                                             {pronunciationFeedback.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 md:gap-2 justify-center my-3 md:my-4 bg-black/50 p-2 md:p-4 rounded-xl border border-white/10">
-                                                    {pronunciationFeedback.map((item, idx) => (
+                                                    {(pronunciationFeedback || []).map((item, idx) => (
                                                         <span key={idx} className={`text-xs md:text-lg font-bold px-1 md:px-2 py-0.5 md:py-1 rounded ${item.correct ? 'bg-green-900/50 text-green-400 border border-green-500/30' : 'bg-red-900/50 text-red-400 border border-red-500/30 line-through decoration-red-500'}`}>{item.word}</span>
                                                     ))}
                                                 </div>
@@ -232,7 +358,7 @@ function HistoriaPanel(props) {
                                             <p className="text-yellow-300 font-mono text-base md:text-xl mb-2">"{spokenText}"</p>
                                             {pronunciationFeedback.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 md:gap-2 justify-center my-3 md:my-4 bg-black/50 p-2 md:p-4 rounded-xl border border-white/10">
-                                                    {pronunciationFeedback.map((item, idx) => (
+                                                    {(pronunciationFeedback || []).map((item, idx) => (
                                                         <span key={idx} className={`text-xs md:text-lg font-bold px-1 md:px-2 py-0.5 md:py-1 rounded ${item.correct ? 'bg-green-900/50 text-green-400 border border-green-500/30' : 'bg-red-900/50 text-red-400 border border-red-500/30 line-through decoration-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]'}`}>{item.word}</span>
                                                     ))}
                                                 </div>
@@ -255,10 +381,10 @@ function HistoriaPanel(props) {
                                 {!showPuzzleResult ? (
                                     <div className="flex flex-col items-center gap-4 md:gap-8 w-full mt-2 md:mt-4">
                                         <div className="min-h-[80px] md:min-h-[100px] w-full bg-black/40 border-2 border-dashed border-indigo-500/50 rounded-xl p-2 md:p-4 flex flex-wrap gap-1 md:gap-2 items-center justify-center">
-                                            {puzzleAnswer.map(pw => <button key={pw.id} onClick={() => { setPuzzleAnswer(puzzleAnswer.filter(w => w.id !== pw.id)); setPuzzleWords([...puzzleWords, pw]); }} className="bg-indigo-600 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg font-bold text-sm md:text-xl">{pw.text}</button>)}
+                                            {(puzzleAnswer || []).map(pw => <button key={pw.id} onClick={() => { setPuzzleAnswer((puzzleAnswer || []).filter(w => w.id !== pw.id)); setPuzzleWords([...(puzzleWords || []), pw]); }} className="bg-indigo-600 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg font-bold text-sm md:text-xl">{pw.text}</button>)}
                                         </div>
                                         <div className="flex flex-wrap gap-2 md:gap-3 justify-center w-full bg-black/20 p-3 md:p-6 rounded-xl">
-                                            {puzzleWords.map(pw => <button key={pw.id} onClick={() => { setPuzzleWords(puzzleWords.filter(w => w.id !== pw.id)); setPuzzleAnswer([...puzzleAnswer, pw]); }} className="bg-gray-800 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg font-bold text-sm md:text-xl">{pw.text}</button>)}
+                                            {(puzzleWords || []).map(pw => <button key={pw.id} onClick={() => { setPuzzleWords((puzzleWords || []).filter(w => w.id !== pw.id)); setPuzzleAnswer([...(puzzleAnswer || []), pw]); }} className="bg-gray-800 text-white px-2 md:px-4 py-1 md:py-2 rounded-lg font-bold text-sm md:text-xl">{pw.text}</button>)}
                                         </div>
                                         <div className="flex gap-3 md:gap-4 w-full md:w-auto justify-center">
                                             <button onClick={() => { setIsPlaying(true); togglePlay(); setIsPlaying(true); }} className="bg-gray-800 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-bold flex items-center gap-1 md:gap-2 text-xs md:text-sm"><Icon name="volume-2" className="w-3 h-3 md:w-5 md:h-5" /> Pista</button>
@@ -333,7 +459,7 @@ function HistoriaPanel(props) {
                                     <div className="tempus-panel mt-3 md:mt-4 p-2 md:p-3 bg-blue-950/60 border border-blue-500/40 rounded-xl w-full">
                                         <p className="text-blue-300 font-bold text-xs md:text-sm mb-1 md:mb-2 flex items-center gap-2"><Icon name="clock" className="w-3 h-3 md:w-4 md:h-4" /> Tempus - Formas verbales:</p>
                                         <div className="flex flex-wrap gap-2 md:gap-3">
-                                            {tempusVerbList.map((verb, idx) => (
+                                            {(tempusVerbList || []).map((verb, idx) => (
                                                 <div key={idx} className="bg-black/50 px-2 md:px-3 py-1 md:py-1.5 rounded-lg border border-blue-400/50">
                                                     <span className="font-bold text-blue-200 text-xs md:text-sm">{verb.infinitive}</span>
                                                     <span className="text-blue-300 text-[10px] md:text-xs ml-1 md:ml-2">→ {verb.forms}</span>

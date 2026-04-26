@@ -1,4 +1,62 @@
 function ComunidadPanel(props) {
+  const noop = () => {};
+  const identityEmail = (e) => String(e == null ? '' : e);
+  const base = {
+    communitySubTab: 'economia',
+    setCommunitySubTab: noop,
+    unifiedAuth: null,
+    isCreatorAccount: false,
+    profileNameDraft: '',
+    setProfileNameDraft: noop,
+    profileNameBusy: false,
+    setProfileNameBusy: noop,
+    profileNameMsg: '',
+    setProfileNameMsg: noop,
+    setSupabaseUser: noop,
+    setSupabaseProfile: noop,
+    saveProgress: noop,
+    setAuthTick: noop,
+    mullerAuthLogout: noop,
+    setAuthPassword: noop,
+    authMode: 'login',
+    setAuthMode: noop,
+    authError: null,
+    setAuthError: noop,
+    authEmail: '',
+    setAuthEmail: noop,
+    authPassword: '',
+    authDisplayName: '',
+    setAuthDisplayName: noop,
+    authBusy: false,
+    setAuthBusy: noop,
+    userStats: {},
+    walletCoins: 0,
+    rewardStatus: null,
+    walletLoading: false,
+    economyMsg: null,
+    setEconomyMsg: noop,
+    setWalletCoins: noop,
+    economyReasonText: '',
+    adOpenedAt: null,
+    setAdOpenedAt: noop,
+    premiumStatus: null,
+    supabaseUser: null,
+    remoteProfiles: null,
+    directoryLocals: [],
+    leagueBoard: { week: '—', rows: [] },
+    mullerMaskEmail: identityEmail,
+    mullerGetSupabaseClient: () => null,
+    mullerAccountsLoad: noop,
+    mullerAccountsSave: noop,
+    mullerAuthRegister: noop,
+    mullerAuthLogin: noop,
+  };
+  const merged = { ...base, ...(props || {}) };
+  if (merged.remoteProfiles === undefined) merged.remoteProfiles = null;
+  if (!Array.isArray(merged.directoryLocals)) merged.directoryLocals = [];
+  if (!merged.leagueBoard || typeof merged.leagueBoard !== 'object') merged.leagueBoard = { week: '—', rows: [] };
+  if (!Array.isArray(merged.leagueBoard.rows)) merged.leagueBoard.rows = [];
+  const mullerBotPlayers = (typeof window !== 'undefined' && window.MULLER_BOT_PLAYERS) ? window.MULLER_BOT_PLAYERS : [];
   const {
     communitySubTab,
     setCommunitySubTab,
@@ -48,7 +106,7 @@ function ComunidadPanel(props) {
     mullerAccountsSave,
     mullerAuthRegister,
     mullerAuthLogin,
-  } = props;
+  } = merged;
   const ExerciseHelpBtn = window.ExerciseHelpBtn || (() => null);
   const mullerSupabaseConfigured = window.mullerSupabaseConfigured || (() => false);
   return (
@@ -458,7 +516,7 @@ function ComunidadPanel(props) {
                                       <table className="w-full text-sm text-left">
                                           <thead><tr className="text-gray-500 border-b border-white/10"><th className="py-2 pr-2">Nombre</th><th className="py-2 pr-2">Ciudad / nivel</th><th className="py-2">Rol</th></tr></thead>
                                           <tbody>
-                                              {MULLER_BOT_PLAYERS.map((b) => (
+                                              {mullerBotPlayers.map((b) => (
                                                   <tr key={b.id} className="border-b border-white/5 text-gray-300">
                                                       <td className="py-2 pr-2 font-bold text-fuchsia-200">{b.name}</td>
                                                       <td className="py-2 pr-2">{b.tag} · {b.lvl}</td>

@@ -1,4 +1,4 @@
-        const MULLER_BOT_PLAYERS = [
+        var MULLER_BOT_PLAYERS = [
             { id: 'bot_elena', name: 'Elena Vogt', tag: 'München', lvl: 'B2' },
             { id: 'bot_jonas', name: 'Jonas Keller', tag: 'Hamburg', lvl: 'B1' },
             { id: 'bot_fatima', name: 'Fatima Al-Sayed', tag: 'Köln', lvl: 'B2' },
@@ -14,3 +14,4 @@
             { id: 'bot_mira', name: 'Mira Popov', tag: 'Wien', lvl: 'B2' },
             { id: 'bot_oscar', name: 'Óscar Prieto', tag: 'Barcelona', lvl: 'B1' },
         ];
+        if (typeof window !== 'undefined') window.MULLER_BOT_PLAYERS = MULLER_BOT_PLAYERS;

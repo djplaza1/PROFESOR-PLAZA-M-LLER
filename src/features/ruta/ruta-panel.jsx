@@ -1,4 +1,40 @@
-function RutaPanel(props) {
+function RutaPanel(rawProps) {
+  const noop = () => {};
+  const p = { ...(rawProps || {}) };
+  if (!p.rutaProgress || typeof p.rutaProgress !== 'object') p.rutaProgress = { playTimeMs: 0, lessonsCompleted: 0, completed: {} };
+  if (!p.rutaVerbDb || typeof p.rutaVerbDb !== 'object') p.rutaVerbDb = { verbs: [] };
+  if (!p.rutaArticleDb || typeof p.rutaArticleDb !== 'object') p.rutaArticleDb = { artikel: [] };
+  if (p.rutaSubTab == null) p.rutaSubTab = 'camino';
+  if (p.rutaMentor == null) p.rutaMentor = 'lena';
+  if (p.rutaFillInput == null) p.rutaFillInput = '';
+  if (p.rutaTopicFilter == null) p.rutaTopicFilter = 'all';
+  if (p.sfxEpoch == null) p.sfxEpoch = 0;
+  if (!Array.isArray(p.placementQuestions)) p.placementQuestions = [];
+  if (p.placementIndex == null) p.placementIndex = 0;
+  if (!Array.isArray(p.placementAnswers)) p.placementAnswers = [];
+  if (!p.rutaPdfPack || typeof p.rutaPdfPack !== 'object') p.rutaPdfPack = { keywords: [], phrases: [] };
+  if (!p.rutaPdfGapIdx) p.rutaPdfGapIdx = 0;
+  if (p.rutaPdfGapInput == null) p.rutaPdfGapInput = '';
+  if (!p.rutaPdfFeedback) p.rutaPdfFeedback = {};
+  if (!p.rutaPdfCoachStats) p.rutaPdfCoachStats = {};
+  if (!p.celebrationModal) p.celebrationModal = null;
+  if (p.coinsUiLabel == null) p.coinsUiLabel = '';
+  if (p.userStats == null) p.userStats = {};
+  Object.keys(p).forEach((k) => {
+    if (k.startsWith('set') && typeof p[k] !== 'function') p[k] = noop;
+  });
+  const fnz = [
+    'runSingleSubmitAction', 'handleExerciseEnterSubmit', 'completeRutaLesson', 'startRutaListen', 'speakRutaDe',
+    'startPlacementTest', 'handlePlacementAnswer', 'selectQuestionsForLevel', 'calculateRecommendedLevel', 'finishPlacementWithLevel',
+    'checkRutaFillAnswer', 'checkRutaSpeakAnswer', 'saveProgress', 'mergeActivityPoints',
+  ];
+  fnz.forEach((k) => { if (typeof p[k] !== 'function') p[k] = noop; });
+  if (p.activeTab == null) p.activeTab = 'ruta';
+  if (p.practiceActive == null) p.practiceActive = false;
+  if (p.isListening == null) p.isListening = false;
+  if (!p.rutaLevels || !Array.isArray(p.rutaLevels)) {
+    p.rutaLevels = (typeof window !== 'undefined' && window.MULLER_RUTA_LEVELS) ? window.MULLER_RUTA_LEVELS : [];
+  }
   const {
     activeTab, practiceActive,
     rutaLevels, rutaProgress, rutaSubTab, setRutaSubTab,
@@ -26,10 +62,11 @@ function RutaPanel(props) {
     runSingleSubmitAction, handleExerciseEnterSubmit,
     completeRutaLesson, startRutaListen, speakRutaDe,
     rutaVerbDb, rutaArticleDb,
+    isListening,
     sfxEpoch, setSfxEpoch,
     celebrationModal, setCelebrationModal,
     saveProgress, mergeActivityPoints, coinsUiLabel, userStats
-  } = props;
+  } = p;
   const ExerciseHelpBtn = window.ExerciseHelpBtn || (() => null);
   return (
                       <div className="flex-1 flex flex-col overflow-y-auto hide-scrollbar p-4 md:p-8 max-w-4xl mx-auto w-full animate-in fade-in duration-500">
@@ -280,7 +317,7 @@ function RutaPanel(props) {
             {placementQuestions[placementIndex]?.q}
           </p>
           <div className="grid grid-cols-1 gap-2">
-            {placementQuestions[placementIndex]?.opts.map((opt, oi) => (
+            {(placementQuestions[placementIndex]?.opts || []).map((opt, oi) => (
               <button
                 key={oi}
                 type="button"
