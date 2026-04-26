@@ -1,5 +1,35 @@
    
-   function LecturaPanel(props) {
+   function LecturaPanel(rawProps) {
+  const noop = () => {};
+  const p = { ...(rawProps || {}) };
+  const arrKeys = ['readingScriptOptions', 'pdfStudySavedDocs', 'pdfDidacticPackLibrary', 'readingWordTokens', 'readingFeedback', 'readingSentences'];
+  arrKeys.forEach((k) => { if (!Array.isArray(p[k])) p[k] = []; });
+  if (!p.pdfStudyDoc || typeof p.pdfStudyDoc !== 'object') p.pdfStudyDoc = { pages: [] };
+  if (!p.readingProgress || typeof p.readingProgress !== 'object') p.readingProgress = {};
+  if (p.readingTargetText == null) p.readingTargetText = '';
+  if (p.readingTextSurfaceRef == null) p.readingTextSurfaceRef = (typeof React !== 'undefined' && React.createRef) ? React.createRef() : { current: null };
+  Object.keys(p).forEach((k) => {
+    if (k.startsWith('set') && typeof p[k] !== 'function') p[k] = noop;
+  });
+  const fnKeys = [
+    'readingCaptureCurrentSelection', 'readingSpeakText', 'speakReadingWord', 'speakReadingSentenceWithWord', 'readingTipForWord', 'runReadingWordLookup',
+    'startReadingListen', 'stopReadingListen', 'finalizeReadingSession', 'runReadingCompare', 'stopAudio', 'saveProgress', 'mergeActivityPoints',
+    'clearPdfStudyTextFromReading', 'loadPdfStudyFile', 'loadPdfStudyFromLibrary', 'removePdfStudyFromLibrary', 'clearPdfStudyLibrary', 'saveCurrentPdfStudyDoc', 'clearPdfStudyDoc',
+    'applyPdfStudyTextToReading', 'applyPdfStudyTextToWriting', 'openPdfStudyFullscreen', 'runPdfPageOcr', 'runPdfOcrBatch', 'updatePdfStudyPageMeta', 'runSingleSubmitAction',
+    'runPdfDidacticAnalysis', 'sendPdfDidacticToRuta', 'sendPdfDidacticToBx', 'sendPdfDidacticToVocab', 'savePdfDidacticPack', 'exportAllPdfCoachData', 'importAllPdfCoachData',
+    'loadPdfDidacticPackFromLibrary', 'removePdfDidacticPackFromLibrary', 'clearPdfDidacticPackLibrary',
+  ];
+  fnKeys.forEach((k) => { if (typeof p[k] !== 'function') p[k] = noop; });
+  if (p.pdfDidacticPack == null || typeof p.pdfDidacticPack !== 'object') p.pdfDidacticPack = { keywords: [] };
+  if (!Array.isArray(p.pdfDidacticPack.keywords)) p.pdfDidacticPack.keywords = [];
+  if (p.readingSelectedWord == null) p.readingSelectedWord = null;
+  if (p.readingVerbInfo == null) p.readingVerbInfo = null;
+  if (p.readingWordInfo == null) p.readingWordInfo = null;
+  if (p.readingTranscript == null) p.readingTranscript = '';
+  if (p.readingScore == null) p.readingScore = null;
+  if (p.readingSource == null) p.readingSource = 'historia';
+  if (p.activeTab == null) p.activeTab = 'lectura';
+  if (p.practiceActive == null) p.practiceActive = false;
   const {
     activeTab, practiceActive,
     readingSource, setReadingSource,
@@ -72,7 +102,7 @@
     pdfDidacticPack,
     removePdfDidacticPackFromLibrary,
     clearPdfDidacticPackLibrary,
-  } = props;
+  } = p;
   return (
                       <div className="flex-1 flex flex-col p-4 md:p-8 max-w-4xl mx-auto w-full animate-in fade-in duration-500 overflow-y-auto">
                           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">

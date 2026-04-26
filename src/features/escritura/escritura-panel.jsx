@@ -1,4 +1,22 @@
-function EscrituraPanel(props) {
+function EscrituraPanel(rawProps) {
+  const noop = () => {};
+  const p = { ...(rawProps || {}) };
+  if (!Array.isArray(p.ocrHistoryList)) p.ocrHistoryList = [];
+  if (!Array.isArray(p.writingScriptOptions)) p.writingScriptOptions = [];
+  if (!p.guionData || !Array.isArray(p.guionData)) p.guionData = (typeof window !== 'undefined' && window.__DEFAULT_GUION__) ? window.__DEFAULT_GUION__ : [];
+  if (!Array.isArray(p.currentVocabList)) p.currentVocabList = [];
+  if (!Array.isArray(p.writingDictationPool)) p.writingDictationPool = [];
+  if (p.writingMode == null) p.writingMode = 'free';
+  if (p.writingGrid == null) p.writingGrid = [];
+  if (p.writingStroke == null) p.writingStroke = [];
+  Object.keys(p).forEach((k) => {
+    if (k.startsWith('set') && typeof p[k] !== 'function') p[k] = noop;
+  });
+  if (typeof p.runSingleSubmitAction !== 'function') p.runSingleSubmitAction = (_a, b) => { if (typeof b === 'function') b(); };
+  if (typeof p.handleExerciseEnterSubmit !== 'function') p.handleExerciseEnterSubmit = noop;
+  if (typeof p.runTelcCoachFromCurrentInput !== 'function') p.runTelcCoachFromCurrentInput = noop;
+  if (typeof p.speakRutaDe !== 'function') p.speakRutaDe = noop;
+  if (typeof p.writingTelcCoach !== 'function') p.writingTelcCoach = noop;
   const {
     escrituraExerciseHelpId,
     writingMode,
@@ -47,7 +65,7 @@ function EscrituraPanel(props) {
     setOcrHistoryList,
     setWritingTelcLastOcrText,
     runSingleSubmitAction,
-  } = props;
+  } = p;
   const ExerciseHelpBtn = window.ExerciseHelpBtn || (() => null);
   return (
                       <div className="flex-1 flex flex-col p-3 md:p-6 max-w-4xl mx-auto w-full animate-in fade-in duration-500 overflow-y-auto pb-24">
@@ -274,7 +292,7 @@ function EscrituraPanel(props) {
                                       <div className="rounded-lg border border-emerald-700/35 bg-emerald-950/30 p-2">
                                           <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider mb-1">Checklist del encargo</p>
                                           <ul className="text-[11px] text-emerald-100/90 space-y-1">
-                                              {WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length].checklist.map((item, i) => (
+                                              {(WRITING_TELC_TASKS[writingTelcIdx % Math.max(1, WRITING_TELC_TASKS.length)]?.checklist || []).map((item, i) => (
                                                   <li key={i}>• {item}</li>
                                               ))}
                                           </ul>
