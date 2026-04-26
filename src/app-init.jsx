@@ -48,9 +48,34 @@ function App() {
         const ComunidadPanelCmp = getCmp('ComunidadPanel');
         const BibliotecaPanelCmp = getCmp('BibliotecaPanel');
         const TelcLevelsCmp = getCmp('TelcLevels');
+        const inicioSafeProps = {
+            healthSnapshot: {
+                ok: false,
+                micOk: false,
+                micLabel: 'No disponible',
+                voiceCount: 0,
+                savedScriptsCount: 0,
+                storyScenesCount: 0,
+                listeningBusy: false,
+            },
+            showSelfCheckPanel: false,
+            setShowSelfCheckPanel: () => {},
+            getSelfCheckItems: () => [],
+            vocabSrsDueCount: 0,
+            setActiveTab: go,
+            setMode: () => {},
+            stopAudio: () => {},
+            setPracticeActive: () => {},
+            setVocabDueFilterOnly: () => {},
+            setBxBankLevel: () => {},
+            setBxCategory: () => {},
+            setShowMullerHub: () => {},
+            setMullerHubTab: () => {},
+            setTourStep: () => {},
+        };
 
         switch (activeTab) {
-            case 'inicio': return React.createElement(InicioPanelCmp, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData });
+            case 'inicio': return React.createElement(InicioPanelCmp, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData, ...inicioSafeProps });
             case 'entrenamiento': return React.createElement(AdvancedPracticePanelFinalCmp, { user, go });
             case 'escritura': return React.createElement(EscrituraPanelCmp, { user, go });
             case 'lectura': return React.createElement(LecturaPanelCmp, { user, go });
@@ -60,7 +85,7 @@ function App() {
             case 'comunidad': return React.createElement(ComunidadPanelCmp, { user, go });
             case 'biblioteca': return React.createElement(BibliotecaPanelCmp, { go });
             case 'telc': return React.createElement(TelcLevelsCmp, { go });
-            default: return React.createElement(InicioPanelCmp, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData });
+            default: return React.createElement(InicioPanelCmp, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData, ...inicioSafeProps });
         }
     })();
 
