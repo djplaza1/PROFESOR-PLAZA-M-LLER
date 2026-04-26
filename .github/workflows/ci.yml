@@ -1,0 +1,33 @@
+# Smoke checks for static GitHub Pages deploy (no paid services).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify core files exist
+        run: |
+          test -f index.html
+          test -f manifest.json
+          test -f sw.js
+          test -f b1-b2-database.json
+          test -f vocab-packs/reise-mini.json
+
+      - name: Validate JSON
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('vocab-packs/reise-mini.json','utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('b1-b2-database.json','utf8'))"
+
+      - name: Sanity check index.html references
+        run: |
+          grep -qE 'serviceWorker|sw\.js' index.html
+          grep -q 'manifest.json' index.html
