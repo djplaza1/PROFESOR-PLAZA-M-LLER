@@ -1,4 +1,5 @@
 function InicioPanel(props) {
+    const p = props || {};
     const noop = () => {};
     const safeHealth = {
         ok: false,
@@ -9,13 +10,13 @@ function InicioPanel(props) {
         storyScenesCount: 0,
         listeningBusy: false,
     };
+    const hs = { ...safeHealth, ...((p.healthSnapshot && typeof p.healthSnapshot === 'object') ? p.healthSnapshot : {}) };
+    const getSelfCheckItemsSafe = (typeof p.getSelfCheckItems === 'function') ? p.getSelfCheckItems : (() => []);
     const {
-        healthSnapshot = safeHealth,
         showSelfCheckPanel = false,
         setShowSelfCheckPanel = noop,
-        getSelfCheckItems = () => [],
         vocabSrsDueCount = 0,
-        setActiveTab = props && props.go ? props.go : noop,
+        setActiveTab = p.go ? p.go : noop,
         setMode = noop,
         stopAudio = noop,
         setPracticeActive = noop,
@@ -35,7 +36,7 @@ function InicioPanel(props) {
                           <div className="mb-4 rounded-2xl border border-cyan-500/30 bg-cyan-950/35 p-4">
                               <div className="flex items-center justify-between gap-2 mb-2">
                                   <p className="text-cyan-200 font-black text-sm flex items-center gap-2"><Icon name="stethoscope" className="w-4 h-4" /> Diagnóstico rápido</p>
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${healthSnapshot.ok ? 'bg-emerald-800/60 text-emerald-200 border border-emerald-500/40' : 'bg-amber-900/60 text-amber-200 border border-amber-500/40'}`}>{healthSnapshot.ok ? 'Estado: OK' : 'Revisar'}</span>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${hs.ok ? 'bg-emerald-800/60 text-emerald-200 border border-emerald-500/40' : 'bg-amber-900/60 text-amber-200 border border-amber-500/40'}`}>{hs.ok ? 'Estado: OK' : 'Revisar'}</span>
                               </div>
                               <div className="mb-2 flex items-center gap-2">
                                   <button
@@ -49,7 +50,7 @@ function InicioPanel(props) {
                               </div>
                               {showSelfCheckPanel && (
                                   <div className="mb-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
-                                      {getSelfCheckItems().map((it) => (
+                                      {getSelfCheckItemsSafe().map((it) => (
                                           <div key={it.id} className={`rounded-lg border px-2.5 py-1.5 ${it.ok ? 'border-emerald-500/35 bg-emerald-950/25 text-emerald-200' : 'border-amber-500/35 bg-amber-950/30 text-amber-100'}`}>
                                               <span className="font-bold">{it.ok ? '✓' : '⚠'} {it.label}</span>
                                           </div>
@@ -59,19 +60,19 @@ function InicioPanel(props) {
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
                                   <div className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2">
                                       <p className="text-gray-400">Micrófono</p>
-                                      <p className={`font-bold ${healthSnapshot.micOk ? 'text-emerald-300' : 'text-amber-300'}`}>{healthSnapshot.micLabel}</p>
+                                      <p className={`font-bold ${hs.micOk ? 'text-emerald-300' : 'text-amber-300'}`}>{hs.micLabel}</p>
                                   </div>
                                   <div className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2">
                                       <p className="text-gray-400">Voces TTS</p>
-                                      <p className={`font-bold ${healthSnapshot.voiceCount > 0 ? 'text-emerald-300' : 'text-amber-300'}`}>{healthSnapshot.voiceCount > 0 ? `${healthSnapshot.voiceCount} disponibles` : 'Sin voces cargadas'}</p>
+                                      <p className={`font-bold ${hs.voiceCount > 0 ? 'text-emerald-300' : 'text-amber-300'}`}>{hs.voiceCount > 0 ? `${hs.voiceCount} disponibles` : 'Sin voces cargadas'}</p>
                                   </div>
                                   <div className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2">
                                       <p className="text-gray-400">Guiones</p>
-                                      <p className={`font-bold ${(healthSnapshot.savedScriptsCount > 0 || healthSnapshot.storyScenesCount > 0) ? 'text-emerald-300' : 'text-amber-300'}`}>{healthSnapshot.savedScriptsCount} guardados · {healthSnapshot.storyScenesCount} escenas</p>
+                                      <p className={`font-bold ${(hs.savedScriptsCount > 0 || hs.storyScenesCount > 0) ? 'text-emerald-300' : 'text-amber-300'}`}>{hs.savedScriptsCount} guardados · {hs.storyScenesCount} escenas</p>
                                   </div>
                                   <div className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2">
                                       <p className="text-gray-400">Estado sesión</p>
-                                      <p className={`font-bold ${healthSnapshot.listeningBusy ? 'text-fuchsia-300' : 'text-emerald-300'}`}>{healthSnapshot.listeningBusy ? 'Mic activo' : 'En reposo'}</p>
+                                      <p className={`font-bold ${hs.listeningBusy ? 'text-fuchsia-300' : 'text-emerald-300'}`}>{hs.listeningBusy ? 'Mic activo' : 'En reposo'}</p>
                                   </div>
                               </div>
                           </div>
