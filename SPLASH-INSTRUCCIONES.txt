@@ -1,0 +1,516 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                    SPLASH / PREBOOT — INSTRUCCIONES COMPLETAS                     ║
+║                  Pantalla de carga con banderas, logo y animaciones                ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+================================================================================
+1.  INTRODUCCIÓN — ¿QUÉ ES EL SPLASH?
+================================================================================
+
+Es la pantalla que aparece al abrir la app antes de que cargue la aplicación
+principal (React). Ocupa toda la pantalla (position: fixed; inset: 0; z-index: 9999).
+
+ESTRUCTURA VISUAL (de arriba a abajo):
+┌────────────────────────────────┐
+│    BANDERA ALEMANA (flex:1)    │  ← negro/rojo/amarillo
+├────────────────────────────────┤
+│ ┌────┐ ┌────────────────────┐  │
+│ │logo│ │ PROFESOR PLAZA     │  │  ← zona blanca (18vh fijo)
+│ │red.│ │ MÜLLER             │  │
+│ │sin │ │ ← PULSE AQUÍ       │  │
+│ │mrc.│ └────────────────────┘  │
+│ └────┘                        │
+├────────────────────────────────┤
+│    BANDERA ESPAÑOLA (flex:1)   │  ← rojo/amarillo/rojo
+└────────────────────────────────┘
+
+COMPORTAMIENTO:
+- Aparece al cargar la página
+- A los 3 segundos: logo y marco empiezan a PARPADEAR con destello dorado
+- A los 3 segundos: aparece "← PULSE AQUÍ" con flecha animada
+- NO desaparece hasta que el usuario pulsa el LOGO (click, Enter o Espacio)
+- Al pulsar: fade out (opacity 0), se elimina del DOM a los 320ms
+
+
+================================================================================
+2.  ARCHIVO DONDE VA TODO
+================================================================================
+
+TODOS los cambios (CSS + HTML + JavaScript) van en el mismo archivo:
+
+    index.html  (en la raíz del proyecto)
+
+Dentro de index.html:
+  - CSS  →  dentro de <style> ... </style> (entre líneas 414 y 670 aprox.)
+  - HTML → dentro del <body> ... </body> (entre líneas 674 y 698 aprox.)
+  - JS   → dentro de <script> ... </script> (entre líneas 701 y 755 aprox.)
+
+
+================================================================================
+3.  IMAGEN DEL LOGO
+================================================================================
+
+La imagen que se usa es:
+
+    icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png
+
+Ruta completa: /PROFESOR-PLAZA-MULLER/icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png
+
+Es un PNG sin fondo (transparente) con el logo de Profesor Plaza Müller.
+
+TAMAÑO EN EL SPLASH:
+  - height = 100% del contenedor padre - 4px  (casi toca las banderas por arriba y abajo)
+  - aspect-ratio: 1 / 1  (siempre cuadrado perfecto)
+  - min-width: 62px, min-height: 62px
+  - object-fit: contain (se ve la imagen COMPLETA, sin recortar)
+  - envuelto en un botón circular con background: #000000
+
+OTROS ARCHIVOS DE ICONOS EN LA CARPETA icons/:
+  - icons/icon-192.png              → icono PWA 192x192
+  - icons/icon-512.png              → icono PWA 512x512
+  - icons/logo-plaza-sin-fondo.png  → otra versión del logo
+  - icons/profesor-plaza-muller-logo.jpg  → logo en JPG
+
+
+================================================================================
+4.  CSS COMPLETO DEL SPLASH
+================================================================================
+
+CÓMO USAR: todo este bloque va DENTRO de la etiqueta <style> en index.html,
+entre /* ==================== SPLASH / PREBOOT - REDISEÑO ==================== */
+y el cierre de </style>.
+
+═══════════════════════════════════════════════════════════════════════════════
+/* ==================== SPLASH / PREBOOT - REDISEÑO ==================== */
+.muller-preboot {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 100dvh;
+    background: #ffffff;
+    transition: opacity 280ms ease, visibility 280ms ease;
+}
+.muller-preboot.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+/* ---- BANDA ALEMANA ARRIBA: flex:1 para ocupar todo el espacio restante ---- */
+.muller-preboot-de {
+    flex: 1;
+    width: 100%;
+    min-height: 60px;
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    background: linear-gradient(
+        180deg,
+        #000000 0%, #000000 33.3%,
+        #dd0000 33.3%, #dd0000 66.6%,
+        #ffce00 66.6%, #ffce00 100%
+    );
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ---- BANDA ESPAÑOLA ABAJO: flex:1 para ocupar todo el espacio restante ---- */
+.muller-preboot-es {
+    flex: 1;
+    width: 100%;
+    min-height: 60px;
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    background: linear-gradient(
+        180deg,
+        #aa151b 0%, #aa151b 33.3%,
+        #f1bf00 33.3%, #f1bf00 66.6%,
+        #aa151b 66.6%, #aa151b 100%
+    );
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+}
+
+/* ---- ZONA CENTRAL: BLANCA, 18% VH (fijo) ---- */
+.muller-preboot-mid {
+    flex: 0 0 18vh;
+    height: 18vh;
+    min-height: 64px;
+    max-height: 170px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100vw;
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+    padding: 0;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+/* Lado izquierdo: altura completa */
+.muller-preboot-mid-left {
+    flex: 0 0 auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    padding: 0;
+    box-sizing: border-box;
+    position: relative;
+    overflow: visible;
+}
+
+/* Logo: círculo PERFECTO cuadrado, altura = padre menos 4px */
+.muller-preboot-logo-btn {
+    -webkit-tap-highlight-color: transparent;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #000000;
+    box-shadow: none !important;
+    line-height: 0;
+    cursor: pointer;
+    transition: transform 180ms ease, opacity 180ms ease;
+    position: relative;
+    z-index: 3;
+    outline: none;
+    height: calc(100% - 4px);
+    aspect-ratio: 1 / 1;
+    min-width: 62px;
+    min-height: 62px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.muller-preboot-logo-btn:hover {
+    transform: scale(1.02);
+}
+.muller-preboot-logo-btn:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 3px;
+}
+.muller-preboot-logo-btn img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+    background: transparent !important;
+    border: 0;
+    box-shadow: none;
+    filter: none;
+}
+
+/* Lado derecho: fondo blanco, título con marco negro redondeado */
+.muller-preboot-mid-right {
+    flex: 0 1 auto;
+    max-width: 55%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    background: #ffffff;
+    padding: clamp(0.25rem, 1vw, 0.75rem);
+    box-sizing: border-box;
+}
+/* Marco negro redondeado alrededor del título y CTA */
+.muller-preboot-title-frame {
+    border: 3px solid #000000;
+    border-radius: 1.2rem;
+    padding: clamp(0.3rem, 1vw, 0.8rem) clamp(0.5rem, 1.5vw, 1.2rem);
+    display: inline-block;
+    background: #ffffff;
+    transition: box-shadow 0.4s ease, border-color 0.4s ease;
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.2);
+}
+/* Título enorme, negro, sin espaciado extra */
+.muller-preboot-title {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: clamp(1.2rem, 6vw, 3rem);
+    font-weight: 800;
+    line-height: 1.05;
+    color: #000000;
+    margin: 0;
+    padding: 0;
+    letter-spacing: 0;
+    text-shadow: none;
+    text-align: left;
+    word-break: keep-all;
+    white-space: nowrap;
+}
+/* CTA: flecha ← + "PULSE AQUÍ" debajo del título */
+.muller-preboot-hint {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.2rem;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+    margin-top: 0;
+}
+.muller-preboot-hint--visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.muller-preboot-hint-arrow {
+    display: inline-block;
+    font-size: clamp(1rem, 3vw, 1.8rem);
+    line-height: 1;
+    color: #b45309;
+    animation: prebootArrowBounce 1s ease-in-out infinite;
+}
+@keyframes prebootArrowBounce {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-5px); }
+}
+.muller-preboot-hint-text {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: clamp(0.75rem, 2vw, 1.1rem);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-align: left;
+    line-height: 1.2;
+    background: linear-gradient(90deg, #a16207, #d97706, #eab308, #b45309);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ---- ANIMACIONES tras 3 segundos ---- */
+/* Logo parpadea IGUAL que el marco (misma animación golden-frame-blink) */
+.muller-preboot-logo-btn.preboot-logo-blink {
+    animation: golden-frame-blink 0.8s ease-in-out infinite;
+}
+/* Marco del título: destello dorado alrededor del borde redondeado */
+.muller-preboot-mid-right.preboot-border-blink .muller-preboot-title-frame {
+    animation: golden-frame-blink 0.8s ease-in-out infinite;
+}
+@keyframes golden-frame-blink {
+    0%, 100% {
+        box-shadow: 0 0 8px rgba(212, 175, 55, 0.2);
+        border-color: #000000;
+    }
+    50% {
+        box-shadow: 0 0 35px gold, 0 0 70px rgba(212, 175, 55, 0.4);
+        border-color: #d4a017;
+    }
+}
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 640px) {
+    .muller-preboot-mid { flex-direction: row; flex: 0 0 16vh; height: 16vh; min-height: 60px; max-height: 140px; }
+    .muller-preboot-mid-left,
+    .muller-preboot-mid-right { flex: none; }
+    .muller-preboot-mid-right { max-width: 65%; padding: 0.4rem; align-items: flex-start; }
+    .muller-preboot-mid-right .muller-preboot-title-frame { text-align: left; }
+    .muller-preboot-mid-right .muller-preboot-title { text-align: left; white-space: nowrap; font-size: clamp(1rem, 4.5vw, 1.8rem); }
+    .muller-preboot-mid-right .muller-preboot-hint { justify-content: flex-start; }
+    .muller-preboot-logo-btn { max-width: 14vh; max-height: 14vh; min-width: 50px; min-height: 50px; }
+    .muller-preboot-title-frame { padding: 0.25rem 0.4rem; border-width: 2px; border-radius: 0.8rem; }
+    .muller-preboot-hint-text { font-size: clamp(0.65rem, 2.5vw, 0.9rem); }
+}
+@media (max-width: 480px) {
+    .muller-preboot-de { min-height: 50px; }
+    .muller-preboot-es { min-height: 50px; }
+    .muller-preboot-mid { flex: 0 0 14vh; height: 14vh; min-height: 50px; max-height: 120px; }
+    .muller-preboot-title { font-size: clamp(0.85rem, 4vw, 1.4rem); }
+    .muller-preboot-hint-text { font-size: clamp(0.6rem, 2.5vw, 0.8rem); }
+    .muller-preboot-title-frame { padding: 0.2rem 0.35rem; border-width: 2px; border-radius: 0.6rem; }
+}
+@media (min-width: 768px) {
+    .muller-preboot-mid { flex: 0 0 22vh; height: 22vh; max-height: 200px; }
+    .muller-preboot-logo-btn { max-width: 22vh; max-height: 22vh; }
+    .muller-preboot-title { font-size: clamp(1.5rem, 5vw, 3.2rem); }
+}
+═══════════════════════════════════════════════════════════════════════════════
+
+
+================================================================================
+5.  HTML COMPLETO DEL SPLASH
+================================================================================
+
+CÓMO USAR: este bloque va dentro del <body> de index.html, justo DESPUÉS de
+la apertura de <body> y ANTES del <div id="root"></div>.
+
+═══════════════════════════════════════════════════════════════════════════════
+<div id="muller-preboot" class="muller-preboot" role="dialog" aria-modal="true" aria-label="Pantalla de inicio">
+    <!-- BANDERA ALEMANA (ARRIBA) -->
+    <div class="muller-preboot-de" aria-hidden="true" title="Bandera de Alemania"></div>
+    
+    <!-- ZONA CENTRAL: IZQUIERDA (LOGO) + DERECHA (TÍTULO + CTA) -->
+    <div class="muller-preboot-mid">
+        <div class="muller-preboot-mid-left">
+            <button type="button" id="muller-preboot-logo-btn" class="muller-preboot-logo-btn" title="Pulse aquí para entrar" aria-label="Pulse en el logo para abrir la aplicación">
+                <img src="icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png" alt="Profesor Plaza Müller" width="600" height="600" loading="eager" fetchpriority="high" decoding="async" />
+            </button>
+        </div>
+        <div id="muller-preboot-mid-right" class="muller-preboot-mid-right">
+            <div class="muller-preboot-title-frame">
+                <div class="muller-preboot-title">PROFESOR PLAZA MÜLLER</div>
+                <div id="muller-preboot-hint" class="muller-preboot-hint" role="status" aria-live="polite" aria-hidden="true">
+                    <span class="muller-preboot-hint-arrow" aria-hidden="true">←</span>
+                    <span class="muller-preboot-hint-text">PULSE AQUÍ</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- BANDERA ESPAÑOLA (ABAJO) -->
+    <div class="muller-preboot-es" aria-hidden="true" title="Bandera de España"></div>
+</div>
+═══════════════════════════════════════════════════════════════════════════════
+
+
+================================================================================
+6.  JAVASCRIPT COMPLETO DEL SPLASH
+================================================================================
+
+CÓMO USAR: este bloque va dentro del <body> de index.html, justo DESPUÉS del
+HTML del splash (cierre de </div> del preboot). Va en una etiqueta <script>
+independiente, ANTES del script que carga la app (app-bundled-from-user-index.jsx).
+
+═══════════════════════════════════════════════════════════════════════════════
+<script>
+(function () {
+    var hintTid;
+    function dismissPreboot() {
+        if (typeof window.mullerDismissPreboot === 'function') {
+            try { window.mullerDismissPreboot(); } catch (e) {}
+            return;
+        }
+        var el = document.getElementById('muller-preboot');
+        if (!el) return;
+        el.classList.add('is-hidden');
+        window.setTimeout(function () {
+            try { if (el && el.parentNode) el.parentNode.removeChild(el); } catch (e) {}
+        }, 320);
+    }
+    function setupPreboot() {
+        var btn = document.getElementById('muller-preboot-logo-btn');
+        if (btn) {
+            btn.addEventListener('click', function () {
+                if (hintTid) { try { clearTimeout(hintTid); } catch (e) {} }
+                dismissPreboot();
+            });
+            btn.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (hintTid) { try { clearTimeout(hintTid); } catch (e) {} }
+                    dismissPreboot();
+                }
+            });
+        }
+        // A los 3 segundos: logo parpadea + marco parpadea + aparece "← PULSE AQUÍ"
+        hintTid = setTimeout(function () {
+            var wrap = document.getElementById('muller-preboot');
+            if (!wrap || wrap.classList.contains('is-hidden')) return;
+            // Logo parpadea con destello dorado circular
+            if (btn) {
+                btn.classList.add('preboot-logo-blink');
+            }
+            // Marco del título parpadea con destello dorado
+            var right = document.getElementById('muller-preboot-mid-right');
+            if (right) {
+                right.classList.add('preboot-border-blink');
+            }
+            // Mensaje "← PULSE AQUÍ"
+            var h = document.getElementById('muller-preboot-hint');
+            if (h) {
+                h.classList.add('muller-preboot-hint--visible');
+                h.setAttribute('aria-hidden', 'false');
+            }
+        }, 3000);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupPreboot, { once: true });
+    else setupPreboot();
+})();
+</script>
+═══════════════════════════════════════════════════════════════════════════════
+
+
+================================================================================
+7.  RESUMEN DE CLASES Y ELEMENTOS CLAVE
+================================================================================
+
+ID / CLASE                        ┃ PROPÓSITO
+───────────────────────────────────╂────────────────────────────────────────────
+.muller-preboot                   ┃ Contenedor principal (fixed, z-index 9999)
+.muller-preboot.is-hidden         ┃ Oculta el splash (fade out)
+.muller-preboot-de                ┃ Bandera alemana (arriba) — solo CSS
+.muller-preboot-es                ┃ Bandera española (abajo) — solo CSS
+.muller-preboot-mid               ┃ Centro blanco (flex row: logo + título)
+.muller-preboot-mid-left          ┃ Lado izquierdo: aloja el botón del logo
+#muller-preboot-logo-btn          ┃ Botón circular del logo (click → entrar)
+.muller-preboot-mid-right         ┃ Lado derecho: título + "PULSE AQUÍ"
+#muller-preboot-mid-right         ┃ Mismo elemento (se le añade clase blink)
+.muller-preboot-title-frame       ┃ Marco negro redondeado
+.muller-preboot-title             ┃ Texto "PROFESOR PLAZA MÜLLER"
+#muller-preboot-hint              ┃ Contenedor de la CTA (inicialmente oculto)
+.muller-preboot-hint--visible     ┃ Clase que hace visible la CTA
+.muller-preboot-hint-arrow        ┃ Flecha "←" que bounces
+.muller-preboot-hint-text         ┃ Texto "PULSE AQUÍ" con gradiente dorado
+.preboot-logo-blink               ┃ Se añade al botón del logo a los 3s
+.preboot-border-blink             ┃ Se añade al mid-right a los 3s
+───────────────────────────────────┴────────────────────────────────────────────
+
+
+================================================================================
+8.  NOTAS IMPORTANTES
+================================================================================
+
+1. El SPLASH se elimina del DOM a los 320ms después de pulsar el logo.
+   Si hay una función global window.mullerDismissPreboot(), la usa en lugar
+   del método por defecto.
+
+2. La app principal se carga en <div id="root"></div>, que está JUSTO
+   DESPUÉS del splash en el DOM. El splash tapa todo hasta que se cierra.
+
+3. La imagen del logo debe estar en icons/ y ser un PNG sin fondo.
+   Actualmente se usa: icons/Logo-Plaza-Sin-fondo_20250125_054126_0000.png
+
+4. El texto "PULSE AQUÍ" usa gradiente dorado con background-clip: text.
+   Para cambiar colores del gradiente, editar la propiedad background
+   de .muller-preboot-hint-text (líneas 619-624 del index.html).
+
+5. El destello dorado usa la animación golden-frame-blink.
+   Es la MISMA animación para logo y marco. Para cambiar intensidad,
+   editar los valores de box-shadow en la keyframe 50%.
+
+6. El tiempo de espera antes de las animaciones es 3000ms (3 segundos).
+   Para cambiarlo, editar el valor en setTimeout dentro del JS (línea 750).
+
+7. RESPONSIVE:
+   - Móvil grande (≤640px): centro 16vh, logo 14vh, marco más fino
+   - Móvil pequeño (≤480px): centro 14vh, fuentes más pequeñas
+   - Escritorio (≥768px): centro 22vh, logo 22vh, título más grande
+
+8. Las banderas se hacen SOLO CON CSS (gradientes), no usan imágenes.
+   Alemania: negro #000000 / rojo #dd0000 / amarillo #ffce00
+   España:   rojo #aa151b / amarillo #f1bf00
+
+9. Si quieres cambiar el logo por otro archivo, cambia el src en la etiqueta
+   <img> dentro del HTML (línea 682 del index.html).
+
+10. IMPORTANTE: Todo el splash está en un solo archivo (index.html).
+    No hay archivos externos que afecten al splash (excepto la imagen del logo).
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
