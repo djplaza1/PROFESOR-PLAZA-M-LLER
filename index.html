@@ -754,8 +754,33 @@
     })();
     </script>
 
-    <!-- App completa (un solo bundle; NO usar app-init.jsx en producción: es solo carcasa modular incompleta) -->
-    <script type="text/babel" src="src/app-bundled-from-user-index.jsx"></script>
+    <!-- App completa en 3 partes (<500KB cada una para evitar warning de Babel). 
+         Se concatenan en runtime para compartir scope y compilar como un solo bundle. -->
+    <script>
+    (async function(){
+        const parts = ['src/a-core.jsx','src/b-app.jsx','src/c-extra.jsx'];
+        const nocache = '?v=' + Date.now();
+        let code = '';
+        for(const p of parts){
+            const resp = await fetch(p + nocache);
+            if(!resp.ok) throw new Error('Failed to load ' + p + ': ' + resp.status);
+            code += await resp.text() + '\n';
+        }
+        const result = Babel.transform(code, {
+            presets: ['react'],
+            filename: 'app-bundle.jsx',
+            sourceMaps: false
+        });
+        if(result.code){
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.textContent = result.code;
+            document.body.appendChild(script);
+        } else if(result.errors && result.errors.length){
+            console.error('[Muller] Babel transform errors:', result.errors);
+        }
+    })();
+    </script>
 
     <script>
         if ('serviceWorker' in navigator) {
