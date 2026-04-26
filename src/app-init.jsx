@@ -1,5 +1,14 @@
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
+const MissingPanel = ({ name }) => React.createElement(
+    'div',
+    { className: 'p-4 text-center', style: { color: '#e2e8f0' } },
+    React.createElement('h2', { className: 'text-xl font-bold mb-2', style: { color: '#fbbf24' } }, 'Componente pendiente'),
+    React.createElement('p', null, `No se encontró ${name} en window.`)
+);
+
+const getCmp = (name) => window[name] || ((props) => React.createElement(MissingPanel, { name, ...props }));
+
 // ====== COMPONENTE PRINCIPAL APP ======
 function App() {
     const [activeTab, setActiveTab] = useState(window.__mullerTab || 'inicio');
@@ -28,18 +37,29 @@ function App() {
     const toggleOnboarding = useCallback(() => setOnboardingOpen(o => !o), []);
 
     const content = (() => {
+        const InicioPanelCmp = getCmp('InicioPanel');
+        const AdvancedPracticePanelFinalCmp = getCmp('AdvancedPracticePanelFinal');
+        const EscrituraPanelCmp = getCmp('EscrituraPanel');
+        const LecturaPanelCmp = getCmp('LecturaPanel');
+        const HistoriaPanelCmp = getCmp('HistoriaPanel');
+        const VocabSRSCmp = getCmp('VocabSRS');
+        const RutaPanelCmp = getCmp('RutaPanel');
+        const ComunidadPanelCmp = getCmp('ComunidadPanel');
+        const BibliotecaPanelCmp = getCmp('BibliotecaPanel');
+        const TelcLevelsCmp = getCmp('TelcLevels');
+
         switch (activeTab) {
-            case 'inicio': return React.createElement(InicioPanel, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData });
-            case 'entrenamiento': return React.createElement(AdvancedPracticePanelFinal, { user, go });
-            case 'escritura': return React.createElement(EscrituraPanel, { user, go });
-            case 'lectura': return React.createElement(LecturaPanel, { user, go });
-            case 'historia': return React.createElement(HistoriaPanel, { user, go });
-            case 'vocabulario': return React.createElement(VocabSRS, { user });
-            case 'ruta': return React.createElement(RutaPanel, { user, go });
-            case 'comunidad': return React.createElement(ComunidadPanel, { user, go });
-            case 'biblioteca': return React.createElement(BibliotecaPanel, { go });
-            case 'telc': return React.createElement(TelcLevels, { go });
-            default: return React.createElement(InicioPanel, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData });
+            case 'inicio': return React.createElement(InicioPanelCmp, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData });
+            case 'entrenamiento': return React.createElement(AdvancedPracticePanelFinalCmp, { user, go });
+            case 'escritura': return React.createElement(EscrituraPanelCmp, { user, go });
+            case 'lectura': return React.createElement(LecturaPanelCmp, { user, go });
+            case 'historia': return React.createElement(HistoriaPanelCmp, { user, go });
+            case 'vocabulario': return React.createElement(VocabSRSCmp, { user });
+            case 'ruta': return React.createElement(RutaPanelCmp, { user, go });
+            case 'comunidad': return React.createElement(ComunidadPanelCmp, { user, go });
+            case 'biblioteca': return React.createElement(BibliotecaPanelCmp, { go });
+            case 'telc': return React.createElement(TelcLevelsCmp, { go });
+            default: return React.createElement(InicioPanelCmp, { user, go, toggleProfile, toggleOnboarding, vocabData, setVocabData });
         }
     })();
 
@@ -66,7 +86,7 @@ function App() {
                     style: { minWidth: 'var(--muller-nav-tab-w, 68px)' }
                 },
                     React.createElement('div', { className: 'nav-tab-icon' },
-                        React.createElement(Icon, { name: t.icon, size: 18 })
+                        React.createElement(getCmp('Icon'), { name: t.icon, size: 18 })
                     ),
                     React.createElement('span', { className: 'text-[10px] font-semibold tracking-wide mt-1', style: { color: '#94a3b8' } }, t.label)
                 ))
@@ -88,13 +108,17 @@ const hidePreboot = () => {
 
 // ====== RENDER ======
 document.addEventListener('DOMContentLoaded', () => {
+    const ErrorBoundaryCmp = getCmp('MullerErrorBoundary');
+    const FloatingButtonsCmp = getCmp('FloatingButtons');
+    const AdvancedPracticePanelFinalCmp = getCmp('AdvancedPracticePanelFinal');
+
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(
-        React.createElement(MullerErrorBoundary, null,
+        React.createElement(ErrorBoundaryCmp, null,
             React.createElement(React.Fragment, null,
         React.createElement(App, null),
-        React.createElement(FloatingButtons, null),
-        React.createElement(AdvancedPracticePanelFinal, null)
+        React.createElement(FloatingButtonsCmp, null),
+        React.createElement(AdvancedPracticePanelFinalCmp, null)
             )
         )
     );
