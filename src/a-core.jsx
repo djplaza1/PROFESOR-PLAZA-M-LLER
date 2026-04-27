@@ -1,4 +1,4 @@
-        const { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } = React;
+﻿        const { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } = React;
 
         class MullerErrorBoundary extends React.Component {
             constructor(props) {
@@ -50,7 +50,7 @@
 
         // --- BASES DE DATOS Y CONFIGURACIÃ“N INICIAL (sin cambios) ---
         const DEFAULT_GUION = [
-            { speaker: 'Lukas', text: 'Hallo Elena! Heute ist ein groÃŸer Tag.', translation: 'Â¡Hola Elena! Hoy es un gran dÃ­a.', vocab: [{ de: 'der Tag', es: 'el dÃ­a', diff: 0 }] },
+            { speaker: 'Lukas', text: 'Hallo Elena! Heute ist ein großer Tag.', translation: '¡Hola Elena! Hoy es un gran día.', vocab: [{ de: 'der Tag', es: 'el día', diff: 0 }] },
             { speaker: 'Lukas', text: 'Ich bin nervös, weil wir Bilder ausstellen.', translation: 'Estoy nervioso porque exponemos cuadros.', vocab: [{ de: 'ausstellen', es: 'exponer', diff: 0 }] },
             { speaker: 'Elena', text: 'Keine Sorge. Du bist ein toller Künstler.', translation: 'No te preocupes. Eres un gran artista.', isRedemittel: true, vocab: [{ de: 'der Künstler', es: 'el artista', diff: 0 }] },
             { speaker: 'Elena', text: 'Du wirst heute viel Anerkennung bekommen.', translation: 'Hoy recibirás mucho reconocimiento.', vocab: [{ de: 'die Anerkennung', es: 'el reconocimiento', diff: 1 }, { de: 'bekommen', es: 'recibir', diff: 0 }] },
