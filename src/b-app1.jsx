@@ -626,7 +626,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
               const creatorEmail = String(window.MULLER_CREATOR_EMAIL || '').trim().toLowerCase();
               return !!(creatorEmail && String(unifiedAuth.email || '').toLowerCase() === creatorEmail);
           }, [walletIsCreator, unifiedAuth]);
-          const coinsUiLabel = isCreatorAccount ? 'âˆž' : userStats.coins;
+          const coinsUiLabel = isCreatorAccount ? '∞' : userStats.coins;
           const economyReasonText = (reason) => {
               const r = String(reason || '');
               if (r === 'already_claimed_today') return 'Ya has reclamado el bonus diario hoy.';
@@ -1741,7 +1741,7 @@ const finishPlacementWithLevel = (finalLevel) => {
               setReadingSource('paste');
               setReadingTextInput(txt);
               setPdfStudyBusyMsg(`Página ${page.page} enviada a Lectura.`);
-              setPdfStudyLastApplied(`âœ“ Página ${page.page} cargada en Lectura`);
+              setPdfStudyLastApplied(`✓ Página ${page.page} cargada en Lectura`);
           }, [pdfStudyDoc]);
 
           const applyPdfStudyTextToWriting = useCallback((pageNumber) => {
@@ -1758,7 +1758,7 @@ const finishPlacementWithLevel = (finalLevel) => {
               setWritingTelcInputMode('keyboard');
               setWritingTelcTypedText(txt);
               setPdfStudyBusyMsg(`Página ${page.page} enviada a Escritura TELC.`);
-              setPdfStudyLastApplied(`âœ“ Página ${page.page} cargada en Escritura TELC`);
+              setPdfStudyLastApplied(`✓ Página ${page.page} cargada en Escritura TELC`);
           }, [pdfStudyDoc]);
 
           const updatePdfStudyPageMeta = useCallback((pageNumber, patch = {}) => {
@@ -2616,7 +2616,7 @@ const finishPlacementWithLevel = (finalLevel) => {
                   return s.trim();
               };
               lines.forEach(line => {
-                  let text = line.trim().replace(/â€“/g, '-').replace(/—/g, '-');
+                  let text = line.trim().replace(/–/g, '-').replace(/—/g, '-');
                   if (!text) return;
                   let isDiff = false;
                   if (text.startsWith('1')) { isDiff = true; text = text.replace(/^1[.\-):\]]*\s*/, '').trim(); }
@@ -2688,7 +2688,7 @@ const finishPlacementWithLevel = (finalLevel) => {
                 vocabPairs.forEach(pair => {
                     const parts = pair.split('-');
                     if (parts.length >= 2) {
-                        const cleanDe = parts[0].trim().replace(/[ðŸ”´ðŸ”µðŸŸ¢•]/g, '');
+                        const cleanDe = parts[0].trim().replace(/[🔴🔵🟢•]/g, '');
                         vocab.push({ de: cleanDe, es: parts[1].trim(), diff: 1 });
                     }
                 });
@@ -2704,7 +2704,7 @@ const finishPlacementWithLevel = (finalLevel) => {
             }
 
             // 5. Alemán (limpio de círculos para el audio)
-            const germanText = content.replace(/[ðŸ”´ðŸ”µðŸŸ¢]/g, '').trim();
+            const germanText = content.replace(/[🔴🔵🟢]/g, '').trim();
 
             if (germanText) {
                 newGuion.push({ speaker, text: germanText, translation, isRedemittel, vocab });
@@ -3286,7 +3286,7 @@ const finishPlacementWithLevel = (finalLevel) => {
               return String(text || '')
                   .replace(/\[R\]/gi, '')
                   .replace(/\bN[üu]tzlich\b\.?/gi, '')
-                  .replace(/\b[ÃšU]TIL\b\.?/gi, '')
+                  .replace(/\b[ÚU]TIL\b\.?/gi, '')
                   .replace(/\s{2,}/g, ' ')
                   .trim();
           };
@@ -3369,19 +3369,19 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           const generateTutorFeedback = (text) => {
               let feedback = [];
               const tLower = text.toLowerCase();
-              if (tLower.match(/\b(weil|dass|obwohl|wenn|als|damit|ob|bevor|nachdem)\b/i)) feedback.push("ðŸŸ£ **Nebensatz (Subordinada):** Has usado un conector subordinante. El verbo conjugado va a la última posición de la frase.");
-              if (tLower.match(/\b(deshalb|deswegen|darum|trotzdem|dann|danach|außerdem)\b/i)) feedback.push("ðŸŸ  **Hauptsatz (Inversión):** Conector en Posición 1. Inmediatamente después tiene que ir el verbo (Pos 2), y luego el sujeto.");
-              if (tLower.match(/\b(und|aber|oder|denn|sondern)\b/i)) feedback.push("ðŸŸ¢ **Conector ADUSO (Posición 0):** Une dos frases sin alterar el orden normal (Sujeto + Verbo).");
-              if (tLower.match(/\b(habe|hast|hat|haben|habt|bin|bist|ist|sind|seid)\b.*\b(ge[a-zäöüß]+t|ge[a-zäöüß]+en|.+[ie]rt)\b/i)) feedback.push("ðŸ•°ï¸ **Perfekt:** Auxiliar (haben/sein) en Posición 2 y Participio al final.");
-              if (tLower.match(/\b(wurde|wurdest|wurden|wurdet|war|warst|waren|wart|hatte|hattest|hatten|hattet|gab|musste|konnte|wollte|sollte|durfte)\b/i) && !tLower.match(/\b(worden)\b/i)) feedback.push("ðŸ“– **Präteritum:** Pasado simple. Usado para verbos auxiliares, modales o narración.");
-              if (tLower.match(/\b(wurde|worden)\b/i) || (tLower.match(/\b(werden|wird|werden|werdet)\b/i) && tLower.match(/\b(ge[a-zäöüß]+t|ge[a-zäöüß]+en)\b/i))) feedback.push("ðŸ›ï¸ **Passiv:** 'Werden' + Participio II. Lo importante es la acción, no el sujeto.");
-              if (tLower.match(/\b(muss|musst|müssen|kann|kannst|können|darf|darfst|dürfen|soll|sollst|sollen|will|willst|wollen|möchte|möchtest|möchten)\b/i)) feedback.push("ðŸ’ª **Modalverben:** Verbo modal en Pos 2, obliga al verbo principal en Infinitivo al final.");
-              if (tLower.match(/\b(an|ein|auf|zu|mit|aus|vor|nach|ab|her|hin|los|teil)\s*[.,!?]*$/i)) feedback.push("âœ‚ï¸ **Trennbare Verben:** El prefijo del verbo se ha separado al final de la frase.");
-              if (tLower.match(/\b(aus|bei|mit|nach|seit|von|zu|ab)\b/i)) feedback.push("ðŸ”µ **Dativo (Preposición):** Preposición que rige Dativo estricto.");
-              if (tLower.match(/\b(durch|für|gegen|ohne|um)\b/i)) feedback.push("ðŸ”´ **Acusativo (Preposición):** Preposición que rige Acusativo estricto.");
-              if (tLower.match(/\b(in|an|auf|neben|hinter|über|unter|vor|zwischen)\b/i)) feedback.push("ðŸŸ¡ **Wechselpräposition:** Rige Dativo (Wo?) o Acusativo (Wohin?).");
-              GRAMMAR_PATTERNS.forEach(p => { if (text.match(p.regex)) feedback.push(`ðŸŒŸ **Verbo con Preposición Fija:** ${p.tooltip}.`); });
-              return feedback.join("\n\n") || "ðŸŸ¢ **Hauptsatz:** Estructura estándar perfecta.";
+              if (tLower.match(/\b(weil|dass|obwohl|wenn|als|damit|ob|bevor|nachdem)\b/i)) feedback.push("🟣 **Nebensatz (Subordinada):** Has usado un conector subordinante. El verbo conjugado va a la última posición de la frase.");
+              if (tLower.match(/\b(deshalb|deswegen|darum|trotzdem|dann|danach|außerdem)\b/i)) feedback.push("🟠 **Hauptsatz (Inversión):** Conector en Posición 1. Inmediatamente después tiene que ir el verbo (Pos 2), y luego el sujeto.");
+              if (tLower.match(/\b(und|aber|oder|denn|sondern)\b/i)) feedback.push("🟢 **Conector ADUSO (Posición 0):** Une dos frases sin alterar el orden normal (Sujeto + Verbo).");
+              if (tLower.match(/\b(habe|hast|hat|haben|habt|bin|bist|ist|sind|seid)\b.*\b(ge[a-zäöüß]+t|ge[a-zäöüß]+en|.+[ie]rt)\b/i)) feedback.push("🕰️ **Perfekt:** Auxiliar (haben/sein) en Posición 2 y Participio al final.");
+              if (tLower.match(/\b(wurde|wurdest|wurden|wurdet|war|warst|waren|wart|hatte|hattest|hatten|hattet|gab|musste|konnte|wollte|sollte|durfte)\b/i) && !tLower.match(/\b(worden)\b/i)) feedback.push("📖 **Präteritum:** Pasado simple. Usado para verbos auxiliares, modales o narración.");
+              if (tLower.match(/\b(wurde|worden)\b/i) || (tLower.match(/\b(werden|wird|werden|werdet)\b/i) && tLower.match(/\b(ge[a-zäöüß]+t|ge[a-zäöüß]+en)\b/i))) feedback.push("🏛ï¸ **Passiv:** 'Werden' + Participio II. Lo importante es la acción, no el sujeto.");
+              if (tLower.match(/\b(muss|musst|müssen|kann|kannst|können|darf|darfst|dürfen|soll|sollst|sollen|will|willst|wollen|möchte|möchtest|möchten)\b/i)) feedback.push("💪 **Modalverben:** Verbo modal en Pos 2, obliga al verbo principal en Infinitivo al final.");
+              if (tLower.match(/\b(an|ein|auf|zu|mit|aus|vor|nach|ab|her|hin|los|teil)\s*[.,!?]*$/i)) feedback.push("✂ï¸ **Trennbare Verben:** El prefijo del verbo se ha separado al final de la frase.");
+              if (tLower.match(/\b(aus|bei|mit|nach|seit|von|zu|ab)\b/i)) feedback.push("🔵 **Dativo (Preposición):** Preposición que rige Dativo estricto.");
+              if (tLower.match(/\b(durch|für|gegen|ohne|um)\b/i)) feedback.push("🔴 **Acusativo (Preposición):** Preposición que rige Acusativo estricto.");
+              if (tLower.match(/\b(in|an|auf|neben|hinter|über|unter|vor|zwischen)\b/i)) feedback.push("🟡 **Wechselpräposition:** Rige Dativo (Wo?) o Acusativo (Wohin?).");
+              GRAMMAR_PATTERNS.forEach(p => { if (text.match(p.regex)) feedback.push(`🌟 **Verbo con Preposición Fija:** ${p.tooltip}.`); });
+              return feedback.join("\n\n") || "🟢 **Hauptsatz:** Estructura estándar perfecta.";
           };
 
           const showAITutor = () => {
@@ -3544,7 +3544,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               let penalty = false;
               if (mode !== 'shadow' && cleanOrig.includes("wegen des") && cleanSpoken.includes("wegen dem")) {
                   score -= 20;
-                  polizeiMsg = "ðŸš¨ Grammatik-Polizei: Has external DATIVO en vez de GENITIVO. -1 â¤ï¸";
+                  polizeiMsg = "🚨 Grammatik-Polizei: Has external DATIVO en vez de GENITIVO. -1 ❤ï¸";
                   penalty = true;
               }
               const finalScore = score > 100 ? 100 : score < 0 ? 0 : score;
@@ -3575,7 +3575,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
               window.speechSynthesis.cancel();
               const currentVocab = vocabDisplayList[vocabReviewIndex];
               const cleanDeAudio = currentVocab.de.replace(/^[0-9]+[.\-):\]]*\s*/g, '').replace(/^[a-zA-ZäöüßÄÖÜ]{1,10}\s*[.:]\s*/g, '').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|\u{FE0F}/gu, '').trim();
-              const cleanEsAudio = currentVocab.es.replace(/^[0-9]+[.\-):\]]*\s*/g, '').replace(/^[a-zA-ZñÃ‘áéíóúÃÃ‰ÃÓÃš]{1,10}\s*[.:]\s*/g, '').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|\u{FE0F}/gu, '').trim();
+              const cleanEsAudio = currentVocab.es.replace(/^[0-9]+[.\-):\]]*\s*/g, '').replace(/^[a-zA-ZñÑáéíóúÁÉÍÓÚ]{1,10}\s*[.:]\s*/g, '').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|\u{FE0F}/gu, '').trim();
               const utterDe = new SpeechSynthesisUtterance(cleanDeAudio);
               utterDe.lang = 'de-DE'; utterDe.voice = getVoice('de', 'female'); utterDe.rate = 0.85;
               utterDe.onend = () => {
@@ -3641,9 +3641,9 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
 
           const getArticleVisual = (word) => {
             if (!word) return null;
-            if (word.startsWith('der ')) return <span className="text-blue-400 mr-2">ðŸ”µ</span>;
-            if (word.startsWith('die ')) return <span className="text-red-400 mr-2">ðŸ”´</span>;
-            if (word.startsWith('das ')) return <span className="text-green-400 mr-2">ðŸŸ¢</span>;
+            if (word.startsWith('der ')) return <span className="text-blue-400 mr-2">🔵</span>;
+            if (word.startsWith('die ')) return <span className="text-red-400 mr-2">🔴</span>;
+            if (word.startsWith('das ')) return <span className="text-green-400 mr-2">🟢</span>;
             return null;
           };
 
@@ -3779,7 +3779,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                     </style>
                 </head>
                 <body>
-                    <h1>ðŸ“œ ${escPdf(activeScriptTitle)}</h1>
+                    <h1>📝 ${escPdf(activeScriptTitle)}</h1>
                     <p class="meta"><strong>Müller</strong> · Entrenador alemán TELC · ${escPdf(genDate)} · ${totalScenes} escena${totalScenes === 1 ? '' : 's'}</p>
             `;
             let uniqueGrammarRules = new Set();
@@ -3817,7 +3817,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                     ? `<div class="block-es"><div class="label-row label-es">Español · traducción</div><p class="text-es">${escPdf(tr)}</p></div>`
                     : `<div class="block-es"><div class="label-row label-es">Español · traducción</div><p class="text-es text-es-empty">(Sin traducción en esta línea del guion — puedes añadirla en Biblioteca al editar.)</p></div>`;
                 const vocabHtml = scene.vocab && scene.vocab.length > 0
-                    ? `<div class="vocab-box">ðŸ“– Vocabulario: ${scene.vocab.map((v) => `${escPdf(v.de)} → ${escPdf(v.es)}`).join(' · ')}</div>`
+                    ? `<div class="vocab-box">📖 Vocabulario: ${scene.vocab.map((v) => `${escPdf(v.de)} → ${escPdf(v.es)}`).join(' · ')}</div>`
                     : '';
                 htmlContent += `
                     <div class="scene">
@@ -3836,7 +3836,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
                 `;
             });
             if (uniqueGrammarRules.size > 0) {
-                htmlContent += `<div class="grammar-summary"><h2>ðŸ§  Análisis Gramatical del Guion</h2><ul>`;
+                htmlContent += `<div class="grammar-summary"><h2>🧠 Análisis Gramatical del Guion</h2><ul>`;
                 uniqueGrammarRules.forEach(rule => { let cleanRule = rule.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); htmlContent += `<li>${cleanRule}</li>`; });
                 htmlContent += `</ul></div>`;
             }
@@ -3861,10 +3861,10 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
             if (!printWindow) { alert("Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para generar el PDF."); return; }
             const htmlContent = `
                 <html><head><title>Mi Resumen de Alemán - Profesor Müller</title><style>body { font-family: 'Segoe UI', sans-serif; color: #1e293b; padding: 40px; line-height: 1.6; } h1 { color: #2563eb; text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 15px; } h2 { color: #0f172a; margin-top: 40px; } table { width: 100%; border-collapse: collapse; margin-top: 15px; } th, td { border: 1px solid #94a3b8; padding: 12px; } th { background-color: #f1f5f9; } .diff { color: #dc2626; font-weight: bold; } .norm { color: #2563eb; } .grammar-base { color: #0891b2; }</style></head><body>
-                <h1>ðŸ“š Resumen de Estudio - B1/B2</h1>
-                <div><h2>ðŸ”´ Vocabulario Difícil</h2>${userStats.difficultVocab?.length ? `<table><tr><th>Alemán</th><th>Español</th></tr>${userStats.difficultVocab.map(v => `<tr><td class="diff">${v.de}</td><td>${v.es}</td></tr>`).join('')}</table>` : '<p>Vacío.</p>'}</div>
-                <div><h2>ðŸ”µ Vocabulario Normal</h2>${userStats.normalVocab?.length ? `<table><tr><th>Alemán</th><th>Español</th></tr>${userStats.normalVocab.map(v => `<tr><td class="norm">${v.de}</td><td>${v.es}</td></tr>`).join('')}</table>` : '<p>Vacío.</p>'}</div>
-                <div><h2>ðŸ§  Reglas Gramaticales</h2>${userStats.difficultGrammar?.length ? `<table><tr><th>Regla</th><th>Ejemplo</th><th>Traducción</th></tr>${userStats.difficultGrammar.map(g => `<tr><td class="grammar-base">${g.base}</td><td><i>"${g.exampleDe}"</i></td><td>${g.exampleEs}</td></tr>`).join('')}</table>` : '<p>Vacío.</p>'}</div>
+                <h1>📚 Resumen de Estudio - B1/B2</h1>
+                <div><h2>🔴 Vocabulario Difícil</h2>${userStats.difficultVocab?.length ? `<table><tr><th>Alemán</th><th>Español</th></tr>${userStats.difficultVocab.map(v => `<tr><td class="diff">${v.de}</td><td>${v.es}</td></tr>`).join('')}</table>` : '<p>Vacío.</p>'}</div>
+                <div><h2>🔵 Vocabulario Normal</h2>${userStats.normalVocab?.length ? `<table><tr><th>Alemán</th><th>Español</th></tr>${userStats.normalVocab.map(v => `<tr><td class="norm">${v.de}</td><td>${v.es}</td></tr>`).join('')}</table>` : '<p>Vacío.</p>'}</div>
+                <div><h2>🧠 Reglas Gramaticales</h2>${userStats.difficultGrammar?.length ? `<table><tr><th>Regla</th><th>Ejemplo</th><th>Traducción</th></tr>${userStats.difficultGrammar.map(g => `<tr><td class="grammar-base">${g.base}</td><td><i>"${g.exampleDe}"</i></td><td>${g.exampleEs}</td></tr>`).join('')}</table>` : '<p>Vacío.</p>'}</div>
                 <script>window.onload = function() { window.print(); }<\/script></body></html>
             `;
             printWindow.document.write(htmlContent);

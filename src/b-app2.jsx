@@ -318,7 +318,7 @@
                       worker = await Tesseract.createWorker('deu', 1, {
                           logger: (m) => {
                               if (m.status === 'recognizing text' && m.progress != null) setOcrHint(`Leyendo⬦ ${Math.round(100 * m.progress)}%`);
-                              else if (m.status && String(m.status).includes('loading')) setOcrHint('Descargando modelo alemán (solo la 1ª vez, ~2â€“5 MB)…');
+                              else if (m.status && String(m.status).includes('loading')) setOcrHint('Descargando modelo alemán (solo la 1ª vez, ~2–5 MB)…');
                               else if (m.status) setOcrHint(String(m.status));
                           },
                       });
@@ -526,7 +526,7 @@
               return (
                   <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
                       <div className="bg-gray-800 rounded-2xl p-4 max-w-2xl w-full">
-                          <h3 className="text-xl font-bold mb-2">âœï¸ Escritura a mano</h3>
+                          <h3 className="text-xl font-bold mb-2">✍ï¸ Escritura a mano</h3>
                           <canvas ref={canvasRef} className="handwriting-canvas" onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
                           <div className="flex gap-3 mt-4">
                               <button onClick={clearCanvas} className="bg-gray-600 px-4 py-2 rounded-lg">Borrar</button>
@@ -1052,7 +1052,7 @@
                   <div className="flex items-center gap-2 flex-wrap md:justify-end">
                       {activeModeBadge ? <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-amber-500/35 bg-amber-900/30 text-amber-200">{activeModeBadge}</span> : null}
                       <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-rose-500/35 bg-rose-950/40 text-rose-200">❤️ {userStats.hearts}</span>
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-amber-500/35 bg-amber-950/40 text-amber-200">ðŸª™ {coinsUiLabel}</span>
+                      <span className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-amber-500/35 bg-amber-950/40 text-amber-200">🪙 {coinsUiLabel}</span>
                       <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('muller-open-profile-settings', { detail: { tab: 'ajustes' } }))} className="px-2.5 py-1 rounded-full text-[11px] font-bold border border-sky-500/35 bg-sky-900/30 text-sky-200 hover:bg-sky-800/40 transition">Ajustes</button>
                   </div>
               </div>
@@ -1390,7 +1390,7 @@
                                               {sortedDeVoices.map((v) => {
                                                   const uri = v.voiceURI || v.name;
                                                   return (
-                                                  <option key={uri + v.name} value={uri}>{v.name} · {v.lang}{window.__mullerRankVoiceNatural(v) >= 20 ? ' â˜…' : ''}</option>
+                                                  <option key={uri + v.name} value={uri}>{v.name} · {v.lang}{window.__mullerRankVoiceNatural(v) >= 20 ? ' ★' : ''}</option>
                                                   );
                                               })}
                                           </select>
@@ -1406,7 +1406,7 @@
                                                   window.speechSynthesis.speak(u);
                                               }}
                                           >
-                                              â–¶ Probar voz alemana
+                                              ▶ Probar voz alemana
                                           </button>
                                       </div>
                                       <div>
@@ -1441,7 +1441,7 @@
                                                   window.speechSynthesis.speak(u);
                                               }}
                                           >
-                                              â–¶ Probar voz español
+                                              ▶ Probar voz español
                                           </button>
                                       </div>
                                       <div className="border-t border-white/10 pt-4 mt-4 space-y-2">
@@ -2026,7 +2026,7 @@
                           </div>
 
                           <div className="rounded-2xl border border-indigo-700/40 bg-slate-900/80 p-4 md:p-6 mb-6 shadow-xl">
-                              <h2 className="text-lg font-black text-indigo-200 mb-3 flex items-center gap-2"><Icon name="languages" className="w-5 h-5" /> Traductor (DE â†” ES)</h2>
+                              <h2 className="text-lg font-black text-indigo-200 mb-3 flex items-center gap-2"><Icon name="languages" className="w-5 h-5" /> Traductor (DE ↔ ES)</h2>
                               <p className="text-[11px] text-gray-500 mb-2">Elige el idioma de <strong className="text-gray-300">salida</strong>; el origen se detecta solo (evita que una palabra española se traduzca mal por empate DE/ES).</p>
                               <div className="flex flex-wrap gap-2 mb-3">
                                   <button type="button" onClick={() => setLexikonTransTarget('de')} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${lexikonTransTarget === 'de' ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-black/40 border-white/15 text-gray-400'}`}>→ Alemán</button>
@@ -2080,9 +2080,9 @@
                                   </div>
                                   <p className="text-[10px] text-gray-500 uppercase tracking-wider pt-3 mb-2">Retos del día (+5 monedas, una vez al día)</p>
                                   <div className="flex flex-wrap gap-2">
-                                      <button type="button" disabled={dailyChallenges.vocab} onClick={() => claimDailyStamp('vocab')} className={`text-xs font-bold px-2 py-1.5 rounded-lg ${dailyChallenges.vocab ? 'bg-gray-800 text-gray-500' : 'bg-amber-700 hover:bg-amber-600 text-white'}`}>{dailyChallenges.vocab ? 'âœ“ Vocab' : 'He practicado vocab'}</button>
-                                      <button type="button" disabled={dailyChallenges.shadow} onClick={() => claimDailyStamp('shadow')} className={`text-xs font-bold px-2 py-1.5 rounded-lg ${dailyChallenges.shadow ? 'bg-gray-800 text-gray-500' : 'bg-teal-700 hover:bg-teal-600 text-white'}`}>{dailyChallenges.shadow ? 'âœ“ Shadow' : 'He hecho shadowing'}</button>
-                                      <button type="button" disabled={dailyChallenges.write} onClick={() => claimDailyStamp('write')} className={`text-xs font-bold px-2 py-1.5 rounded-lg ${dailyChallenges.write ? 'bg-gray-800 text-gray-500' : 'bg-rose-700 hover:bg-rose-600 text-white'}`}>{dailyChallenges.write ? 'âœ“ Escritura' : 'He escrito / OCR'}</button>
+                                      <button type="button" disabled={dailyChallenges.vocab} onClick={() => claimDailyStamp('vocab')} className={`text-xs font-bold px-2 py-1.5 rounded-lg ${dailyChallenges.vocab ? 'bg-gray-800 text-gray-500' : 'bg-amber-700 hover:bg-amber-600 text-white'}`}>{dailyChallenges.vocab ? '✓ Vocab' : 'He practicado vocab'}</button>
+                                      <button type="button" disabled={dailyChallenges.shadow} onClick={() => claimDailyStamp('shadow')} className={`text-xs font-bold px-2 py-1.5 rounded-lg ${dailyChallenges.shadow ? 'bg-gray-800 text-gray-500' : 'bg-teal-700 hover:bg-teal-600 text-white'}`}>{dailyChallenges.shadow ? '✓ Shadow' : 'He hecho shadowing'}</button>
+                                      <button type="button" disabled={dailyChallenges.write} onClick={() => claimDailyStamp('write')} className={`text-xs font-bold px-2 py-1.5 rounded-lg ${dailyChallenges.write ? 'bg-gray-800 text-gray-500' : 'bg-rose-700 hover:bg-rose-600 text-white'}`}>{dailyChallenges.write ? '✓ Escritura' : 'He escrito / OCR'}</button>
                                   </div>
                                   <button type="button" onClick={() => setTourStep(1)} className="w-full mt-3 py-2 rounded-xl bg-indigo-800 hover:bg-indigo-700 font-bold text-xs border border-indigo-500/30">Iniciar tour guiado (5 pasos)</button>
                               </div>
@@ -2309,7 +2309,7 @@
                                   <h1 className="text-4xl md:text-8xl font-black text-slate-900 text-center drop-shadow-md flex items-center justify-center flex-wrap gap-1">{getArticleVisual(vocabDisplayList[vocabReviewIndex].de)}{vocabDisplayList[vocabReviewIndex].de}</h1>
                                   {!showVocabTranslation ? (
                                       <div className="flex gap-4">
-                                          <button onClick={() => setShowVocabTranslation(true)} className="mt-6 md:mt-8 bg-slate-900 hover:bg-slate-800 text-white px-8 md:px-10 py-3 md:py-5 rounded-2xl font-bold text-2xl md:text-3xl shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition transform hover:scale-105 border-b-4 border-slate-700">Revelar ðŸ‘€</button>
+                                          <button onClick={() => setShowVocabTranslation(true)} className="mt-6 md:mt-8 bg-slate-900 hover:bg-slate-800 text-white px-8 md:px-10 py-3 md:py-5 rounded-2xl font-bold text-2xl md:text-3xl shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition transform hover:scale-105 border-b-4 border-slate-700">Revelar 👀</button>
                                           <button onClick={() => setShowHandwriting(true)} className="mt-6 md:mt-8 bg-indigo-600 hover:bg-indigo-500 text-white px-6 md:px-8 py-3 md:py-5 rounded-2xl font-bold text-xl md:text-2xl shadow-lg transition transform hover:scale-105 border-b-4 border-indigo-800 flex items-center gap-2"><Icon name="edit" className="w-6 h-6" /> Escribir a mano</button>
                                       </div>
                                   ) : (
@@ -2428,7 +2428,7 @@
                                                                       <span className="font-black text-white text-sm md:text-lg tabular-nums">{pronunciationScore}%</span>
                                                                   </div>
                                                               )}
-                                                              <p className="text-[10px] text-gray-500 mt-2">&gt;85%: verde · 55â€“84%: mejorable · &lt;55%: repite tras escuchar el modelo</p>
+                                                              <p className="text-[10px] text-gray-500 mt-2">&gt;85%: verde · 55–84%: mejorable · &lt;55%: repite tras escuchar el modelo</p>
                                                           </div>
                                                       )}
                                                   </div>
@@ -2520,7 +2520,7 @@
                                           disabled={!readingSelectedWord || readingWordAudioBusy}
                                           className="px-2 py-0.5 text-[10px] font-bold rounded border border-cyan-400/55 text-cyan-100 hover:bg-cyan-900/50 disabled:opacity-40"
                                       >
-                                          ðŸ”Š Palabra
+                                          🔊 Palabra
                                       </button>
                                       <button
                                           type="button"
@@ -2528,7 +2528,7 @@
                                           disabled={(!readingSelectedWord && !readingSelectedSnippet) || readingWordAudioBusy}
                                           className="px-2 py-0.5 text-[10px] font-bold rounded border border-teal-400/55 text-teal-100 hover:bg-teal-900/50 disabled:opacity-40"
                                       >
-                                          ðŸ”Š {readingSelectedSnippet ? 'Frase sel.' : 'Frase'}
+                                          🔊 {readingSelectedSnippet ? 'Frase sel.' : 'Frase'}
                                       </button>
                                       <button
                                           type="button"
@@ -2541,7 +2541,7 @@
                                   </div>
                               </div>
                           <p className="text-[11px] text-sky-200/80 mb-2">
-                              Puedes seleccionar una frase con el dedo o ratón y usar ðŸ”Š Frase para reproducir solo esa parte.
+                              Puedes seleccionar una frase con el dedo o ratón y usar 🔊 Frase para reproducir solo esa parte.
                           </p>
                           <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/25 p-3 mb-3 space-y-2">
                               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2560,7 +2560,7 @@
                                               e.target.value = '';
                                           }}
                                       />
-                                      {pdfStudyExtracting ? 'â³ Procesando PDF…' : 'ðŸ“„ Subir PDF'}
+                                      {pdfStudyExtracting ? '⏳ Procesando PDF…' : '📄 Subir PDF'}
                                   </label>
                                   {pdfStudySavedDocs.length > 0 && (
                                       <>
@@ -2789,7 +2789,7 @@
                           )}
 
                           <div className="flex flex-wrap gap-3 items-center mb-3">
-                              <button type="button" onClick={startReadingListen} disabled={readingListening || !readingTargetText} className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 font-black text-sm">ðŸŽ¤ Empezar lectura</button>
+                              <button type="button" onClick={startReadingListen} disabled={readingListening || !readingTargetText} className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 font-black text-sm">🎤 Empezar lectura</button>
                               <button type="button" onClick={stopReadingListen} disabled={!readingListening} className="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 disabled:opacity-40 font-black text-sm">⏹ Parar y evaluar</button>
                               <span className={`text-xs font-bold ${readingListening ? 'text-emerald-300 animate-pulse' : 'text-gray-500'}`}>{readingListening ? 'Escuchando⬦' : 'Micrófono en espera'}</span>
                           </div>
@@ -3016,14 +3016,14 @@
                                               onClick={() => setWritingTelcInputMode('pen')}
                                               className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${writingTelcInputMode === 'pen' ? 'bg-orange-600 text-white border-orange-300/60' : 'bg-black/40 text-gray-300 border-white/10 hover:text-white'}`}
                                           >
-                                              âœ Lápiz óptico
+                                              ✍ Lápiz óptico
                                           </button>
                                           <button
                                               type="button"
                                               onClick={() => setWritingTelcInputMode('keyboard')}
                                               className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${writingTelcInputMode === 'keyboard' ? 'bg-orange-600 text-white border-orange-300/60' : 'bg-black/40 text-gray-300 border-white/10 hover:text-white'}`}
                                           >
-                                              âŒ¨ Teclado
+                                              ⌨ Teclado
                                           </button>
                                       </div>
                                       {writingTelcInputMode === 'keyboard' && (
@@ -3381,7 +3381,7 @@
                               const st = rutaRun.step || 0;
                               return (
                                   <div className="rounded-2xl border border-fuchsia-500/30 bg-black/40 p-5 md:p-8">
-                                      <button type="button" onClick={() => { setRutaRun(null); setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr(''); }} className="text-sm font-bold text-fuchsia-300 mb-4 hover:text-white">â† Volver al camino</button>
+                                      <button type="button" onClick={() => { setRutaRun(null); setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr(''); }} className="text-sm font-bold text-fuchsia-300 mb-4 hover:text-white">← Volver al camino</button>
                                       <h2 className="text-2xl font-black text-white mb-1">{lesson.title}</h2>
                                       <p className="text-xs text-fuchsia-400/90 mb-6">{lv.badge} · {lv.title}</p>
                                       {st === 0 && (
@@ -3469,7 +3469,7 @@
                                   <div className="mb-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
                                       {getSelfCheckItems().map((it) => (
                                           <div key={it.id} className={`rounded-lg border px-2.5 py-1.5 ${it.ok ? 'border-emerald-500/35 bg-emerald-950/25 text-emerald-200' : 'border-amber-500/35 bg-amber-950/30 text-amber-100'}`}>
-                                              <span className="font-bold">{it.ok ? 'âœ“' : 'âš '} {it.label}</span>
+                                              <span className="font-bold">{it.ok ? '✓' : '⚠'} {it.label}</span>
                                           </div>
                                       ))}
                                   </div>
@@ -3750,7 +3750,7 @@
                                               : 'Sin Supabase: modo local de pruebas. Para anti-trampas real usa Supabase activo.'}
                                       </p>
                                       <p className="text-sm text-gray-300">
-                                          <span className="font-bold text-white">Saldo actual:</span> {isCreatorAccount ? 'âˆž (Creador)' : (walletCoins != null ? walletCoins : userStats.coins)}
+                                          <span className="font-bold text-white">Saldo actual:</span> {isCreatorAccount ? '∞ (Creador)' : (walletCoins != null ? walletCoins : userStats.coins)}
                                       </p>
                                       <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
                                           <div className="rounded-lg border border-white/10 bg-black/25 px-2 py-1.5">
@@ -4081,7 +4081,7 @@
                                 <div className="bg-red-600 text-white px-3 md:px-6 py-1 md:py-2 rounded-full font-bold flex items-center gap-2 text-xs md:text-sm"><Icon name="mic-off" className="w-4 h-4 md:w-5 md:h-5" /> {roleplayChar === 'Todos' ? "Modo Lectura" : "Tu turno (Roleplay)"}</div>
                                 <h1 className="text-xl md:text-5xl font-medium text-white text-center leading-snug break-words w-full max-w-full px-1">
                                     {renderHighlightedText(guionData[getActualSceneIndex()].text, guionData[getActualSceneIndex()].vocab)}
-                                    {guionData[getActualSceneIndex()].isRedemittel && <span className="inline-flex items-center justify-center ml-2 md:ml-3 mb-1 md:mb-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-[8px] md:text-xs font-black px-1 md:px-2 py-0.5 md:py-1 rounded shadow-lg animate-pulse whitespace-nowrap"><Icon name="flame" className="w-2 h-2 md:w-3 md:h-3 mr-0.5 md:mr-1" /> ÃšTIL</span>}
+                                    {guionData[getActualSceneIndex()].isRedemittel && <span className="inline-flex items-center justify-center ml-2 md:ml-3 mb-1 md:mb-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-[8px] md:text-xs font-black px-1 md:px-2 py-0.5 md:py-1 rounded shadow-lg animate-pulse whitespace-nowrap"><Icon name="flame" className="w-2 h-2 md:w-3 md:h-3 mr-0.5 md:mr-1" /> ÚTIL</span>}
                                 </h1>
                                 {!showCurrentTranslation ? (
                                     <button onClick={() => setShowCurrentTranslation(true)} className="text-gray-500 hover:text-white transition text-xs md:text-sm font-bold flex items-center gap-1 mt-2 border border-gray-700 rounded-full px-2 md:px-3 py-0.5 md:py-1"><Icon name="eye" className="w-3 h-3 md:w-4 md:h-4" /> Ver Traducción</button>
@@ -4117,7 +4117,7 @@
                                         </div>
                                     )}
                                 </div>
-                                <button onClick={handleNext} className="bg-white text-black px-6 md:px-8 py-2 md:py-3 rounded-xl font-black text-base md:text-lg hover:bg-gray-200 transition shadow-xl mt-2 w-full md:w-auto">Continuar âž”</button>
+                                <button onClick={handleNext} className="bg-white text-black px-6 md:px-8 py-2 md:py-3 rounded-xl font-black text-base md:text-lg hover:bg-gray-200 transition shadow-xl mt-2 w-full md:w-auto">Continuar ➔</button>
                             </div>
                         ) : mode === 'dialogue' && puzzleMode ? (
                             <div className="max-w-4xl w-full flex flex-col gap-4 md:gap-6 animate-in fade-in relative mt-6 md:mt-8 items-center p-4">
@@ -4154,17 +4154,17 @@
                                                 <h1 className="text-xl md:text-4xl font-medium text-white bg-amber-950/40 p-4 md:p-6 rounded-xl border border-amber-600/30 w-full max-w-full break-words leading-snug">{renderHighlightedText(guionData[getActualSceneIndex()].text, guionData[getActualSceneIndex()].vocab)}</h1>
                                             </div>
                                         )}
-                                        <button onClick={handleNext} className="bg-indigo-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold mt-2 md:mt-4 flex items-center gap-2 w-full md:w-auto justify-center text-sm md:text-base">Siguiente âž”</button>
+                                        <button onClick={handleNext} className="bg-indigo-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold mt-2 md:mt-4 flex items-center gap-2 w-full md:w-auto justify-center text-sm md:text-base">Siguiente ➔</button>
                                     </div>
                                 )}
                             </div>
                         ) : mode === 'dialogue' && diktatMode ? (
                             <div className="max-w-4xl w-full flex flex-col gap-4 md:gap-6 animate-in fade-in relative mt-6 md:mt-8 items-center p-4">
-                                {isReviewing && <div className="absolute -top-8 md:-top-12 text-red-500 font-black animate-pulse text-xs md:text-xl">âš ï¸ REPASO OBLIGATORIO (SRS)</div>}
+                                {isReviewing && <div className="absolute -top-8 md:-top-12 text-red-500 font-black animate-pulse text-xs md:text-xl">⚠️ REPASO OBLIGATORIO (SRS)</div>}
                                 <span className="uppercase tracking-widest text-xs md:text-sm font-bold bg-black/30 px-3 md:px-5 py-1 md:py-2 rounded-full border border-white/10">{guionData[getActualSceneIndex()].speaker} spricht...</span>
                                 {!showDiktatResult ? (
                                     <>
-                                        <p className="text-base md:text-xl text-blue-200 font-bold mb-1 md:mb-2">âœï¸ Escribe lo que oyes:</p>
+                                        <p className="text-base md:text-xl text-blue-200 font-bold mb-1 md:mb-2">✍ï¸ Escribe lo que oyes:</p>
                                         <textarea className="w-full h-24 md:h-32 bg-black/50 border-2 border-blue-500/50 rounded-xl p-3 md:p-4 text-base md:text-2xl text-white outline-none" value={diktatInput} onChange={(e) => setDiktatInput(e.target.value)} onKeyDown={(e) => handleExerciseEnterSubmit(e, 'diktat-check', handleDiktatCheck, { requireCtrlOrMeta: true })} autoFocus />
                                         <div className="flex gap-3 md:gap-4 w-full md:w-auto justify-center">
                                             <button onClick={() => { setIsPlaying(true); togglePlay(); setIsPlaying(true); }} className="bg-gray-800 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 flex-1 md:flex-none justify-center text-xs md:text-sm"><Icon name="volume-2" className="w-3 h-3 md:w-5 md:h-5" /> Audio</button>
@@ -4177,7 +4177,7 @@
                                         {diktatMotivationMsg ? (
                                             <p className="text-amber-100/95 text-sm md:text-base font-semibold max-w-lg rounded-2xl border border-amber-500/35 bg-amber-950/50 px-4 py-3 shadow-lg">{diktatMotivationMsg}</p>
                                         ) : null}
-                                        <button onClick={handleNext} className="bg-blue-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold mt-2 md:mt-4 flex items-center gap-2 w-full md:w-auto justify-center text-sm md:text-base">Siguiente âž”</button>
+                                        <button onClick={handleNext} className="bg-blue-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold mt-2 md:mt-4 flex items-center gap-2 w-full md:w-auto justify-center text-sm md:text-base">Siguiente ➔</button>
                                     </div>
                                 )}
                             </div>
@@ -4200,12 +4200,12 @@
                             </div>
                         ) : mode === 'dialogue' && (
                             <div className="max-w-4xl w-full flex flex-col gap-3 md:gap-6 animate-in fade-in relative mt-4 md:mt-8 p-3 md:p-0">
-                                {isReviewing && <div className="absolute -top-8 md:-top-12 left-1/2 -translate-x-1/2 text-red-500 font-black animate-pulse text-xs md:text-xl w-full text-center">âš ï¸ REPASO OBLIGATORIO (SRS)</div>}
+                                {isReviewing && <div className="absolute -top-8 md:-top-12 left-1/2 -translate-x-1/2 text-red-500 font-black animate-pulse text-xs md:text-xl w-full text-center">⚠️ REPASO OBLIGATORIO (SRS)</div>}
                                 <span className="uppercase tracking-widest text-[10px] md:text-sm font-bold bg-black/30 px-2 md:px-4 py-0.5 md:py-1.5 rounded-full self-start border border-white/10">{guionData[getActualSceneIndex()].speaker}</span>
                                 
                                 <h1 className={`text-2xl md:text-5xl font-medium text-white shadow-sm transition-all duration-300 leading-snug break-words w-full max-w-full ${blindMode ? 'blur-md hover:blur-none cursor-pointer' : ''}`}>
                                     {renderHighlightedText(guionData[getActualSceneIndex()].text, guionData[getActualSceneIndex()].vocab)}
-                                    {guionData[getActualSceneIndex()].isRedemittel && <span className="inline-flex items-center justify-center ml-2 md:ml-3 mb-1 md:mb-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-[8px] md:text-xs font-black px-1 md:px-2 py-0.5 md:py-1 rounded shadow-lg animate-pulse whitespace-nowrap"><Icon name="flame" className="w-2 h-2 md:w-3 md:h-3 mr-0.5 md:mr-1" /> ÃšTIL</span>}
+                                    {guionData[getActualSceneIndex()].isRedemittel && <span className="inline-flex items-center justify-center ml-2 md:ml-3 mb-1 md:mb-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-[8px] md:text-xs font-black px-1 md:px-2 py-0.5 md:py-1 rounded shadow-lg animate-pulse whitespace-nowrap"><Icon name="flame" className="w-2 h-2 md:w-3 md:h-3 mr-0.5 md:mr-1" /> ÚTIL</span>}
                                 </h1>
 
                                 {tempusMode && tempusVerbList.length > 0 && (
@@ -4246,7 +4246,7 @@
                                 )}
 
                                 {(declinaMode || artikelSniperMode) && !isPlaying && (
-                                    <div className="absolute -bottom-8 md:-bottom-12 left-1/2 -translate-x-1/2 text-pink-400 font-bold animate-pulse text-xs md:text-lg w-full text-center">Piensa la respuesta y pulsa Play o âž” para continuar.</div>
+                                    <div className="absolute -bottom-8 md:-bottom-12 left-1/2 -translate-x-1/2 text-pink-400 font-bold animate-pulse text-xs md:text-lg w-full text-center">Piensa la respuesta y pulsa Play o ➔ para continuar.</div>
                                 )}
                                 
                                 {!isPlaying && !podcastMode && (
@@ -4284,7 +4284,7 @@
                                             <input type="text" placeholder="Ej: Nebensatz con weil" className="w-full bg-black/50 border border-cyan-800 p-2 md:p-3 rounded-lg text-white outline-none focus:border-cyan-400 mb-4 md:mb-6 text-xs md:text-sm" value={customGrammarInput} onChange={(e)=>setCustomGrammarInput(e.target.value)} autoFocus />
                                             <div className="flex gap-3 md:gap-4">
                                                 <button onClick={()=>setShowGrammarPrompt(false)} className="flex-1 bg-gray-800 hover:bg-gray-700 py-2 md:py-3 rounded-xl font-bold text-xs md:text-base">Cancelar</button>
-                                                <button onClick={handleCustomGrammarSave} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-2 md:py-3 rounded-xl font-bold shadow-lg text-xs md:text-base">Guardar âž”</button>
+                                                <button onClick={handleCustomGrammarSave} className="flex-1 bg-cyan-600 hover:bg-cyan-500 py-2 md:py-3 rounded-xl font-bold shadow-lg text-xs md:text-base">Guardar ➔</button>
                                             </div>
                                         </div>
                                     </div>
@@ -4355,7 +4355,7 @@
                                   onClick={closePdfStudyFullscreen}
                                   className="px-3 py-1.5 rounded-lg border border-rose-500/45 bg-rose-900/50 hover:bg-rose-800/60 text-[11px] font-black text-white"
                               >
-                                  Cerrar âœ•
+                                  Cerrar ✕
                               </button>
                           </div>
                       </div>
@@ -4368,7 +4368,7 @@
                                       disabled={pdfStudyPageIdx <= 0}
                                       className="px-3 py-1.5 rounded-lg border border-white/15 bg-slate-900/70 hover:bg-slate-800 disabled:opacity-40 text-xs font-bold text-white"
                                   >
-                                      â† Página
+                                      ← Página
                                   </button>
                                   <button
                                       type="button"
@@ -4565,7 +4565,7 @@
 
             const showSyncHelp = () => {
                 alert(
-                    "ðŸ”„ Sincronización TOTAL gratis:\n\n" +
+                    "🔄 Sincronización TOTAL gratis:\n\n" +
                     "1) En tu dispositivo actual pulsa Exportar.\n" +
                     "2) Sube el archivo .json a Google Drive.\n" +
                     "3) En otro dispositivo descarga ese .json.\n" +

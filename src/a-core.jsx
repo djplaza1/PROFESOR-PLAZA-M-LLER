@@ -514,14 +514,14 @@
                         content = content.replace(transMatch[0], '').trim();
                     }
 
-                    const germanText = content.replace(/[ðŸ”´ðŸ”µðŸŸ¢•]/g, '').replace(/\s+/g, ' ').trim();
+                    const germanText = content.replace(/[🔴🔵🟢•]/g, '').replace(/\s+/g, ' ').trim();
                     if (germanText) out.push({ german: germanText, es: translation, isRedemittel });
 
                     if (vocabInner) {
                         vocabInner.split(',').forEach((piece) => {
                             const parts = piece.split('-');
                             if (parts.length >= 2) {
-                                const de = parts[0].trim().replace(/[ðŸ”´ðŸ”µðŸŸ¢•]/g, '');
+                                const de = parts[0].trim().replace(/[🔴🔵🟢•]/g, '');
                                 const es = parts.slice(1).join('-').trim();
                                 if (de) out.push({ german: de, es: es, isRedemittel: false, isPair: true });
                             }
@@ -530,7 +530,7 @@
                     continue;
                 }
 
-                const pairMatch = line.match(/^(.+?)\s*[-â€“—]\s*(.+)$/);
+                const pairMatch = line.match(/^(.+?)\s*[-–—]\s*(.+)$/);
                 if (pairMatch && !line.includes(':')) {
                     const de = pairMatch[1].replace(/^[⬢\-\d.)\]]+\s*/, '').trim();
                     const es = pairMatch[2].trim();
@@ -725,7 +725,7 @@
             return matrix[b.length][a.length];
         };
 
-        /** Quita repeticiones consecutivas de la misma palabra (STT móvil suele duplicar 5â€“20 veces). */
+        /** Quita repeticiones consecutivas de la misma palabra (STT móvil suele duplicar 5–20 veces). */
         const dedupeConsecutiveWords = (s) => {
             if (!s || typeof s !== 'string') return '';
             const parts = s.trim().split(/\s+/).filter(Boolean);
@@ -795,7 +795,7 @@
             let t = s.toLowerCase().trim();
             t = t.replace(/\u00df/g, 'ss').replace(/ß/g, 'ss');
             t = t.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue');
-            t = t.replace(/[â€™'`´]/g, "'");
+            t = t.replace(/[’'`´]/g, "'");
             t = t.replace(/[^a-z0-9\s']/g, ' ');
             t = t.replace(/\s+/g, ' ').trim();
             return t;
@@ -1129,7 +1129,7 @@
             nav_progreso: { title: 'Progreso', what: 'Resumen de racha, mazos difícil/normal, gramática, gráfico semanal y exportación PDF/Anki.', tips: ['Exporta PDF antes de examen para revisar en papel.', 'Los mazos se alimentan desde Vocab y gramática guardada en Historia.', 'SRS de vocabulario tiene su propio contador en la pantalla de ayuda.'] },
             nav_biblioteca: { title: 'Biblioteca', what: 'Guardas guiones pegados desde la IA y listas de vocabulario personalizadas; puedes enviar un texto pegado a B1 o B2 (vocabulario, verbos, etc.) con nivel automático por frase o forzando un nivel.', tips: ['Revisa el formato del prompt de IA antes de pegar.', '“Distribuir” estima B1/B2 por heurística local (no es IA); puedes forzar todo a B1 o B2.', 'Las tarjetas del archivo b1-b2-database.json no son “tuyas”: “Borrar aportaciones” solo quita lo añadido desde Distribuir.', 'Las lecciones de vocab se practican con el botón Practicar.'] },
             nav_lexikon: { title: 'Lexikon', what: 'Traducción de palabras o frases (detección automática de idioma hacia alemán o español que elijas); opción aparte para solo Wiktionary; guardar pares en las mismas lecciones que en Biblioteca → Vocab.', tips: ['En “Palabra → traducción” elige ES→DE si buscas cómo se dice en alemán una palabra en español.', 'En el traductor usa “→ Alemán” o “→ Español” para forzar el sentido (incluye palabras malsonantes: el servicio puede devolver equivalentes o censura según el motor).', 'Si el desplegable de lecciones está vacío, crea lecciones en Biblioteca → Vocab; al abrir Lexikon se vuelve a leer el almacenamiento local.'] },
-            nav_telc: { title: 'TELC por nivel', what: 'Orientación por nivel CEFR: estructura típica de examen (lectura, escucha, escritura, oral), checklist del día y enlaces oficiales. No sustituye modelos de examen ni convocatoria.', tips: ['Elige tu nivel arriba (A1â€“C2).', 'Los tiempos reales los marca tu centro; confirma en tu hoja de inscripción.', 'Para modelos oficiales usa telc.de / el centro examinador.', 'Combina con la pestaña Entrenamiento para práctica tipo test.'] },
+            nav_telc: { title: 'TELC por nivel', what: 'Orientación por nivel CEFR: estructura típica de examen (lectura, escucha, escritura, oral), checklist del día y enlaces oficiales. No sustituye modelos de examen ni convocatoria.', tips: ['Elige tu nivel arriba (A1–C2).', 'Los tiempos reales los marca tu centro; confirma en tu hoja de inscripción.', 'Para modelos oficiales usa telc.de / el centro examinador.', 'Combina con la pestaña Entrenamiento para práctica tipo test.'] },
             nav_ia: { title: 'IA Story Builder', what: 'Genera un guion nuevo con nivel y tema; útil cuando quieres vocabulario fresco sin pegar texto manual.', tips: ['Indica bien el nivel (B1/B2) y el tema.', 'Tras generar, guarda y estudia en Historia.', 'Combina con vocab propio en el campo de palabras si existe.'] },
             nav_comunidad: { title: 'Comunidad', what: 'Opción A: cuenta solo en el navegador (PBKDF2 local). Opción B (gratis): Supabase — mismo registro pero con sesión en la nube, directorio de perfiles y tabla de liga semanal compartida; bots siguen siendo simulados en tu ranking.', tips: ['Pega URL y anon key de Supabase en index.html (Project Settings → API) y ejecuta supabase/schema.sql en el SQL Editor.', 'El plan gratuito de Supabase suele bastar para estudio; revisa límites en el dashboard.', 'Si no configuras Supabase, todo sigue funcionando en modo local.', 'Tecla O para abrir Comunidad.'] },
             historia_base: { title: 'Historia — vista general', what: 'Escuchas y lees escenas; el vocabulario resaltado enlaza con las tarjetas. Abajo tienes play, escenas y velocidad.', tips: ['Primero escucha, luego muestra traducción.', 'Sube o baja la velocidad según el nivel del día.', 'PDF del guion sirve para repaso offline.'] },
@@ -1150,26 +1150,26 @@
             escritura_free: { title: 'Escritura — libre', what: 'Hoja en blanco para apuntes, conjugaciones o lo que necesites.', tips: ['Goma con varios anchos borra sin vaciar el lienzo; Deshacer trazo quita el último gesto.', 'Marcador y subrayado ayudan a marcar errores o énfasis como en papel.', 'Guarda PNG o usa OCR cuando quieras revisar el texto.'] },
             escritura_copy: { title: 'Escritura — copia', what: 'Copias frases modelo para caligrafía y ortografía.', tips: ['Mira la frase completa, luego escribe de memoria en el lienzo.', 'Repite la misma línea varias veces.', 'Compara tu escritura con la fuente al final.'] },
             escritura_dictation: { title: 'Escritura — dictado', what: 'Escuchas un dictado por TTS y escribes; puedes ver la solución para autocorregir.', tips: ['Dos escuchas antes de revelar.', 'Anota en borrador mental la puntuación.', 'Pasa a otro dictado cuando domines el actual.'] },
-            escritura_prompt: { title: 'Escritura — tema', what: 'Recibes un tema B1/B2 para escribir un mini texto a mano.', tips: ['Escribe un esquema de 3 ideas en el lienzo.', 'No pares en la primera frase: busca 5â€“8 líneas.', 'Lee en voz alta lo escrito para detectar errores.'] },
+            escritura_prompt: { title: 'Escritura — tema', what: 'Recibes un tema B1/B2 para escribir un mini texto a mano.', tips: ['Escribe un esquema de 3 ideas en el lienzo.', 'No pares en la primera frase: busca 5–8 líneas.', 'Lee en voz alta lo escrito para detectar errores.'] },
             escritura_letters: { title: 'Escritura — letras alemanas', what: 'Practicas Ä, Ö, Ü, ß y ligaduras típicas.', tips: ['Haz filas enteras de una letra antes de mezclar.', 'Pronuncia en voz alta mientras escribes.', 'Pasa al siguiente bloque cuando salgan uniformes.'] },
-            escritura_guion: { title: 'Escritura — guion', what: 'Copias líneas del guion cargado en Historia/Biblioteca.', tips: ['Avanza escena a escena como en shadowing lento.', 'Tapar traducción hasta haber escrito.', 'Ãštil como dictado propio: léete la frase y escribe sin mirar.'] },
+            escritura_guion: { title: 'Escritura — guion', what: 'Copias líneas del guion cargado en Historia/Biblioteca.', tips: ['Avanza escena a escena como en shadowing lento.', 'Tapar traducción hasta haber escrito.', 'Útil como dictado propio: léete la frase y escribe sin mirar.'] },
             escritura_vocab: { title: 'Escritura — vocabulario', what: 'Escribes a mano la palabra activa de tu lista de vocabulario.', tips: ['Di la palabra en voz alta antes de trazar.', 'Si la lista está vacía, abre Vocab o carga guion.', 'Combina con OCR si quieres comparar trazo con modelo.'] },
             vocab_active_recall: { title: 'Vocabulario — active recall', what: 'Escuchas alemán, intentas recordar español, revelas y calificas. El SRS ordena la lista automáticamente.', tips: ['No marques “fácil” si solo reconoces: hay que recordar.', 'Usa escritura a mano si necesitas refuerzo motor.', 'Mezcla lecciones para variedad.'] },
             bx_mix: { title: 'B1/B2 — modo MIX', what: 'Baraja frases de todas las categorías del JSON activo.', tips: ['Ideal cuando ya dominas categorías sueltas.', 'Marca mentalmente las que fallas y vuelve en modo categoría.', 'Escucha primero, lee después.'] },
             bx_vocabulario: { title: 'B1/B2 — vocabulario', what: 'Frases cortas con léxico clave por nivel.', tips: ['Lee en voz alta ambas columnas.', 'Copia 3 que te cuesten a Escritura.', 'Relaciona con Historia buscando palabras en guion.'] },
             bx_verbos: { title: 'B1/B2 — verbos', what: 'Patrones verbales y colocaciones frecuentes.', tips: ['En voz alta: infinitivo + ejemplo.', 'Crea una mini frase tuya con cada verbo.', 'Cruza con preposiciones si el verbo las pide.'] },
             bx_preposiciones: { title: 'B1/B2 — preposiciones', what: 'Uso de Kasus con preposiciones típicas.', tips: ['Memoriza verbo + preposición como bloque.', 'Haz dos frases: una Dativo otra Akkusativ si aplica.', 'Repasa en Entrenamiento para más ítems.'] },
-            bx_conectores: { title: 'B1/B2 — conectores', what: 'Conectores lógicos para escritura oral y Redemittel.', tips: ['Clasifica: oposición, causa, consecuencia, tiempo.', 'Escribe un minipárrafo usando solo conectores nuevos.', 'Ãšsalos en Historia al improvisar respuestas.'] },
+            bx_conectores: { title: 'B1/B2 — conectores', what: 'Conectores lógicos para escritura oral y Redemittel.', tips: ['Clasifica: oposición, causa, consecuencia, tiempo.', 'Escribe un minipárrafo usando solo conectores nuevos.', 'Úsalos en Historia al improvisar respuestas.'] },
             bx_redemittel: { title: 'B1/B2 — Redemittel', what: 'Fórmulas listas para examen oral/escrito.', tips: ['Aprende de memoria 5 por semana.', 'Dílas en voz alta con buena entonación.', 'Inserta una por respuesta en simulación oral.'] },
             progreso_dashboard: { title: 'Progreso — panel', what: 'Ves racha, monedas, mazos y exportaciones; el bloque de Entrenamiento resume práctica avanzada si lo usas.', tips: ['Haz PDF antes de vacaciones para no perder la foto.', 'Revisa mazos difícil cada pocos días.', 'Combina con backup JSON flotante para copia total.'] },
             guiones_import: { title: 'Biblioteca — guiones', what: 'Pegas texto de la IA con título y lo guardas; al cargarlo se vuelve tu Historia activa.', tips: ['Comprueba títulos para encontrar lecciones rápido.', 'Borra versiones viejas para no confundirte.', 'El prompt sugerido está arriba: cópialo tal cual a ChatGPT/Gemini.'] },
             guiones_vocab_custom: { title: 'Biblioteca — vocabulario propio', what: 'Pegas listas “alemán — español” y guardas lecciones; luego Practicar o mezcla.', tips: ['Una línea por palabra facilita el parseo.', 'Mezcla varias lecciones para simular examen amplio.', 'Exporta a Anki desde Progreso si usas mazos allí.'] },
             guiones_bx_distrib: { title: 'Biblioteca → B1 / B2 (subpestañas)', what: 'Desde un texto pegado se extraen frases y se clasifican por tipo (vocabulario, verbos, etc.); cada frase se coloca en B1 o B2 según reglas locales o en un solo nivel si lo fuerzas.', tips: ['Si tenías un guion guardado cargado en Historia al pulsar Distribuir, esas tarjetas quedan vinculadas: al borrar ese guion puedes quitar también esas entradas en B1/B2.', 'El nivel automático es una estimación: revisa en B1/B2 y mueve o borra tarjetas con “Tu biblioteca”.', 'Frases antiguas sin vincular: usa “Borrar mis aportaciones” o borra tarjeta a tarjeta. El archivo b1-b2-database.json del proyecto no se borra desde aquí.'] },
-            guiones_mix: { title: 'Mezclar lecciones de vocabulario', what: 'Seleccionas varias lecciones guardadas y generas una sesión única en la pestaña Vocab.', tips: ['Marca al menos dos lecciones si quieres variedad.', 'Las tarjetas difíciles se suelen repetir al final.', 'Ãšsalo antes de un examen para repaso amplio.'] },
+            guiones_mix: { title: 'Mezclar lecciones de vocabulario', what: 'Seleccionas varias lecciones guardadas y generas una sesión única en la pestaña Vocab.', tips: ['Marca al menos dos lecciones si quieres variedad.', 'Las tarjetas difíciles se suelen repetir al final.', 'Úsalo antes de un examen para repaso amplio.'] },
             storybuilder: { title: 'IA Story Builder', what: 'Pides a la app/IA integrada un guion según nivel y tema; luego lo estudias como cualquier Historia.', tips: ['Sé concreto en el tema (trabajo, medio ambiente⬦).', 'Revisa que el vocabulario coincida con tus metas.', 'Guarda siempre en Biblioteca para no perderlo.'] },
             practice_mazos: { title: 'Entrenamiento rápido (mazos)', what: 'Repasas tarjetas guardadas como difícil, normal o gramática: audio, revelar traducción, siguiente.', tips: ['No mires revelar hasta haber intentado recordar.', 'Haz lotes cortos varias veces al día.', 'Cuando vacíe un mazo, vuelve a Historia para añadir nuevas frases.'] },
             advanced_menu: { title: 'Entrenamiento avanzado', what: 'Práctica guiada de artículos, verbos con preposición, preposiciones puras, conectores y simulacro tipo examen con cronómetro.', tips: ['Empieza por la categoría con peor porcentaje en el dashboard.', 'El modo examen entrena gestión de tiempo, no solo aciertos.', 'Cierra sesiones cortas para fijar mejor.', 'Artículos (JSON): usa "levels": ["A1","A2","B1"] para que la misma palabra salga en varios mazos; si repites la misma "de" con otro "level", la app une los niveles automáticamente.'] },
-            advanced_exam: { title: 'Simulacro TELC (avanzado)', what: 'Cronómetro orientativo, pistas limitadas y mezcla de ítems según lo que elijas.', tips: ['Elige duración realista (20â€“30 min al principio).', 'Usa pistas solo cuando lleves bloqueado más de un minuto.', 'Al terminar, repasa solo los fallos en modo categoría.'] },
+            advanced_exam: { title: 'Simulacro TELC (avanzado)', what: 'Cronómetro orientativo, pistas limitadas y mezcla de ítems según lo que elijas.', tips: ['Elige duración realista (20–30 min al principio).', 'Usa pistas solo cuando lleves bloqueado más de un minuto.', 'Al terminar, repasa solo los fallos en modo categoría.'] },
             nav_ruta: { title: 'Ruta A0 → C1', what: 'Camino guiado desde cero real: lecciones con frases, huecos, lectura en voz alta y recompensas. Pestaña Gramática resume reglas por nivel. Test de nivel sugiere por dónde empezar.', tips: ['Tecla R para abrir Ruta.', 'Elige mentor (voz) arriba: Frau Lena, Herr Tom o Lina.', 'Cada 3 lecciones completadas hay bonus extra de monedas.', 'El contenido se ampliará por niveles hasta C1.'] },
             ruta_gramatica: { title: 'Ruta — Gramática', what: 'Resumen por niveles (A1, A2, B1) con explicaciones claras. No sustituye un libro de texto: combínalo con Historia y ejercicios.', tips: ['Abre el bloque del nivel que estudies en el camino.', 'Copia un ejemplo a Escritura para fijarlo.', 'Si algo no cuadra, pregunta a tu tutor o al foro.'] },
             nav_inicio: { title: 'Inicio', what: 'Pantalla principal con accesos rápidos y pendientes de repaso (SRS). Desde aquí saltas a Historia, vocab, shadowing, etc.', tips: ['Tecla I para volver al Inicio.', 'El número en Vocab indica tarjetas prioritarias del SRS.', 'Tras la bienvenida (banderas), eliges qué practicar.'] },
@@ -1343,7 +1343,7 @@
                         topic: 'presentacion',
                         rewardCoins: 15,
                         rewardXp: 20,
-                        grammarTip: 'En frases declarativas el verbo conjugado va en 2.ª posición: sujeto â€“ verbo â€“ resto.',
+                        grammarTip: 'En frases declarativas el verbo conjugado va en 2.ª posición: sujeto – verbo – resto.',
                         phrases: [
                             { de: 'Guten Tag! Ich heiße Maria.', es: '¡Buenos días! Me llamo María.' },
                             { de: 'Wie geht es dir?', es: '¿Cómo estás?' },
@@ -1561,7 +1561,7 @@
                 label: 'B2 · TELC Deutsch B2 / Zertifikat B2',
                 summary: 'Textos más largos y matizados; producción argumentativa y registro elevado.',
                 sections: [
-                    { title: 'Pruebas típicas', items: ['Lectura: artículos, comentarios; inferencias y opiniones del autor.', 'Escucha: ritmo más natural; notas y detalles.', 'Escritura: carta formal / texto de opinión con estructura clara (Einleitung â€“ Hauptteil â€“ Schluss).', 'Oral: debate, ventajas/desventajas, matizar posiciones.'] },
+                    { title: 'Pruebas típicas', items: ['Lectura: artículos, comentarios; inferencias y opiniones del autor.', 'Escucha: ritmo más natural; notas y detalles.', 'Escritura: carta formal / texto de opinión con estructura clara (Einleitung – Hauptteil – Schluss).', 'Oral: debate, ventajas/desventajas, matizar posiciones.'] },
                     { title: 'Errores frecuentes', items: ['Confundir registro (du/Sie, coloquial vs académico).', 'Subordinadas sin verbo al final.', 'Tiempo insuficiente en la última parte escrita.'] },
                 ],
             },
