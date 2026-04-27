@@ -3280,10 +3280,10 @@
                                                           .map((lesson, origIdx) => ({ lesson, origIdx }))
                                                           .filter(({ lesson }) => rutaTopicFilter === 'all' || (lesson.topic || '') === rutaTopicFilter)
                                                           .map(({ lesson, origIdx }) => {
-                                                          const unlocked = typeof window.mullerRutaIsLessonUnlocked === 'function' && window.mullerRutaIsLessonUnlocked(rutaLevels || [], levelIdx, origIdx, rutaProgress.completed || {});
+                                                          const unlocked = typeof window.mullerRutaIsLessonUnlocked === 'function' && window.mullerRutaIsLessonUnlocked(rutaLevels || [], levelIdx, origIdx, rutaProgress.completed || {}, rutaProgress || {});
                                                           const done = !!(rutaProgress.completed && rutaProgress.completed[lesson.id]);
                                                           return (
-                                                              <button key={lesson.id} type="button" disabled={!unlocked} onClick={() => { if (!unlocked) return; setRutaRun({ levelIdx, lessonIdx: origIdx, step: 0 }); setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr(''); }} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-left transition ${!unlocked ? 'opacity-40 cursor-not-allowed border-white/5' : done ? 'border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/40' : 'border-white/15 bg-black/30 hover:bg-fuchsia-950/40'}`}>
+                                                              <button key={lesson.id} type="button" disabled={!unlocked} onClick={() => { if (!unlocked) return; startRutaLesson(levelIdx, origIdx); }} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-left transition ${!unlocked ? 'opacity-40 cursor-not-allowed border-white/5' : done ? 'border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/40' : 'border-white/15 bg-black/30 hover:bg-fuchsia-950/40'}`}>
                                                                   <span className="font-bold text-white">{lesson.title}</span>
                                                                   <span className="text-[10px] uppercase tracking-wider text-cyan-300/90">{String(lesson.topic || 'general').replace('_', ' ')}</span>
                                                                   <span className="text-xs font-bold text-amber-300">+{lesson.rewardCoins} · {lesson.rewardXp} XP</span>
@@ -3378,40 +3378,86 @@
                               const lv = L[rutaRun.levelIdx];
                               const lesson = lv && lv.lessons[rutaRun.lessonIdx];
                               if (!lesson) return null;
+                              const plan = Array.isArray(rutaRun.exercisePlan) ? rutaRun.exercisePlan : [];
+                              const exerciseIdx = rutaRun.exerciseIdx || 0;
+                              const ex = plan[exerciseIdx];
                               const st = rutaRun.step || 0;
+                              const score = rutaRun.score || { correct: 0, total: 0, reviewCorrect: 0, reviewTotal: 0 };
+                              const accPct = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+                              const reviewLabel = ex && ex.fromReview ? 'Repaso (20%)' : 'Nuevo';
+                              const advanceExercise = (wasCorrect) => {
+                                  if (!ex) return;
+                                  const nextScore = {
+                                      correct: (score.correct || 0) + (wasCorrect ? 1 : 0),
+                                      total: (score.total || 0) + 1,
+                                      reviewCorrect: (score.reviewCorrect || 0) + (ex.fromReview && wasCorrect ? 1 : 0),
+                                      reviewTotal: (score.reviewTotal || 0) + (ex.fromReview ? 1 : 0),
+                                  };
+                                  const nextIdx = exerciseIdx + 1;
+                                  if (nextIdx >= plan.length) {
+                                      completeRutaLesson(rutaRun.levelIdx, rutaRun.lessonIdx, nextScore);
+                                      return;
+                                  }
+                                  setRutaRun({ ...rutaRun, step: 0, exerciseIdx: nextIdx, score: nextScore });
+                                  setRutaFillInput('');
+                                  setRutaTranscript('');
+                                  setRutaSpeakErr('');
+                                  window.__mullerPlaySfx && window.__mullerPlaySfx('tick');
+                              };
                               return (
                                   <div className="rounded-2xl border border-fuchsia-500/30 bg-black/40 p-5 md:p-8">
                                       <button type="button" onClick={() => { setRutaRun(null); setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr(''); }} className="text-sm font-bold text-fuchsia-300 mb-4 hover:text-white">← Volver al camino</button>
                                       <h2 className="text-2xl font-black text-white mb-1">{lesson.title}</h2>
-                                      <p className="text-xs text-fuchsia-400/90 mb-6">{lv.badge} · {lv.title}</p>
-                                      {st === 0 && (
+                                      <p className="text-xs text-fuchsia-400/90 mb-3">{lv.badge} · {lv.title}</p>
+                                      <div className="mb-6 rounded-xl border border-fuchsia-500/20 bg-fuchsia-950/20 p-3 flex flex-wrap items-center justify-between gap-2">
+                                          <p className="text-xs text-fuchsia-200 font-bold">Ejercicio {Math.min((exerciseIdx || 0) + 1, Math.max(1, plan.length))} / {Math.max(1, plan.length)} · Precisión {accPct}%</p>
+                                          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${ex && ex.fromReview ? 'bg-amber-900/40 text-amber-200 border-amber-500/35' : 'bg-cyan-900/40 text-cyan-200 border-cyan-500/35'}`}>{reviewLabel}</span>
+                                      </div>
+                                      {st === 0 && ex && (
                                           <>
                                               <p className="text-sm text-violet-200/90 mb-4 rounded-xl bg-violet-950/50 border border-violet-500/25 p-4 leading-relaxed">{lesson.grammarTip}</p>
-                                              {lesson.phrases.map((p, i) => (
-                                                  <div key={i} className="mb-4 rounded-xl border border-white/10 bg-slate-900/60 p-4">
-                                                      <p className="text-lg font-bold text-white">{p.de}</p>
-                                                      <p className="text-sm text-gray-400">{p.es}</p>
-                                                      <button type="button" onClick={() => speakRutaDe(p.de)} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar</button>
+                                              {ex.type === 'read' ? (
+                                                  <div className="mb-4 rounded-xl border border-white/10 bg-slate-900/60 p-4">
+                                                      <p className="text-lg font-bold text-white">{ex.de}</p>
+                                                      <p className="text-sm text-gray-400">{ex.es}</p>
+                                                      <button type="button" onClick={() => speakRutaDe(ex.de)} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar</button>
                                                   </div>
-                                              ))}
-                                              <button type="button" onClick={() => { setRutaRun({ ...rutaRun, step: 1 }); setRutaFillInput(''); setRutaSpeakErr(''); window.__mullerPlaySfx && window.__mullerPlaySfx('tick'); }} className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg">Siguiente: huecos</button>
+                                              ) : ex.type === 'fill' ? (
+                                                  <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-4">
+                                                      <p className="text-white font-bold mb-3">{ex.prompt}</p>
+                                                      {ex.hint ? <p className="text-xs text-gray-500 mb-2">Pista: {ex.hint}</p> : null}
+                                                  </div>
+                                              ) : (
+                                                  <div className="mb-4 rounded-xl border border-rose-500/25 bg-rose-950/20 p-4">
+                                                      <p className="text-gray-300 mb-2">Lee en voz alta en alemán:</p>
+                                                      <p className="text-xl font-bold text-white leading-snug">{ex.target}</p>
+                                                  </div>
+                                              )}
+                                              <button type="button" onClick={() => { setRutaRun({ ...rutaRun, step: 1 }); setRutaFillInput(''); setRutaSpeakErr(''); window.__mullerPlaySfx && window.__mullerPlaySfx('tick'); }} className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg">
+                                                  {ex.type === 'read' ? 'Marcar como leído y continuar' : ex.type === 'fill' ? 'Ir a respuesta' : 'Ir a validación'}
+                                              </button>
                                           </>
                                       )}
-                                      {st === 1 && lesson.fill && (
+                                      {st === 1 && ex && ex.type === 'fill' && (
                                           <>
-                                              <p className="text-white font-bold mb-3">{lesson.fill.prompt}</p>
-                                              {lesson.fill.hint ? <p className="text-xs text-gray-500 mb-2">Pista: {lesson.fill.hint}</p> : null}
-                                              <input value={rutaFillInput} onChange={(e) => setRutaFillInput(e.target.value)} onKeyDown={(e) => handleExerciseEnterSubmit(e, 'ruta-fill-submit', () => { if (checkRutaFillAnswer(lesson)) { setRutaRun({ ...rutaRun, step: 2 }); setRutaTranscript(''); setRutaSpeakErr(''); } })} className="w-full rounded-xl bg-black/50 border border-fuchsia-500/40 px-4 py-3 text-white text-lg mb-3 outline-none focus:border-fuchsia-400" placeholder="Tu respuesta" autoComplete="off" />
+                                              <p className="text-white font-bold mb-3">{ex.prompt}</p>
+                                              {ex.hint ? <p className="text-xs text-gray-500 mb-2">Pista: {ex.hint}</p> : null}
+                                              <input value={rutaFillInput} onChange={(e) => setRutaFillInput(e.target.value)} onKeyDown={(e) => handleExerciseEnterSubmit(e, 'ruta-fill-submit', () => { if (checkRutaFillAnswer(ex)) { setRutaRun({ ...rutaRun, step: 2 }); setRutaTranscript(''); setRutaSpeakErr(''); } })} className="w-full rounded-xl bg-black/50 border border-fuchsia-500/40 px-4 py-3 text-white text-lg mb-3 outline-none focus:border-fuchsia-400" placeholder="Tu respuesta" autoComplete="off" />
                                               {rutaSpeakErr ? <p className="text-amber-200 text-sm mb-2">{rutaSpeakErr}</p> : null}
-                                              <button type="button" onClick={() => runSingleSubmitAction('ruta-fill-submit', () => { if (checkRutaFillAnswer(lesson)) { setRutaRun({ ...rutaRun, step: 2 }); setRutaTranscript(''); setRutaSpeakErr(''); } })} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Comprobar y continuar</button>
+                                              <button type="button" onClick={() => runSingleSubmitAction('ruta-fill-submit', () => { if (checkRutaFillAnswer(ex)) { setRutaRun({ ...rutaRun, step: 2 }); setRutaTranscript(''); setRutaSpeakErr(''); } })} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Comprobar y continuar</button>
                                           </>
                                       )}
-                                      {st === 2 && lesson.speak && (
+                                      {st === 1 && ex && ex.type === 'read' && (
+                                          <>
+                                              <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Continuar</button>
+                                          </>
+                                      )}
+                                      {st === 1 && ex && ex.type === 'speak' && (
                                           <>
                                               <p className="text-gray-300 mb-2">Lee en voz alta en alemán:</p>
-                                              <p className="text-xl font-bold text-white mb-4 leading-snug">{lesson.speak.target}</p>
+                                              <p className="text-xl font-bold text-white mb-4 leading-snug">{ex.target}</p>
                                               <div className="flex flex-wrap gap-2 mb-4">
-                                                  <button type="button" onClick={() => speakRutaDe(lesson.speak.target)} className="rounded-xl bg-slate-800 border border-white/15 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">Escuchar modelo</button>
+                                                  <button type="button" onClick={() => speakRutaDe(ex.target)} className="rounded-xl bg-slate-800 border border-white/15 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">Escuchar modelo</button>
                                                   <button type="button" disabled={rutaListening} onClick={startRutaListen} className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-500 disabled:opacity-50">{rutaListening ? 'Escuchando⬦' : 'Grabar'}</button>
                                               </div>
                                               {rutaTranscript ? <p className="text-sm text-emerald-200/90 mb-2">Detectado: {rutaTranscript}</p> : null}
@@ -3419,17 +3465,17 @@
                                               <button
                                                   type="button"
                                                   onClick={() => runSingleSubmitAction('ruta-speak-validate', () => {
-                                                      if (checkRutaSpeakAnswer(lesson.speak.target)) completeRutaLesson(rutaRun.levelIdx, rutaRun.lessonIdx);
+                                                      if (checkRutaSpeakAnswer(ex.target)) advanceExercise(true);
                                                   })}
                                                   className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg"
                                               >
-                                                  Validar y completar lección
+                                                  Validar y continuar
                                               </button>
                                               <button
                                                   type="button"
                                                   onClick={() => runSingleSubmitAction('ruta-speak-skip', () => {
                                                       setRutaSpeakErr('');
-                                                      completeRutaLesson(rutaRun.levelIdx, rutaRun.lessonIdx);
+                                                      advanceExercise(false);
                                                   })}
                                                   className="w-full mt-2 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold py-2.5 text-gray-200 border border-white/15"
                                               >
@@ -3437,6 +3483,12 @@
                                               </button>
                                               <p className="text-[11px] text-gray-500 mt-2">Si hoy no puedes usar micrófono, puedes avanzar igualmente y practicar voz después.</p>
                                           </>
+                                      )}
+                                      {st === 2 && ex && ex.type === 'fill' && (
+                                          <div className="space-y-3">
+                                              <p className="text-sm text-gray-300">Respuesta correcta: <strong className="text-emerald-300">{ex.answer}</strong></p>
+                                              <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 font-black py-3 text-white">Siguiente ejercicio</button>
+                                          </div>
                                       )}
                                   </div>
                               );

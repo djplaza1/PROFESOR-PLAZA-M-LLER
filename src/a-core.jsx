@@ -1272,7 +1272,7 @@
         };
 
         window.mullerRutaDefaultProgress = function () {
-            return { completed: {}, placementDone: false, suggestedLevelIdx: 0, playTimeMs: 0, lessonsCompleted: 0 };
+            return { completed: {}, placementDone: false, suggestedLevelIdx: 0, playTimeMs: 0, lessonsCompleted: 0, levelScores: {} };
         };
         window.mullerRutaLoad = function () {
             try {
@@ -1283,12 +1283,18 @@
         window.mullerRutaSave = function (p) {
             try { localStorage.setItem('muller_ruta_progress_v1', JSON.stringify(p)); } catch (e) {}
         };
-        window.mullerRutaIsLessonUnlocked = function (levels, levelIdx, lessonIdx, completed) {
+        window.mullerRutaIsLessonUnlocked = function (levels, levelIdx, lessonIdx, completed, progress) {
             if (!levels[levelIdx] || !levels[levelIdx].lessons[lessonIdx]) return false;
             if (levelIdx === 0 && lessonIdx === 0) return true;
             if (lessonIdx === 0) {
                 var prev = levels[levelIdx - 1];
-                return prev.lessons.every(function (l) { return completed[l.id]; });
+                var prevDone = prev.lessons.every(function (l) { return completed[l.id]; });
+                if (!prevDone) return false;
+                var prevKey = String(prev.badge || prev.title || '').toUpperCase();
+                var levelScores = progress && progress.levelScores ? progress.levelScores : {};
+                var score = levelScores[prevKey] || { correct: 0, total: 0 };
+                var acc = score.total > 0 ? (score.correct / score.total) : 0;
+                return acc >= 0.7;
             }
             var prevId = levels[levelIdx].lessons[lessonIdx - 1].id;
             return !!completed[prevId];

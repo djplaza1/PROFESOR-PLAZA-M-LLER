@@ -1330,7 +1330,95 @@ const [placementFinished, setPlacementFinished] = useState(false);
               return dayMap;
           };
 
-          const completeRutaLesson = (levelIdx, lessonIdx) => {
+          const RUTA_SECTION_EXERCISES = 12;
+          const RUTA_REVIEW_RATIO = 0.2;
+          const RUTA_MIN_ACCURACY_TO_UNLOCK_NEXT_LEVEL = 0.7;
+
+          const buildRutaExercisePlan = useCallback((levels, levelIdx, lessonIdx) => {
+              const lv = levels && levels[levelIdx];
+              const lesson = lv && lv.lessons && lv.lessons[lessonIdx];
+              if (!lesson) return [];
+              const safePhrases = Array.isArray(lesson.phrases) && lesson.phrases.length
+                  ? lesson.phrases
+                  : [{ de: 'Ich lerne Deutsch.', es: 'Aprendo alemán.' }];
+              const safeFill = lesson.fill || { prompt: 'Completa: Ich ___ Deutsch.', answer: 'lerne', hint: 'Verbo en presente.' };
+              const safeSpeak = lesson.speak || { target: safePhrases[0].de };
+
+              const previousLessons = [];
+              for (let li = 0; li <= levelIdx; li++) {
+                  const block = levels[li];
+                  if (!block || !Array.isArray(block.lessons)) continue;
+                  const maxIdx = li === levelIdx ? lessonIdx - 1 : block.lessons.length - 1;
+                  for (let lj = 0; lj <= maxIdx; lj++) {
+                      if (block.lessons[lj]) previousLessons.push(block.lessons[lj]);
+                  }
+              }
+              const reviewPool = previousLessons.filter((l) => Array.isArray(l.phrases) && l.phrases.length);
+
+              const total = RUTA_SECTION_EXERCISES;
+              const reviewCount = Math.max(0, Math.round(total * RUTA_REVIEW_RATIO));
+              const reviewSlots = new Set(Array.from({ length: reviewCount }, (_, i) => Math.floor(((i + 1) * total) / (reviewCount + 1))));
+
+              const plan = [];
+              for (let i = 0; i < total; i++) {
+                  const mode = i % 3; // 0 read/listen, 1 fill, 2 speak
+                  const useReview = reviewPool.length > 0 && reviewSlots.has(i);
+                  const srcLesson = useReview ? reviewPool[i % reviewPool.length] : lesson;
+                  const srcPhrases = Array.isArray(srcLesson.phrases) && srcLesson.phrases.length ? srcLesson.phrases : safePhrases;
+                  const srcPhrase = srcPhrases[i % srcPhrases.length] || safePhrases[0];
+                  const srcFill = srcLesson.fill || safeFill;
+                  const srcSpeak = srcLesson.speak || { target: (srcPhrase && srcPhrase.de) || safeSpeak.target };
+
+                  if (mode === 0) {
+                      plan.push({
+                          id: `${srcLesson.id || lesson.id}-read-${i}`,
+                          type: 'read',
+                          de: srcPhrase.de,
+                          es: srcPhrase.es || '',
+                          fromReview: useReview
+                      });
+                  } else if (mode === 1) {
+                      plan.push({
+                          id: `${srcLesson.id || lesson.id}-fill-${i}`,
+                          type: 'fill',
+                          prompt: srcFill.prompt || safeFill.prompt,
+                          answer: srcFill.answer || safeFill.answer,
+                          hint: srcFill.hint || '',
+                          fromReview: useReview
+                      });
+                  } else {
+                      plan.push({
+                          id: `${srcLesson.id || lesson.id}-speak-${i}`,
+                          type: 'speak',
+                          target: (srcSpeak && srcSpeak.target) || srcPhrase.de || safeSpeak.target,
+                          fromReview: useReview
+                      });
+                  }
+              }
+              return plan;
+          }, []);
+
+          const startRutaLesson = useCallback((levelIdx, lessonIdx) => {
+              const levels = rutaLevels || [];
+              const lesson = levels[levelIdx] && levels[levelIdx].lessons && levels[levelIdx].lessons[lessonIdx];
+              if (!lesson) return;
+              const plan = buildRutaExercisePlan(levels, levelIdx, lessonIdx);
+              if (!plan.length) return;
+              setRutaRun({
+                  levelIdx,
+                  lessonIdx,
+                  step: 0,
+                  exerciseIdx: 0,
+                  exerciseTotal: plan.length,
+                  exercisePlan: plan,
+                  score: { correct: 0, total: 0, reviewCorrect: 0, reviewTotal: 0 }
+              });
+              setRutaFillInput('');
+              setRutaTranscript('');
+              setRutaSpeakErr('');
+          }, [buildRutaExercisePlan, rutaLevels]);
+
+          const completeRutaLesson = (levelIdx, lessonIdx, runScore) => {
               const levels = rutaLevels || [];
               const lesson = levels[levelIdx] && levels[levelIdx].lessons[lessonIdx];
               if (!lesson) return;
@@ -1343,12 +1431,25 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   return;
               }
               const nextCount = (rutaProgress.lessonsCompleted || 0) + 1;
+              const score = runScore || { correct: 0, total: 0, reviewCorrect: 0, reviewTotal: 0 };
+              const levelKey = String((levels[levelIdx] && levels[levelIdx].badge) || (levels[levelIdx] && levels[levelIdx].title) || `L${levelIdx}`).toUpperCase();
+              const prevLevelScore = (rutaProgress.levelScores && rutaProgress.levelScores[levelKey]) || { correct: 0, total: 0, reviewCorrect: 0, reviewTotal: 0 };
+              const mergedLevelScore = {
+                  correct: (prevLevelScore.correct || 0) + (score.correct || 0),
+                  total: (prevLevelScore.total || 0) + (score.total || 0),
+                  reviewCorrect: (prevLevelScore.reviewCorrect || 0) + (score.reviewCorrect || 0),
+                  reviewTotal: (prevLevelScore.reviewTotal || 0) + (score.reviewTotal || 0),
+              };
+              const accuracy = mergedLevelScore.total > 0 ? Math.round((mergedLevelScore.correct / mergedLevelScore.total) * 100) : 0;
               let bonus = 0;
               if (nextCount % 3 === 0) bonus = 35;
+              if ((score.total || 0) >= RUTA_SECTION_EXERCISES && ((score.correct || 0) / Math.max(1, score.total || 0)) >= 0.85) bonus += 15;
+              if ((score.reviewTotal || 0) > 0 && ((score.reviewCorrect || 0) / Math.max(1, score.reviewTotal || 0)) >= 0.7) bonus += 10;
               const nextProg = {
                   ...rutaProgress,
                   completed: { ...(rutaProgress.completed || {}), [lesson.id]: true },
                   lessonsCompleted: nextCount,
+                  levelScores: { ...(rutaProgress.levelScores || {}), [levelKey]: mergedLevelScore }
               };
               if (typeof window.mullerRutaSave === 'function') window.mullerRutaSave(nextProg);
               setRutaProgress(nextProg);
@@ -1360,10 +1461,11 @@ const [placementFinished, setPlacementFinished] = useState(false);
               window.__mullerPlaySfx && window.__mullerPlaySfx('complete');
               setCelebrationModal({
                   title: '¡Lo lograste!',
-                  subtitle: lesson.title,
+                  subtitle: `${lesson.title} · Precisión ${score.total ? Math.round((score.correct / score.total) * 100) : 0}%`,
                   xp: lesson.rewardXp,
                   coins: lesson.rewardCoins + bonus,
                   milestone: bonus > 0,
+                  note: `Nivel ${levelKey}: ${accuracy}% acumulado (mínimo ${Math.round(RUTA_MIN_ACCURACY_TO_UNLOCK_NEXT_LEVEL * 100)}% para desbloquear el siguiente nivel)`
               });
               setRutaRun(null);
               setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr('');
@@ -1501,10 +1603,10 @@ const finishPlacementWithLevel = (finalLevel) => {
 
 // ========== FIN NUEVO TEST ADAPTATIVO ==========
 
-          const checkRutaFillAnswer = (lesson) => {
-              if (!lesson || !lesson.fill) return false;
+          const checkRutaFillAnswer = (exercise) => {
+              if (!exercise) return false;
               const got = (rutaFillInput || '').trim().toLowerCase().replace(/\s+/g, ' ');
-              const exp = String(lesson.fill.answer || '').trim().toLowerCase();
+              const exp = String(exercise.answer || '').trim().toLowerCase();
               if (got === exp) { window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true); setRutaSpeakErr(''); return true; }
               window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(false);
               setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Sigue practicando.');
