@@ -3392,7 +3392,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           const handleDiktatCheck = () => {
               if (!diktatInput.trim()) { alert("Por favor, escribe lo que has escuchado primero."); return; }
               setShowDiktatResult(true);
-              const cleanText = (t) => t.toLowerCase().replace(/[.,!?]/g, '').trim();
+              const cleanText = (t) => t.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[.,!?]/g, '').trim();
               const originalText = cleanText(guionData[getActualSceneIndex()].text);
               const typedText = cleanText(diktatInput);
               if (originalText !== typedText) {
@@ -3696,7 +3696,7 @@ const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
           };
 
           const renderDiktatDiff = (original, typed) => {
-              const cleanWord = (w) => w.toLowerCase().replace(/[.,!?]/g, '').trim();
+              const cleanWord = (w) => w.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[.,!?]/g, '').trim();
               const origWords = original.split(/\s+/).filter(w=>w);
               const typedWords = typed.split(/\s+/).filter(w=>w);
               return (

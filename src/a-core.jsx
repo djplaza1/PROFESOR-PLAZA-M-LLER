@@ -825,7 +825,8 @@
         const mullerClamp = (n, min, max) => Math.max(min, Math.min(max, n));
         const mullerNormalizeGermanWordToken = (raw) => String(raw || '')
             .toLowerCase()
-            .replace(/^[^a-zÃ¤Ã¶Ã¼ÃŸ]+|[^a-zÃ¤Ã¶Ã¼ÃŸ]+$/gi, '')
+            .replace(/[äöüß]/g, function(m) { return {ä:'ae',ö:'oe',ü:'ue',ß:'ss'}[m]; })
+            .replace(/^[^a-z]+|[^a-z]+$/gi, '')
             .trim();
         const mullerReadingTokenizeText = (text) => String(text || '')
             .split(/(\s+)/)
