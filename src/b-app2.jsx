@@ -798,6 +798,10 @@
               return h[activeTab] || '';
           }, [activeTab]);
 
+          const bottomTabClass = (isActive, activeTone) => (
+              `flex items-center gap-2 px-3.5 md:px-4 py-2.5 md:py-3 rounded-xl font-black text-[13px] md:text-sm min-h-[3rem] transition border ${isActive ? `${activeTone} text-white shadow-[0_0_18px_rgba(255,255,255,0.18)] ring-1 ring-white/25 border-white/20` : 'text-gray-300 hover:text-white whitespace-nowrap bg-white/[0.02] hover:bg-white/[0.08] border-white/0 hover:border-white/20'}`
+          );
+
           return (
             <div className={`flex flex-col muller-main-fill h-[100svh] max-h-[100svh] w-full font-sans md:rounded-xl overflow-x-hidden md:overflow-hidden shadow-2xl relative transition-colors duration-500 muller-theme-bg ${reduceMotionUi ? 'muller-reduce-motion' : ''} ${themeShellClass} ${uiTheme === 'light' ? 'text-slate-900' : 'text-white'} ${getBgColor()}`}>
 
@@ -1011,6 +1015,31 @@
                           </div>
                       )}
                   </div>
+                  {activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !podcastMode && !practiceActive && (
+                      <div className="w-full flex justify-end px-0.5 md:px-0 pt-0.5">
+                          <div className="flex flex-wrap items-center gap-1 md:gap-2 bg-black/70 p-1 rounded-xl border border-white/10 backdrop-blur-md max-w-[98%] justify-end">
+                              <button onClick={() => setFluesternMode(!fluesternMode)} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${fluesternMode ? 'bg-zinc-600 text-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'text-gray-300 hover:bg-white/10'}`} title="Modo Flüstern"><Icon name="ear" className="w-3 h-3 md:w-4 md:h-4" /> Flüstern</button>
+                              <button onClick={() => setNoiseEnabled(!noiseEnabled)} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${noiseEnabled ? 'bg-amber-600 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'text-gray-300 hover:bg-white/10'}`} title="Ruido de fondo (examen)"><Icon name="volume-2" className="w-3 h-3 md:w-4 md:h-4" /> Ruido</button>
+                              <button onClick={() => {setDiktatMode(!diktatMode); setBlindMode(false); setLueckentextMode(false); setPuzzleMode(false); setDeclinaMode(false); setArtikelSniperMode(false); resetModes(); stopAudio();}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${diktatMode ? 'bg-red-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="edit" className="w-3 h-3 md:w-4 md:h-4" /> Diktat</button>
+                              <button onClick={() => {setLueckentextMode(!lueckentextMode); setDiktatMode(false); setPuzzleMode(false); setArtikelSniperMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${lueckentextMode ? 'bg-amber-500 text-black' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="edit-3" className="w-3 h-3 md:w-4 md:h-4" /> Huecos</button>
+                              <button onClick={() => {setArtikelSniperMode(!artikelSniperMode); setDiktatMode(false); setLueckentextMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${artikelSniperMode ? 'bg-red-800 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="target" className="w-3 h-3 md:w-4 md:h-4" /> Artículos</button>
+                              <button onClick={() => {setDeclinaMode(!declinaMode); setDiktatMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${declinaMode ? 'bg-pink-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="wand-2" className="w-3 h-3 md:w-4 md:h-4" /> Declinar</button>
+                              <button onClick={() => {setTempusMode(!tempusMode);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${tempusMode ? 'bg-blue-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="clock" className="w-3 h-3 md:w-4 md:h-4" /> Tempus</button>
+                              <button onClick={() => {setPuzzleMode(!puzzleMode); setDiktatMode(false); setBlindMode(false); setDeclinaMode(false); setArtikelSniperMode(false); resetModes(); stopAudio();}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${puzzleMode ? 'bg-indigo-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="puzzle" className="w-3 h-3 md:w-4 md:h-4" /> Satzbau</button>
+                              <button onClick={() => {setBlindMode(!blindMode); setDiktatMode(false); setPuzzleMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${blindMode ? 'bg-blue-400 text-black' : 'text-gray-300 hover:bg-white/10'}`}>{blindMode ? <Icon name="eye-off" className="w-3 h-3 md:w-4 md:h-4" /> : <Icon name="eye" className="w-3 h-3 md:w-4 md:h-4" />} Oído</button>
+                              <div className="flex items-center gap-0.5 md:gap-1 pl-1 md:pl-2 border-l border-white/20">
+                                  <Icon name="mic-off" className={`w-3 h-3 md:w-4 md:h-4 ${roleplayChar !== 'none' ? 'text-red-400' : 'text-gray-400'}`} />
+                                  <select className="bg-transparent text-[10px] md:text-xs text-white font-bold outline-none cursor-pointer" value={roleplayChar} onChange={(e) => setRoleplayChar(e.target.value)}>
+                                      <option value="none" className="text-black">No mutear</option>
+                                      <option value="Todos" className="text-black font-bold">Mutear TODOS</option>
+                                      <option value="Lukas" className="text-black">Lukas</option>
+                                      <option value="Elena" className="text-black">Elena</option>
+                                      <option value="Herr Weber" className="text-black">Weber</option>
+                                  </select>
+                              </div>
+                          </div>
+                      </div>
+                  )}
                   </div>
               </div>
               </div>
@@ -1547,24 +1576,24 @@
                   </div>
               )}
 
-              <nav className="muller-nav-row muller-mobile-bottom-nav muller-bottom-secondary-nav" aria-label="Herramientas, segunda fila fija, scroll horizontal">
+              <nav className="muller-nav-row muller-mobile-bottom-nav muller-bottom-secondary-nav bg-zinc-950/90 p-1 md:p-1.5 rounded-t-2xl ring-1 ring-white/[0.1]" aria-label="Herramientas, segunda fila fija, scroll horizontal">
                   {activeTab === 'bxbank' ? (
                       <div className="muller-bxbank-btns" aria-label="Cambio de banco B1 o B2">
-                          <button type="button" onClick={() => { setBxBankLevel('b1'); setActiveTab('bxbank'); setBxCategory('mix'); stopAudio(); setPracticeActive(null); }} className={bxBankLevel === 'b1' ? 'is-active' : ''}><Icon name="target" className="w-3.5 h-3.5" />B1</button>
-                          <button type="button" onClick={() => { setBxBankLevel('b2'); setActiveTab('bxbank'); setBxCategory('mix'); stopAudio(); setPracticeActive(null); }} className={bxBankLevel === 'b2' ? 'is-active' : ''}><Icon name="layers" className="w-3.5 h-3.5" />B2</button>
+                          <button type="button" onClick={() => { setBxBankLevel('b1'); setActiveTab('bxbank'); setBxCategory('mix'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(bxBankLevel === 'b1', 'bg-emerald-600')}><Icon nav name="target" className="w-4 h-4 md:w-5 md:h-5" />B1</button>
+                          <button type="button" onClick={() => { setBxBankLevel('b2'); setActiveTab('bxbank'); setBxCategory('mix'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(bxBankLevel === 'b2', 'bg-teal-600')}><Icon nav name="layers" className="w-4 h-4 md:w-5 md:h-5" />B2</button>
                       </div>
                   ) : null}
-                  <button type="button" onClick={() => { setActiveTab('progreso'); stopAudio(); setPracticeActive(null); }} className={activeTab === 'progreso' ? 'is-active' : ''}><Icon name="bar-chart" className="w-4 h-4" />Progreso</button>
-                  <button type="button" onClick={() => { setActiveTab('guiones'); stopAudio(); setPracticeActive(null); }} className={activeTab === 'guiones' ? 'is-active' : ''}><Icon name="file-text" className="w-4 h-4" />Biblioteca</button>
-                  <button type="button" onClick={() => { setActiveTab('lexikon'); stopAudio(); setPracticeActive(null); }} className={activeTab === 'lexikon' ? 'is-active' : ''}><Icon name="library" className="w-4 h-4" />Lexikon</button>
-                  <button type="button" onClick={() => { setActiveTab('telc'); stopAudio(); setPracticeActive(null); }} className={activeTab === 'telc' ? 'is-active' : ''}><Icon name="clipboard-check" className="w-4 h-4" />TELC</button>
-                  <button type="button" onClick={() => { setActiveTab('storybuilder'); stopAudio(); setPracticeActive(null); }} className={activeTab === 'storybuilder' ? 'is-active' : ''}><Icon name="sparkles" className="w-4 h-4" />IA</button>
-                  <button type="button" onClick={() => { setActiveTab('historiaspro'); stopAudio(); setPracticeActive(null); }} className={activeTab === 'historiaspro' ? 'is-active' : ''}><Icon name="feather" className="w-4 h-4" />Maestros Pro</button>
-                  <button type="button" onClick={() => { setActiveTab('comunidad'); stopAudio(); setPracticeActive(null); }} className={activeTab === 'comunidad' ? 'is-active' : ''}><Icon name="trophy" className="w-4 h-4" />Comunidad</button>
+                  <button type="button" onClick={() => { setActiveTab('progreso'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(activeTab === 'progreso', 'bg-yellow-600')}><Icon nav name="bar-chart" className="w-4 h-4 md:w-5 md:h-5" />Progreso</button>
+                  <button type="button" onClick={() => { setActiveTab('guiones'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(activeTab === 'guiones', 'bg-violet-600')}><Icon nav name="file-text" className="w-4 h-4 md:w-5 md:h-5" />Biblioteca</button>
+                  <button type="button" onClick={() => { setActiveTab('lexikon'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(activeTab === 'lexikon', 'bg-sky-600')}><Icon nav name="library" className="w-4 h-4 md:w-5 md:h-5" />Lexikon</button>
+                  <button type="button" onClick={() => { setActiveTab('telc'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(activeTab === 'telc', 'bg-orange-600')}><Icon nav name="clipboard-check" className="w-4 h-4 md:w-5 md:h-5" />TELC</button>
+                  <button type="button" onClick={() => { setActiveTab('storybuilder'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(activeTab === 'storybuilder', 'bg-fuchsia-600')}><Icon nav name="sparkles" className="w-4 h-4 md:w-5 md:h-5" />IA</button>
+                  <button type="button" onClick={() => { setActiveTab('historiaspro'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(activeTab === 'historiaspro', 'bg-emerald-600')}><Icon nav name="feather" className="w-4 h-4 md:w-5 md:h-5" />Maestros Pro</button>
+                  <button type="button" onClick={() => { setActiveTab('comunidad'); stopAudio(); setPracticeActive(null); }} className={bottomTabClass(activeTab === 'comunidad', 'bg-amber-600')}><Icon nav name="trophy" className="w-4 h-4 md:w-5 md:h-5" />Comunidad</button>
               </nav>
 
               {/* CONTENIDO PRINCIPAL */}
-              <div className={`muller-app-main flex-1 overflow-y-auto relative flex flex-col hide-scrollbar pt-[var(--muller-mobile-header-h)] pb-[calc(var(--muller-mobile-bottom-nav-h)+max(0.5rem,env(safe-area-inset-bottom,0px)))] ${activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !practiceActive ? 'muller-main-historia-pb' : ''} ${uiTheme === 'light' ? 'text-slate-900' : ''}`}>
+              <div className={`muller-app-main flex-1 overflow-y-auto relative flex flex-col hide-scrollbar ${activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !podcastMode && !practiceActive ? 'pt-[calc(var(--muller-mobile-header-h)+3.2rem)] md:pt-[calc(var(--muller-mobile-header-h)+2.8rem)]' : 'pt-[var(--muller-mobile-header-h)]'} pb-[calc(var(--muller-mobile-bottom-nav-h)+max(0.5rem,env(safe-area-inset-bottom,0px)))] ${activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !practiceActive ? 'muller-main-historia-pb' : ''} ${uiTheme === 'light' ? 'text-slate-900' : ''}`}>
                   
                   {activeTab === 'telc' && !practiceActive && (() => {
                       const telcPack = (window.MULLER_TELC_BY_LEVEL && window.MULLER_TELC_BY_LEVEL[telcLevel]) || (window.MULLER_TELC_BY_LEVEL && window.MULLER_TELC_BY_LEVEL.B1);
@@ -4001,31 +4030,7 @@
                                 </select>
                             </div>
                         </div>
-                        {mode !== 'quiz' && mode !== 'interview' && !podcastMode && (
-                            <div className="relative z-[20] mt-0 w-full flex justify-end px-1 md:px-0">
-                            <div className="flex flex-wrap items-center gap-1 md:gap-2 bg-black/60 p-1 rounded-xl border border-white/10 backdrop-blur-md max-w-[95%] justify-end">
-                                <button onClick={() => setFluesternMode(!fluesternMode)} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${fluesternMode ? 'bg-zinc-600 text-white shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'text-gray-300 hover:bg-white/10'}`} title="Modo Flüstern"><Icon name="ear" className="w-3 h-3 md:w-4 md:h-4" /> Flüstern</button>
-                                <button onClick={() => setNoiseEnabled(!noiseEnabled)} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${noiseEnabled ? 'bg-amber-600 text-white shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'text-gray-300 hover:bg-white/10'}`} title="Ruido de fondo (examen)"><Icon name="volume-2" className="w-3 h-3 md:w-4 md:h-4" /> Ruido</button>
-                                <button onClick={() => {setDiktatMode(!diktatMode); setBlindMode(false); setLueckentextMode(false); setPuzzleMode(false); setDeclinaMode(false); setArtikelSniperMode(false); resetModes(); stopAudio();}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${diktatMode ? 'bg-red-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="edit" className="w-3 h-3 md:w-4 md:h-4" /> Diktat</button>
-                                <button onClick={() => {setLueckentextMode(!lueckentextMode); setDiktatMode(false); setPuzzleMode(false); setArtikelSniperMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${lueckentextMode ? 'bg-amber-500 text-black' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="edit-3" className="w-3 h-3 md:w-4 md:h-4" /> Huecos</button>
-                                <button onClick={() => {setArtikelSniperMode(!artikelSniperMode); setDiktatMode(false); setLueckentextMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${artikelSniperMode ? 'bg-red-800 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="target" className="w-3 h-3 md:w-4 md:h-4" /> Artículos</button>
-                                <button onClick={() => {setDeclinaMode(!declinaMode); setDiktatMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${declinaMode ? 'bg-pink-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="wand-2" className="w-3 h-3 md:w-4 md:h-4" /> Declinar</button>
-                                <button onClick={() => {setTempusMode(!tempusMode);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${tempusMode ? 'bg-blue-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="clock" className="w-3 h-3 md:w-4 md:h-4" /> Tempus</button>
-                                <button onClick={() => {setPuzzleMode(!puzzleMode); setDiktatMode(false); setBlindMode(false); setDeclinaMode(false); setArtikelSniperMode(false); resetModes(); stopAudio();}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${puzzleMode ? 'bg-indigo-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}><Icon name="puzzle" className="w-3 h-3 md:w-4 md:h-4" /> Satzbau</button>
-                                <button onClick={() => {setBlindMode(!blindMode); setDiktatMode(false); setPuzzleMode(false);}} className={`flex items-center gap-0.5 md:gap-1 px-2 md:px-3 py-1 rounded-lg text-[10px] md:text-xs font-bold transition ${blindMode ? 'bg-blue-400 text-black' : 'text-gray-300 hover:bg-white/10'}`}>{blindMode ? <Icon name="eye-off" className="w-3 h-3 md:w-4 md:h-4" /> : <Icon name="eye" className="w-3 h-3 md:w-4 md:h-4" />} Oído</button>
-                                <div className="flex items-center gap-0.5 md:gap-1 pl-1 md:pl-2 border-l border-white/20">
-                                    <Icon name="mic-off" className={`w-3 h-3 md:w-4 md:h-4 ${roleplayChar !== 'none' ? 'text-red-400' : 'text-gray-400'}`} />
-                                    <select className="bg-transparent text-[10px] md:text-xs text-white font-bold outline-none cursor-pointer" value={roleplayChar} onChange={(e) => setRoleplayChar(e.target.value)}>
-                                        <option value="none" className="text-black">No mutear</option>
-                                        <option value="Todos" className="text-black font-bold">Mutear TODOS</option>
-                                        <option value="Lukas" className="text-black">Lukas</option>
-                                        <option value="Elena" className="text-black">Elena</option>
-                                        <option value="Herr Weber" className="text-black">Weber</option>
-                                    </select>
-                                </div>
-                            </div>
-                            </div>
-                        )}
+                        {/* Barra de herramientas de Historia movida al header, debajo del bloque de usuario */}
 
                         {podcastMode && (
                             <div className="absolute top-2 right-2 bg-indigo-600/30 text-indigo-200 border border-indigo-500/50 px-2 md:px-4 py-1 md:py-2 rounded-full font-bold flex flex-col sm:flex-row items-start sm:items-center gap-0.5 sm:gap-2 animate-pulse z-10 text-[10px] md:text-sm max-w-[min(96%,280px)] sm:max-w-none text-left">
