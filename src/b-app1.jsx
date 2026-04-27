@@ -24,6 +24,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const rutaTabTimerRef = useRef(null);
           const [rutaTranscript, setRutaTranscript] = useState('');
           const [rutaListening, setRutaListening] = useState(false);
+          const [rutaTutorTalking, setRutaTutorTalking] = useState(false);
           const [readingSource, setReadingSource] = useState('current_story');
           const [readingScriptId, setReadingScriptId] = useState('__current__');
           const [readingTextInput, setReadingTextInput] = useState('');
@@ -55,6 +56,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const readingRestartTimerRef = useRef(null);
           const readingSessionIdRef = useRef(0);
           const readingTextSurfaceRef = useRef(null);
+          const rutaAutoSpeakRef = useRef('');
           const [guionData, setGuionData] = useState(DEFAULT_GUION);
           const [activeScriptTitle, setActiveScriptTitle] = useState("Lektion 17: Kunst");
           const [isDefaultScript, setIsDefaultScript] = useState(true);
@@ -2652,6 +2654,9 @@ const finishPlacementWithLevel = (finalLevel) => {
               window.speechSynthesis.cancel();
               const u = new SpeechSynthesisUtterance(text);
               u.lang = 'de-DE';
+              u.onstart = () => setRutaTutorTalking(true);
+              u.onend = () => setRutaTutorTalking(false);
+              u.onerror = () => setRutaTutorTalking(false);
               if (typeof window.__mullerApplyPreferredDeVoice === 'function') window.__mullerApplyPreferredDeVoice(u);
               else {
                   u.voice = rutaMentor === 'tom' ? getVoice('de', 'male') : getVoice('de', 'female');
@@ -2661,6 +2666,22 @@ const finishPlacementWithLevel = (finalLevel) => {
               else { u.pitch = 1.32; u.rate = 0.96; }
               window.speechSynthesis.speak(u);
           };
+
+          useEffect(() => {
+              const ex = rutaRun && Array.isArray(rutaRun.exercisePlan) ? rutaRun.exercisePlan[rutaRun.exerciseIdx || 0] : null;
+              if (!ex) {
+                  rutaAutoSpeakRef.current = '';
+                  setRutaTutorTalking(false);
+                  return;
+              }
+              const shouldAutoSpeak = (rutaRun.step || 0) === 0 && (ex.type === 'read' || ex.type === 'speak');
+              if (!shouldAutoSpeak) return;
+              const key = `${ex.id}:${rutaRun.step || 0}`;
+              if (rutaAutoSpeakRef.current === key) return;
+              rutaAutoSpeakRef.current = key;
+              const phrase = ex.type === 'speak' ? ex.target : ex.de;
+              if (phrase) speakRutaDe(phrase);
+          }, [rutaRun && rutaRun.exerciseIdx, rutaRun && rutaRun.step, rutaRun && rutaRun.exercisePlan]);
 
           const stopAudio = () => { 
               window.speechSynthesis.cancel(); 
