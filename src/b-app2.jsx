@@ -3469,6 +3469,19 @@
                                                   <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-4">
                                                       <p className="text-white font-bold mb-3">{ex.prompt}</p>
                                                   </div>
+                                              ) : ex.type === 'podcast' || ex.type === 'audio_story' ? (
+                                                  <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-950/20 p-4">
+                                                      <p className="text-[11px] uppercase tracking-wide text-sky-300 font-black mb-2">{ex.title || 'Audio interactivo'}</p>
+                                                      {Array.isArray(ex.transcript) && ex.transcript.length ? (
+                                                          <div className="space-y-1.5 mb-3">
+                                                              {ex.transcript.slice(0, 3).map((line, idx) => (
+                                                                  <p key={`${ex.id}-line-${idx}`} className="text-sm text-white/90">{line}</p>
+                                                              ))}
+                                                          </div>
+                                                      ) : null}
+                                                      <p className="text-white font-bold mb-2">{ex.prompt}</p>
+                                                      <button type="button" onClick={() => speakRutaDe(Array.isArray(ex.transcript) ? ex.transcript.join(' ') : (ex.prompt || ''))} className="inline-flex items-center gap-1 text-xs font-bold text-sky-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar audio</button>
+                                                  </div>
                                               ) : (
                                                   <div className="mb-4 rounded-xl border border-rose-500/25 bg-rose-950/20 p-4">
                                                       <p className="text-gray-300 mb-2">Lee en voz alta en alemán:</p>
@@ -3476,7 +3489,7 @@
                                                   </div>
                                               )}
                                               <button type="button" onClick={() => { setRutaRun({ ...rutaRun, step: 1 }); setRutaFillInput(''); setRutaSpeakErr(''); window.__mullerPlaySfx && window.__mullerPlaySfx('tick'); }} className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg">
-                                                  {ex.type === 'read' ? 'Marcar como leído y continuar' : ex.type === 'fill' ? 'Ir a respuesta' : ex.type === 'order' || ex.type === 'connector' ? 'Responder ahora' : 'Ir a validación'}
+                                                  {ex.type === 'read' ? 'Marcar como leído y continuar' : ex.type === 'fill' ? 'Ir a respuesta' : ex.type === 'order' || ex.type === 'connector' || ex.type === 'podcast' || ex.type === 'audio_story' ? 'Responder ahora' : 'Ir a validación'}
                                               </button>
                                           </>
                                       )}
@@ -3494,8 +3507,14 @@
                                               <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Continuar</button>
                                           </>
                                       )}
-                                      {st === 1 && ex && (ex.type === 'order' || ex.type === 'connector') && (
+                                      {st === 1 && ex && (ex.type === 'order' || ex.type === 'connector' || ex.type === 'podcast' || ex.type === 'audio_story') && (
                                           <>
+                                              {(ex.type === 'podcast' || ex.type === 'audio_story') && Array.isArray(ex.transcript) ? (
+                                                  <div className="mb-3 rounded-xl border border-sky-500/30 bg-sky-950/20 p-3">
+                                                      <p className="text-[11px] text-sky-300 font-black mb-1">Escucha y responde sobre la marcha</p>
+                                                      <p className="text-sm text-white">{ex.prompt}</p>
+                                                  </div>
+                                              ) : null}
                                               <div className="grid grid-cols-1 gap-2 mb-3">
                                                   {(ex.options || []).map((opt, idx) => (
                                                       <button key={`${ex.id}-opt-${idx}`} type="button" onClick={() => handleOptionAnswer(opt)} className="text-left rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/15 px-4 py-3 text-white font-bold text-sm">
@@ -3538,7 +3557,7 @@
                                               <p className="text-[11px] text-gray-500 mt-2">Si hoy no puedes usar micrófono, puedes avanzar igualmente y practicar voz después.</p>
                                           </>
                                       )}
-                                      {st === 2 && ex && (ex.type === 'fill' || ex.type === 'order' || ex.type === 'connector') && (
+                                      {st === 2 && ex && (ex.type === 'fill' || ex.type === 'order' || ex.type === 'connector' || ex.type === 'podcast' || ex.type === 'audio_story') && (
                                           <div className="space-y-3">
                                               <p className="text-sm text-gray-300">Respuesta correcta: <strong className="text-emerald-300">{ex.answer}</strong></p>
                                               <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 font-black py-3 text-white">Siguiente ejercicio</button>

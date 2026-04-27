@@ -1332,7 +1332,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
               return dayMap;
           };
 
-          const RUTA_SECTION_EXERCISES = 12;
+          const RUTA_SECTION_EXERCISES = 14;
           const RUTA_REVIEW_RATIO = 0.2;
           const RUTA_MIN_ACCURACY_TO_UNLOCK_NEXT_LEVEL = 0.7;
           const normalizeRutaLevelKey = (value) => {
@@ -1347,12 +1347,12 @@ const [placementFinished, setPlacementFinished] = useState(false);
           };
 
           const rutaExerciseTypeByLevel = {
-              A0: ['read', 'read', 'fill', 'read', 'fill', 'speak', 'read', 'fill', 'read', 'fill', 'speak', 'fill'],
-              A1: ['read', 'fill', 'order', 'fill', 'speak', 'read', 'fill', 'order', 'fill', 'speak', 'fill', 'read'],
-              A2: ['read', 'fill', 'speak', 'order', 'fill', 'speak', 'read', 'fill', 'speak', 'order', 'read', 'speak'],
-              B1: ['fill', 'speak', 'order', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'order', 'read', 'fill'],
-              B2: ['fill', 'speak', 'connector', 'read', 'speak', 'fill', 'connector', 'fill', 'read', 'speak', 'fill', 'speak'],
-              C1: ['speak', 'connector', 'speak', 'fill', 'read', 'connector', 'fill', 'speak', 'fill', 'read', 'speak', 'connector']
+              A0: ['read', 'read', 'fill', 'read', 'fill', 'speak', 'read', 'fill', 'read', 'fill', 'speak', 'fill', 'podcast', 'audio_story'],
+              A1: ['read', 'fill', 'order', 'fill', 'speak', 'read', 'fill', 'order', 'fill', 'speak', 'fill', 'read', 'podcast', 'audio_story'],
+              A2: ['read', 'fill', 'speak', 'order', 'fill', 'speak', 'read', 'fill', 'speak', 'order', 'read', 'speak', 'podcast', 'audio_story'],
+              B1: ['fill', 'speak', 'order', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'order', 'read', 'fill', 'podcast', 'audio_story'],
+              B2: ['fill', 'speak', 'connector', 'read', 'speak', 'fill', 'connector', 'fill', 'read', 'speak', 'fill', 'speak', 'podcast', 'audio_story'],
+              C1: ['speak', 'connector', 'speak', 'fill', 'read', 'connector', 'fill', 'speak', 'fill', 'read', 'speak', 'connector', 'podcast', 'audio_story']
           };
 
           const shouldShowHintForLevel = (levelKey, idx) => {
@@ -1639,6 +1639,53 @@ const [placementFinished, setPlacementFinished] = useState(false);
                           });
                       }
                   } else {
+                      if (mode === 'podcast') {
+                          const left = sourceSentence.replace(/[.?!]$/, '').trim();
+                          const right = phrasePool[(i + 2) % phrasePool.length] || srcPhrase;
+                          const rightSentence = String(right.de || sourceSentence).replace(/[.?!]$/, '').trim();
+                          const conversation = [
+                              `A: ${left}.`,
+                              `B: ${rightSentence}.`,
+                              `A: ${left}, ${connectorPool[i % connectorPool.length]} heute.`
+                          ];
+                          const askedWord = chooseGapWord(conversation[1]) || chooseGapWord(conversation[0]) || 'Thema';
+                          const distractor1 = chooseGapWord(phrasePool[(i + 3) % phrasePool.length] && phrasePool[(i + 3) % phrasePool.length].de) || 'Wetter';
+                          const distractor2 = chooseGapWord(phrasePool[(i + 4) % phrasePool.length] && phrasePool[(i + 4) % phrasePool.length].de) || 'Arbeit';
+                          const options = [...new Set([askedWord, distractor1, distractor2])].slice(0, 3).sort(() => Math.random() - 0.5);
+                          plan.push({
+                              id: `${srcLesson.id || lesson.id}-podcast-${i}`,
+                              type: 'podcast',
+                              title: 'Podcast corto · Dos personas',
+                              transcript: conversation,
+                              prompt: '¿Qué palabra clave acaba de decir la persona B?',
+                              options,
+                              answer: askedWord,
+                              fromReview: useReview
+                          });
+                          continue;
+                      }
+                      if (mode === 'audio_story') {
+                          const base = sourceSentence.replace(/[.?!]$/, '').trim();
+                          const connector = connectorPool[i % connectorPool.length];
+                          const storyParts = [
+                              `Situation: ${base}.`,
+                              `Person 1: Ich komme später, ${connector} ich noch arbeite.`,
+                              `Person 2: Kein Problem, wir warten am Eingang.`
+                          ];
+                          const ordered = [storyParts[0], storyParts[1], storyParts[2]];
+                          const shuffled = [...ordered].sort(() => Math.random() - 0.5);
+                          plan.push({
+                              id: `${srcLesson.id || lesson.id}-audio-story-${i}`,
+                              type: 'audio_story',
+                              title: 'Audio story · Ordena la escena',
+                              transcript: ordered,
+                              prompt: 'Ordena la frase principal del diálogo:',
+                              options: shuffled,
+                              answer: ordered[1],
+                              fromReview: useReview
+                          });
+                          continue;
+                      }
                       if (mode === 'order') {
                           const base = sourceSentence;
                           const distractorA = base.replace(/\bich\b/i, 'wir');
@@ -2892,12 +2939,16 @@ const finishPlacementWithLevel = (finalLevel) => {
                   setRutaTutorTalking(false);
                   return;
               }
-              const shouldAutoSpeak = (rutaRun.step || 0) === 0 && (ex.type === 'read' || ex.type === 'speak');
+              const shouldAutoSpeak = (rutaRun.step || 0) === 0 && (ex.type === 'read' || ex.type === 'speak' || ex.type === 'podcast' || ex.type === 'audio_story');
               if (!shouldAutoSpeak) return;
               const key = `${ex.id}:${rutaRun.step || 0}`;
               if (rutaAutoSpeakRef.current === key) return;
               rutaAutoSpeakRef.current = key;
-              const phrase = ex.type === 'speak' ? ex.target : ex.de;
+              const phrase = ex.type === 'speak'
+                  ? ex.target
+                  : (ex.type === 'podcast' || ex.type === 'audio_story')
+                      ? (Array.isArray(ex.transcript) ? ex.transcript.join(' ') : '')
+                      : ex.de;
               if (phrase) speakRutaDe(phrase);
           }, [rutaRun && rutaRun.exerciseIdx, rutaRun && rutaRun.step, rutaRun && rutaRun.exercisePlan]);
 
