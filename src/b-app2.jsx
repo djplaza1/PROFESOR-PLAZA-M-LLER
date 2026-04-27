@@ -3385,6 +3385,17 @@
                               const score = rutaRun.score || { correct: 0, total: 0, reviewCorrect: 0, reviewTotal: 0 };
                               const accPct = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
                               const reviewLabel = ex && ex.fromReview ? 'Repaso (20%)' : 'Nuevo';
+                              const handleOptionAnswer = (opt) => {
+                                  if (!ex) return;
+                                  const ok = String(opt || '').trim().toLowerCase() === String(ex.answer || '').trim().toLowerCase();
+                                  if (window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(ok);
+                                  if (ok) {
+                                      setRutaSpeakErr('');
+                                      setRutaRun({ ...rutaRun, step: 2 });
+                                  } else {
+                                      setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Casi — prueba otra vez.');
+                                  }
+                              };
                               const advanceExercise = (wasCorrect) => {
                                   if (!ex) return;
                                   const nextScore = {
@@ -3427,6 +3438,10 @@
                                                       <p className="text-white font-bold mb-3">{ex.prompt}</p>
                                                       {ex.hint ? <p className="text-xs text-gray-500 mb-2">Pista: {ex.hint}</p> : null}
                                                   </div>
+                                              ) : ex.type === 'order' || ex.type === 'connector' ? (
+                                                  <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-4">
+                                                      <p className="text-white font-bold mb-3">{ex.prompt}</p>
+                                                  </div>
                                               ) : (
                                                   <div className="mb-4 rounded-xl border border-rose-500/25 bg-rose-950/20 p-4">
                                                       <p className="text-gray-300 mb-2">Lee en voz alta en alemán:</p>
@@ -3434,7 +3449,7 @@
                                                   </div>
                                               )}
                                               <button type="button" onClick={() => { setRutaRun({ ...rutaRun, step: 1 }); setRutaFillInput(''); setRutaSpeakErr(''); window.__mullerPlaySfx && window.__mullerPlaySfx('tick'); }} className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg">
-                                                  {ex.type === 'read' ? 'Marcar como leído y continuar' : ex.type === 'fill' ? 'Ir a respuesta' : 'Ir a validación'}
+                                                  {ex.type === 'read' ? 'Marcar como leído y continuar' : ex.type === 'fill' ? 'Ir a respuesta' : ex.type === 'order' || ex.type === 'connector' ? 'Responder ahora' : 'Ir a validación'}
                                               </button>
                                           </>
                                       )}
@@ -3450,6 +3465,18 @@
                                       {st === 1 && ex && ex.type === 'read' && (
                                           <>
                                               <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Continuar</button>
+                                          </>
+                                      )}
+                                      {st === 1 && ex && (ex.type === 'order' || ex.type === 'connector') && (
+                                          <>
+                                              <div className="grid grid-cols-1 gap-2 mb-3">
+                                                  {(ex.options || []).map((opt, idx) => (
+                                                      <button key={`${ex.id}-opt-${idx}`} type="button" onClick={() => handleOptionAnswer(opt)} className="text-left rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/15 px-4 py-3 text-white font-bold text-sm">
+                                                          {opt}
+                                                      </button>
+                                                  ))}
+                                              </div>
+                                              {rutaSpeakErr ? <p className="text-amber-200 text-sm mb-2">{rutaSpeakErr}</p> : null}
                                           </>
                                       )}
                                       {st === 1 && ex && ex.type === 'speak' && (
@@ -3484,7 +3511,7 @@
                                               <p className="text-[11px] text-gray-500 mt-2">Si hoy no puedes usar micrófono, puedes avanzar igualmente y practicar voz después.</p>
                                           </>
                                       )}
-                                      {st === 2 && ex && ex.type === 'fill' && (
+                                      {st === 2 && ex && (ex.type === 'fill' || ex.type === 'order' || ex.type === 'connector') && (
                                           <div className="space-y-3">
                                               <p className="text-sm text-gray-300">Respuesta correcta: <strong className="text-emerald-300">{ex.answer}</strong></p>
                                               <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 font-black py-3 text-white">Siguiente ejercicio</button>

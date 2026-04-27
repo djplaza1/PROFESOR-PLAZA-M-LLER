@@ -1346,11 +1346,11 @@ const [placementFinished, setPlacementFinished] = useState(false);
 
           const rutaExerciseTypeByLevel = {
               A0: ['read', 'read', 'fill', 'read', 'fill', 'speak', 'read', 'fill', 'read', 'fill', 'speak', 'fill'],
-              A1: ['read', 'fill', 'read', 'fill', 'speak', 'read', 'fill', 'read', 'fill', 'speak', 'fill', 'read'],
-              A2: ['read', 'fill', 'speak', 'read', 'fill', 'speak', 'read', 'fill', 'speak', 'fill', 'read', 'speak'],
-              B1: ['fill', 'speak', 'read', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak', 'read', 'fill'],
-              B2: ['fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak'],
-              C1: ['speak', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak', 'fill', 'read', 'speak', 'fill']
+              A1: ['read', 'fill', 'order', 'fill', 'speak', 'read', 'fill', 'order', 'fill', 'speak', 'fill', 'read'],
+              A2: ['read', 'fill', 'speak', 'order', 'fill', 'speak', 'read', 'fill', 'speak', 'order', 'read', 'speak'],
+              B1: ['fill', 'speak', 'order', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'order', 'read', 'fill'],
+              B2: ['fill', 'speak', 'connector', 'read', 'speak', 'fill', 'connector', 'fill', 'read', 'speak', 'fill', 'speak'],
+              C1: ['speak', 'connector', 'speak', 'fill', 'read', 'connector', 'fill', 'speak', 'fill', 'read', 'speak', 'connector']
           };
 
           const shouldShowHintForLevel = (levelKey, idx) => {
@@ -1396,6 +1396,11 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   const srcPhrase = srcPhrases[i % srcPhrases.length] || safePhrases[0];
                   const srcFill = srcLesson.fill || safeFill;
                   const srcSpeak = srcLesson.speak || { target: (srcPhrase && srcPhrase.de) || safeSpeak.target };
+                  const connectorPool = levelKey === 'C1'
+                      ? ['demzufolge', 'folglich', 'nichtsdestotrotz', 'insofern']
+                      : levelKey === 'B2'
+                          ? ['während', 'sobald', 'falls', 'hingegen']
+                          : ['weil', 'deshalb', 'aber', 'trotzdem'];
 
                   if (mode === 'read') {
                       plan.push({
@@ -1415,6 +1420,35 @@ const [placementFinished, setPlacementFinished] = useState(false);
                           fromReview: useReview
                       });
                   } else {
+                      if (mode === 'order') {
+                          const base = (srcPhrase && srcPhrase.de) || 'Ich lerne Deutsch.';
+                          const distractorA = base.replace(/\bich\b/i, 'wir');
+                          const distractorB = base.split(' ').reverse().join(' ');
+                          const opts = [base, distractorA, distractorB].sort(() => Math.random() - 0.5);
+                          plan.push({
+                              id: `${srcLesson.id || lesson.id}-order-${i}`,
+                              type: 'order',
+                              prompt: 'Selecciona el orden correcto de la frase:',
+                              options: opts,
+                              answer: base,
+                              fromReview: useReview
+                          });
+                          continue;
+                      }
+                      if (mode === 'connector') {
+                          const connector = connectorPool[i % connectorPool.length];
+                          const sentence = `Ich lerne täglich, ${connector} ich besser sprechen will.`;
+                          const options = [...new Set([connector, ...connectorPool.filter((c) => c !== connector).slice(0, 3)])].sort(() => Math.random() - 0.5);
+                          plan.push({
+                              id: `${srcLesson.id || lesson.id}-connector-${i}`,
+                              type: 'connector',
+                              prompt: sentence.replace(connector, '_____'),
+                              options,
+                              answer: connector,
+                              fromReview: useReview
+                          });
+                          continue;
+                      }
                       plan.push({
                           id: `${srcLesson.id || lesson.id}-speak-${i}`,
                           type: 'speak',
