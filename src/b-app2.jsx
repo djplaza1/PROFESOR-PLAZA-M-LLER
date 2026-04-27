@@ -3465,7 +3465,7 @@
                                               <button
                                                   type="button"
                                                   onClick={() => runSingleSubmitAction('ruta-speak-validate', () => {
-                                                      if (checkRutaSpeakAnswer(ex.target)) advanceExercise(true);
+                                                      if (checkRutaSpeakAnswer(ex.target, rutaRun.levelKey)) advanceExercise(true);
                                                   })}
                                                   className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg"
                                               >

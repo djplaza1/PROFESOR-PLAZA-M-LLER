@@ -1333,11 +1333,38 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const RUTA_SECTION_EXERCISES = 12;
           const RUTA_REVIEW_RATIO = 0.2;
           const RUTA_MIN_ACCURACY_TO_UNLOCK_NEXT_LEVEL = 0.7;
+          const normalizeRutaLevelKey = (value) => {
+              const s = String(value || '').toUpperCase();
+              if (s.startsWith('A0')) return 'A0';
+              if (s.startsWith('A1')) return 'A1';
+              if (s.startsWith('A2')) return 'A2';
+              if (s.startsWith('B1')) return 'B1';
+              if (s.startsWith('B2')) return 'B2';
+              if (s.startsWith('C1')) return 'C1';
+              return s;
+          };
+
+          const rutaExerciseTypeByLevel = {
+              A0: ['read', 'read', 'fill', 'read', 'fill', 'speak', 'read', 'fill', 'read', 'fill', 'speak', 'fill'],
+              A1: ['read', 'fill', 'read', 'fill', 'speak', 'read', 'fill', 'read', 'fill', 'speak', 'fill', 'read'],
+              A2: ['read', 'fill', 'speak', 'read', 'fill', 'speak', 'read', 'fill', 'speak', 'fill', 'read', 'speak'],
+              B1: ['fill', 'speak', 'read', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak', 'read', 'fill'],
+              B2: ['fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak'],
+              C1: ['speak', 'fill', 'speak', 'fill', 'read', 'speak', 'fill', 'speak', 'fill', 'read', 'speak', 'fill']
+          };
+
+          const shouldShowHintForLevel = (levelKey, idx) => {
+              if (levelKey === 'A0' || levelKey === 'A1') return true;
+              if (levelKey === 'A2') return idx % 2 === 0;
+              if (levelKey === 'B1') return idx % 3 === 0;
+              return false;
+          };
 
           const buildRutaExercisePlan = useCallback((levels, levelIdx, lessonIdx) => {
               const lv = levels && levels[levelIdx];
               const lesson = lv && lv.lessons && lv.lessons[lessonIdx];
               if (!lesson) return [];
+              const levelKey = normalizeRutaLevelKey((lv && lv.badge) || (lv && lv.title) || '');
               const safePhrases = Array.isArray(lesson.phrases) && lesson.phrases.length
                   ? lesson.phrases
                   : [{ de: 'Ich lerne Deutsch.', es: 'Aprendo alemán.' }];
@@ -1358,10 +1385,11 @@ const [placementFinished, setPlacementFinished] = useState(false);
               const total = RUTA_SECTION_EXERCISES;
               const reviewCount = Math.max(0, Math.round(total * RUTA_REVIEW_RATIO));
               const reviewSlots = new Set(Array.from({ length: reviewCount }, (_, i) => Math.floor(((i + 1) * total) / (reviewCount + 1))));
+              const typeSequence = rutaExerciseTypeByLevel[levelKey] || rutaExerciseTypeByLevel.A2;
 
               const plan = [];
               for (let i = 0; i < total; i++) {
-                  const mode = i % 3; // 0 read/listen, 1 fill, 2 speak
+                  const mode = typeSequence[i % typeSequence.length];
                   const useReview = reviewPool.length > 0 && reviewSlots.has(i);
                   const srcLesson = useReview ? reviewPool[i % reviewPool.length] : lesson;
                   const srcPhrases = Array.isArray(srcLesson.phrases) && srcLesson.phrases.length ? srcLesson.phrases : safePhrases;
@@ -1369,7 +1397,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   const srcFill = srcLesson.fill || safeFill;
                   const srcSpeak = srcLesson.speak || { target: (srcPhrase && srcPhrase.de) || safeSpeak.target };
 
-                  if (mode === 0) {
+                  if (mode === 'read') {
                       plan.push({
                           id: `${srcLesson.id || lesson.id}-read-${i}`,
                           type: 'read',
@@ -1377,13 +1405,13 @@ const [placementFinished, setPlacementFinished] = useState(false);
                           es: srcPhrase.es || '',
                           fromReview: useReview
                       });
-                  } else if (mode === 1) {
+                  } else if (mode === 'fill') {
                       plan.push({
                           id: `${srcLesson.id || lesson.id}-fill-${i}`,
                           type: 'fill',
                           prompt: srcFill.prompt || safeFill.prompt,
                           answer: srcFill.answer || safeFill.answer,
-                          hint: srcFill.hint || '',
+                          hint: shouldShowHintForLevel(levelKey, i) ? (srcFill.hint || '') : '',
                           fromReview: useReview
                       });
                   } else {
@@ -1407,6 +1435,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
               setRutaRun({
                   levelIdx,
                   lessonIdx,
+                  levelKey: normalizeRutaLevelKey((levels[levelIdx] && levels[levelIdx].badge) || (levels[levelIdx] && levels[levelIdx].title) || ''),
                   step: 0,
                   exerciseIdx: 0,
                   exerciseTotal: plan.length,
@@ -1613,12 +1642,14 @@ const finishPlacementWithLevel = (finalLevel) => {
               return false;
           };
 
-          const checkRutaSpeakAnswer = (target) => {
+          const checkRutaSpeakAnswer = (target, levelKey) => {
               const a = normalizeGermanSpeechText(rutaTranscript || '');
               const b = normalizeGermanSpeechText(target || '');
               if (!a || !b) { setRutaSpeakErr('Graba de nuevo con el micrófono.'); return false; }
               const dist = levenshteinDistance(a, b);
-              const tol = Math.max(2, Math.floor(b.length / 5));
+              const key = normalizeRutaLevelKey(levelKey || '');
+              const factor = (key === 'A0' || key === 'A1') ? 4 : (key === 'A2' ? 5 : (key === 'B1' ? 6 : 7));
+              const tol = Math.max(1, Math.floor(b.length / factor));
               if (a === b || dist <= tol) { window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true); setRutaSpeakErr(''); return true; }
               window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(false);
               setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Casi — prueba otra vez.');
