@@ -1396,6 +1396,8 @@ const [placementFinished, setPlacementFinished] = useState(false);
           };
 
           const rutaStopWords = new Set(['ich', 'du', 'er', 'sie', 'wir', 'ihr', 'und', 'oder', 'aber', 'der', 'die', 'das', 'ein', 'eine', 'ist', 'sind', 'bin', 'im', 'in', 'zu', 'mit', 'von', 'am', 'an']);
+          const PERSONS = ['ich', 'du', 'er_sie_es', 'wir', 'ihr', 'sie_Sie'];
+          const PERSON_LABELS = { ich: 'ich', du: 'du', er_sie_es: 'er/sie/es', wir: 'wir', ihr: 'ihr', sie_Sie: 'sie/Sie' };
           const chooseGapWord = (sentence) => {
               const words = String(sentence || '').replace(/[.,!?;:()"]/g, ' ').split(/\s+/).map((w) => w.trim()).filter(Boolean);
               const candidates = words.filter((w) => w.length >= 4 && !rutaStopWords.has(w.toLowerCase()));
@@ -1414,6 +1416,22 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   hint: hintBase || '',
                   fromReview: !!fromReview
               };
+          };
+          const personCycle = (idx) => PERSONS[idx % PERSONS.length];
+          const conjugateFor = (verbEntry, person) => {
+              if (!verbEntry || !verbEntry.forms || !verbEntry.forms.praesens) return null;
+              return verbEntry.forms.praesens[person] || null;
+          };
+          const buildVerbSentence = (verbEntry, person, adverb) => {
+              if (!verbEntry || !verbEntry.lemma) return null;
+              const conj = conjugateFor(verbEntry, person);
+              if (!conj) return null;
+              const subj = person === 'ich' ? 'Ich' : person === 'du' ? 'du' : person === 'er_sie_es' ? 'er' : person === 'wir' ? 'Wir' : person === 'ihr' ? 'ihr' : 'Sie';
+              const adv = adverb || '';
+              const es = verbEntry.es || '';
+              const fullDe = adv ? `${subj} ${conj} ${adv}.` : `${subj} ${conj}.`;
+              const fullEs = es ? `${es} (${subj.toLowerCase()})` : '';
+              return { de: fullDe, es: fullEs, conj, person };
           };
 
           const buildRutaExercisePlan = useCallback((levels, levelIdx, lessonIdx) => {
@@ -1462,8 +1480,22 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   const ex = v && Array.isArray(v.examples) && v.examples.length ? v.examples[0] : null;
                   if (ex && ex.de) pushUniquePhrase(ex.de, ex.es || '', 'verb');
                   else if (v && v.lemma) {
+                      const person = personCycle(idx);
                       const adv = levelLexicon.adverbs[idx % levelLexicon.adverbs.length];
-                      pushUniquePhrase(`Ich ${v.lemma} ${adv}.`, v.es || '', 'verb');
+                      const built = buildVerbSentence(v, person, adv);
+                      if (built) {
+                          pushUniquePhrase(built.de, built.es, 'verb');
+                          const conjugated = built.conj;
+                          const label = PERSON_LABELS[person] || person;
+                          const genPhrase = built.de;
+                          const genEs = built.es;
+                          if (!genPhrase.includes('_____')) {
+                              const gapSentence = genPhrase.replace(conjugated, '_____');
+                              if (gapSentence !== genPhrase) {
+                                  pushUniquePhrase(gapSentence + ' (' + label + ')', genEs + ' (persona: ' + label + ')', 'verb-gap');
+                              }
+                          }
+                      }
                   }
               });
               levelArticleSamples.forEach((a, idx) => {
@@ -1471,7 +1503,10 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   const adj = levelLexicon.adjectives[idx % levelLexicon.adjectives.length];
                   const noun = String(a.de || '').trim();
                   if (!noun) return;
-                  pushUniquePhrase(`${noun} ist ${adj}, ${conn} wir es oft benutzen.`, a.es || noun, 'article');
+                  const artPerson = personCycle(idx + 3);
+                  const artSubj = artPerson === 'ich' ? 'ich' : artPerson === 'du' ? 'du' : artPerson === 'er_sie_es' ? 'man' : artPerson === 'wir' ? 'wir' : artPerson === 'ihr' ? 'ihr' : 'man';
+                  const artVerb = artPerson === 'er_sie_es' || artPerson === 'sie_Sie' ? 'benutzt' : artPerson === 'ich' ? 'benutze' : artPerson === 'du' ? 'benutzt' : artPerson === 'wir' ? 'benutzen' : artPerson === 'ihr' ? 'benutzt' : 'benutzt';
+                  pushUniquePhrase(`${noun} ist ${adj}, ${conn} ${artSubj} es ${artVerb}.`, a.es || noun, 'article');
               });
               if (phrasePool.length === 0) pushUniquePhrase('Ich lerne Deutsch.', 'Aprendo alemán.', 'fallback');
 
@@ -1544,7 +1579,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
                       if (mode === 'connector') {
                           const connector = connectorPool[i % connectorPool.length];
                           const core = sourceSentence.replace(/[.?!]$/, '').trim();
-                          const sentence = `${core}, ${connector} ich besser sprechen will.`;
+                          const sentence = `${core}, ${connector} ich besser sprechen kann.`;
                           const options = [...new Set([connector, ...connectorPool.filter((c) => c !== connector).slice(0, 3)])].sort(() => Math.random() - 0.5);
                           plan.push({
                               id: `${srcLesson.id || lesson.id}-connector-${i}`,
