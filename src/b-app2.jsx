@@ -4297,7 +4297,7 @@
 
               {/* REPRODUCTOR CONTROLES INFERIORES */}
               {activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !practiceActive && (
-                  <div className="muller-historia-player-bar bg-gray-950 p-3 md:p-6 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4 border-t border-gray-800 z-20">
+                  <div className="muller-historia-player-bar bg-gray-950 p-3 md:p-6 flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3 md:gap-4 border-t border-gray-800 z-20">
                       <div className="flex flex-col text-xs md:text-sm text-gray-400 w-full sm:w-auto text-center sm:text-left">
                         <span className="font-bold text-white text-sm md:text-base truncate sm:max-w-[200px]">{activeScriptTitle}</span>
                         <span>Szene {isReviewing ? reviewIndexPointer + 1 : sceneIndex + 1} von {isReviewing ? userStats.failedDiktatScenes.length : guionData.length} {isReviewing && "(Repaso)"}</span>
@@ -4313,7 +4313,7 @@
                         <button onClick={handleNext} className={`muller-icon-nav p-2 md:p-3 bg-gray-900 rounded-full transition text-white border border-gray-700 shadow-md ${podcastMode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`} disabled={podcastMode}><Icon name="chevron-right" className="w-4 h-4 md:w-6 md:h-6 text-white" /></button>
                       </div>
                       <button type="button" onClick={exportScriptPDF} className="flex bg-red-700 hover:bg-red-600 border border-red-500 px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-white font-bold items-center gap-2 shadow-lg transition text-xs md:text-sm shrink-0" title="PDF con alemán, traducción al español, vocabulario y análisis"><Icon name="file-down" className="w-3 h-3 md:w-4 md:h-4" /> PDF Guion</button>
-                      <div className="flex items-center justify-center gap-2 md:gap-3 bg-black/50 px-2 md:px-4 py-1 md:py-2 rounded-xl border border-gray-800 w-full sm:w-auto">
+                      <div className="flex items-center justify-center gap-2 md:gap-3 bg-black/50 px-2 md:px-4 py-1 md:py-2 rounded-xl border border-gray-800 w-full sm:w-auto sm:mr-6 md:mr-10">
                           <Icon name="sliders" className="w-3 h-3 md:w-4 md:h-4 text-gray-400" />
                           <input type="range" min="0.50" max="1.50" step="0.01" value={playbackRate} onChange={(e) => setPlaybackRate(parseFloat(e.target.value))} className="w-20 md:w-32 accent-blue-500 cursor-pointer"/>
                           <span className="text-white font-mono font-bold text-xs md:text-sm w-10 md:w-12 text-right">x{playbackRate.toFixed(2)}</span>
