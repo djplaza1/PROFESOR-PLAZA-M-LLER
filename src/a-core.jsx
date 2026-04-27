@@ -1285,19 +1285,7 @@
         };
         window.mullerRutaIsLessonUnlocked = function (levels, levelIdx, lessonIdx, completed, progress) {
             if (!levels[levelIdx] || !levels[levelIdx].lessons[lessonIdx]) return false;
-            if (levelIdx === 0 && lessonIdx === 0) return true;
-            if (lessonIdx === 0) {
-                var prev = levels[levelIdx - 1];
-                var prevDone = prev.lessons.every(function (l) { return completed[l.id]; });
-                if (!prevDone) return false;
-                var prevKey = String(prev.badge || prev.title || '').toUpperCase();
-                var levelScores = progress && progress.levelScores ? progress.levelScores : {};
-                var score = levelScores[prevKey] || { correct: 0, total: 0 };
-                var acc = score.total > 0 ? (score.correct / score.total) : 0;
-                return acc >= 0.7;
-            }
-            var prevId = levels[levelIdx].lessons[lessonIdx - 1].id;
-            return !!completed[prevId];
+            return true;
         };
 
         window.MULLER_RUTA_LEVELS = [
