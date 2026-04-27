@@ -1,0 +1,3917 @@
+﻿        function App() {
+          const [activeTab, setActiveTab] = useState(() => { try { return localStorage.getItem('muller_active_tab_v1') || 'inicio'; } catch { return 'inicio'; } });
+          const [showSplash, setShowSplash] = useState(false); 
+          const [splashLogoBlink, setSplashLogoBlink] = useState(false);
+          const [rutaSubTab, setRutaSubTab] = useState('camino');
+          const [rutaProgress, setRutaProgress] = useState(() => (typeof window.mullerRutaLoad === 'function' ? window.mullerRutaLoad() : { completed: {}, placementDone: false, suggestedLevelIdx: 0, playTimeMs: 0, lessonsCompleted: 0 }));
+          const [rutaRun, setRutaRun] = useState(null);
+          const [rutaVerbDb, setRutaVerbDb] = useState({ meta: null, verbs: [] });
+          const [rutaArticleDb, setRutaArticleDb] = useState([]);
+          const [rutaTopicFilter, setRutaTopicFilter] = useState('all');
+          // --- NUEVOS ESTADOS PARA TEST ADAPTATIVO (30 PREGUNTAS) ---
+const [placementQuestions, setPlacementQuestions] = useState([]);
+const [placementAnswers, setPlacementAnswers] = useState([]);
+const [placementIndex, setPlacementIndex] = useState(0);
+const [placementLevel, setPlacementLevel] = useState('A2');
+const [placementScore, setPlacementScore] = useState({ correct: 0, total: 0 });
+const [placementFinished, setPlacementFinished] = useState(false);
+          const [rutaMentor, setRutaMentor] = useState('lena');
+          const [rutaFillInput, setRutaFillInput] = useState('');
+          const [rutaSpeakErr, setRutaSpeakErr] = useState('');
+          const [celebrationModal, setCelebrationModal] = useState(null);
+          const [telcLevel, setTelcLevel] = useState('B1');
+          const [diktatMotivationMsg, setDiktatMotivationMsg] = useState('');
+          const rutaTabTimerRef = useRef(null);
+          const [rutaTranscript, setRutaTranscript] = useState('');
+          const [rutaListening, setRutaListening] = useState(false);
+          const [readingSource, setReadingSource] = useState('current_story');
+          const [readingScriptId, setReadingScriptId] = useState('__current__');
+          const [readingTextInput, setReadingTextInput] = useState('');
+          const [readingFontPx, setReadingFontPx] = useState(() => {
+              try {
+                  const raw = Number(localStorage.getItem(MULLER_READING_FONT_STORAGE));
+                  return Number.isFinite(raw) ? mullerClamp(raw, MULLER_READING_FONT_MIN, MULLER_READING_FONT_MAX) : 19;
+              } catch (e) {
+                  return 19;
+              }
+          });
+          const [readingWordInfo, setReadingWordInfo] = useState(null);
+          const [readingFocusMode, setReadingFocusMode] = useState(false);
+          const [readingSelectedSnippet, setReadingSelectedSnippet] = useState('');
+          const [readingWordAudioBusy, setReadingWordAudioBusy] = useState(false);
+          const [readingListening, setReadingListening] = useState(false);
+          const [readingTranscript, setReadingTranscript] = useState('');
+          const [readingScore, setReadingScore] = useState(null);
+          const [readingFeedback, setReadingFeedback] = useState([]);
+          const [diagnosticOpen, setDiagnosticOpen] = useState(false);
+          const [showSelfCheckPanel, setShowSelfCheckPanel] = useState(false);
+          const [sfxEpoch, setSfxEpoch] = useState(0);
+          const rutaRecRef = useRef(null);
+          const readingRecRef = useRef(null);
+          const readingFinalRef = useRef('');
+          const readingLiveTranscriptRef = useRef('');
+          const readingStopRequestedRef = useRef(false);
+          const readingAutoRestartRef = useRef(false);
+          const readingRestartTimerRef = useRef(null);
+          const readingSessionIdRef = useRef(0);
+          const readingTextSurfaceRef = useRef(null);
+          const [guionData, setGuionData] = useState(DEFAULT_GUION);
+          const [activeScriptTitle, setActiveScriptTitle] = useState("Lektion 17: Kunst");
+          const [isDefaultScript, setIsDefaultScript] = useState(true);
+          const [sceneIndex, setSceneIndex] = useState(0);
+          const [mode, setMode] = useState('dialogue'); 
+          const [isPlaying, setIsPlaying] = useState(false);
+          const [voicesLoaded, setVoicesLoaded] = useState(false);
+          const [playbackRate, setPlaybackRate] = useState(1.0); 
+          const [blindMode, setBlindMode] = useState(false); 
+          const [lueckentextMode, setLueckentextMode] = useState(false);
+          const [declinaMode, setDeclinaMode] = useState(false); 
+          const [tempusMode, setTempusMode] = useState(false); 
+          const [artikelSniperMode, setArtikelSniperMode] = useState(false); 
+          const [fluesternMode, setFluesternMode] = useState(false);
+          const [noiseEnabled, setNoiseEnabled] = useState(false); // NUEVO: Ruido de fondo
+          const [roleplayChar, setRoleplayChar] = useState('none');
+          const [podcastMode, setPodcastMode] = useState(false);
+          const [showHistoriaMenu, setShowHistoriaMenu] = useState(false);
+          /** Tras el Ãºltimo guion, carga el siguiente de Biblioteca (solo tiene efecto al terminar una escena en flujo normal / podcast). */
+          const [historiaPlaylistAllScripts, setHistoriaPlaylistAllScripts] = useState(false);
+          const [showCurrentTranslation, setShowCurrentTranslation] = useState(false); 
+          const [tempusVerbList, setTempusVerbList] = useState([]);
+          const [tempusSelectedVerb, setTempusSelectedVerb] = useState(null);
+          const [diktatMode, setDiktatMode] = useState(false);
+          const [diktatInput, setDiktatInput] = useState("");
+          const [showDiktatResult, setShowDiktatResult] = useState(false);
+          const [savedScripts, setSavedScripts] = useState([]);
+          /** Si practicas un guion guardado en Biblioteca, su id; si no, null (ejemplo, IA o no guardado). Sirve para vincular Â«Distribuir â†’ B1/B2Â». */
+          const [activeSavedScriptId, setActiveSavedScriptId] = useState(null);
+          const [customVocabLessons, setCustomVocabLessons] = useState([]);
+          const [lexikonSearch, setLexikonSearch] = useState('');
+          /** tr-es-de | tr-de-es | wiki-de | wiki-es */
+          const [lexikonDictKind, setLexikonDictKind] = useState('tr-es-de');
+          const [lexikonTransTarget, setLexikonTransTarget] = useState('de');
+          const [lexikonResults, setLexikonResults] = useState(null);
+          const [lexikonDictLoading, setLexikonDictLoading] = useState(false);
+          const [lexikonTransText, setLexikonTransText] = useState('');
+          const [lexikonTransOut, setLexikonTransOut] = useState('');
+          const [lexikonTransLoading, setLexikonTransLoading] = useState(false);
+          const [lexikonSaveLessonId, setLexikonSaveLessonId] = useState('');
+          const [lexikonNewLessonTitle, setLexikonNewLessonTitle] = useState('');
+          const [lexikonPairDe, setLexikonPairDe] = useState('');
+          const [lexikonPairEs, setLexikonPairEs] = useState('');
+          const [vocabTitleInput, setVocabTitleInput] = useState("");
+          const [vocabTextInput, setVocabTextInput] = useState("");
+          const [userStats, setUserStats] = useState({
+              username: "Estudiante", isPremium: true,
+              xp: 0, streakDays: 1, lastPlayedDate: new Date().toISOString().split('T')[0],
+              coins: 150, hearts: 5, 
+              diktatAttempts: 0, diktatCorrect: 0,
+              pronunciationTotalScore: 0, pronunciationAttempts: 0,
+              difficultVocab: [], normalVocab: [], 
+              difficultGrammar: [], 
+              failedDiktatScenes: [],
+              activityLog: [40, 60, 45, 80, 55, 90, 75],
+              activityByDay: {}
+          });
+          const [vocabReviewIndex, setVocabReviewIndex] = useState(0);
+          const [showVocabTranslation, setShowVocabTranslation] = useState(false);
+          const [currentVocabList, setCurrentVocabList] = useState([]); 
+          const [bxCategory, setBxCategory] = useState('mix'); 
+          const [bxBankLevel, setBxBankLevel] = useState('b1');
+          const [bxIndex, setBxIndex] = useState(0);
+          const [bxCurrentList, setBxCurrentList] = useState([]);
+          const [bxRemoteDatabases, setBxRemoteDatabases] = useState(() => tryBxSession());
+          const [bxUserOverlay, setBxUserOverlay] = useState(() => tryBxUserOverlay());
+          const [bxImportText, setBxImportText] = useState('');
+          const [bxImportSummary, setBxImportSummary] = useState('');
+          const [bxMoveTargetCat, setBxMoveTargetCat] = useState('verbos');
+          const [chromeAiText, setChromeAiText] = useState('');
+          const [chromeAiOut, setChromeAiOut] = useState('');
+          const [chromeAiBusy, setChromeAiBusy] = useState(false);
+          const [chromeAiLine, setChromeAiLine] = useState('');
+          const bxEffectiveDatabases = useMemo(() => mergeBxDatabases(bxRemoteDatabases || BX_DB_FALLBACK, bxUserOverlay), [bxRemoteDatabases, bxUserOverlay]);
+          const [practiceActive, setPracticeActive] = useState(null);
+          const [practiceIndex, setPracticeIndex] = useState(0);
+          const [practiceShowTrans, setPracticeShowTrans] = useState(false);
+          const [aiLevel, setAiLevel] = useState('B1');
+          const [aiTheme, setAiTheme] = useState('Alltag');
+          const [aiCustomWords, setAiCustomWords] = useState("");
+          const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+          const [isReviewing, setIsReviewing] = useState(false);
+          const [reviewIndexPointer, setReviewIndexPointer] = useState(0);
+          const [puzzleMode, setPuzzleMode] = useState(false);
+          const [puzzleWords, setPuzzleWords] = useState([]);
+          const [puzzleAnswer, setPuzzleAnswer] = useState([]);
+          const [showPuzzleResult, setShowPuzzleResult] = useState(false);
+          const [puzzleLastOk, setPuzzleLastOk] = useState(null);
+          const [isListening, setIsListening] = useState(false);
+          const [spokenText, setSpokenText] = useState("");
+          const [pronunciationScore, setPronunciationScore] = useState(null);
+          const [grammarPolizeiMsg, setGrammarPolizeiMsg] = useState("");
+          const [pronunciationFeedback, setPronunciationFeedback] = useState([]);
+          const [newScriptTitle, setNewScriptTitle] = useState("");
+          const [scriptInput, setScriptInput] = useState(`Lukas: Hallo Elena! (Â¡Hola Elena!) [der Tag - el dÃ­a]\nElena: Ja, ich bin froh! (Â¡SÃ­, estoy contenta!) [froh - contento]`);
+          const [showLoginModal, setShowLoginModal] = useState(false);
+          const [tempUsername, setTempUsername] = useState("");
+          const [showTutor, setShowTutor] = useState(false);
+          const [tutorMessage, setTutorMessage] = useState("");
+          const [showDeathModal, setShowDeathModal] = useState(false);
+          const [showGrammarPrompt, setShowGrammarPrompt] = useState(false);
+          const [customGrammarInput, setCustomGrammarInput] = useState("");
+          const [showHandwriting, setShowHandwriting] = useState(false); // NUEVO: Canvas escritura
+          const [showVocabMixModal, setShowVocabMixModal] = useState(false);
+          const [mixLessonSelection, setMixLessonSelection] = useState({});
+          const [mullerProgresoSnapshot, setMullerProgresoSnapshot] = useState(null);
+          const [audiobookPlaying, setAudiobookPlaying] = useState(false);
+          const [shadowRate, setShadowRate] = useState(0.88);
+          const [shadowShowText, setShadowShowText] = useState(true);
+          const [writingMode, setWritingMode] = useState('free');
+          const [writingGrid, setWritingGrid] = useState(true);
+          const [writingStroke, setWritingStroke] = useState(4);
+          const [writingCopyIdx, setWritingCopyIdx] = useState(0);
+          const [writingPromptIdx, setWritingPromptIdx] = useState(0);
+          const [writingTelcIdx, setWritingTelcIdx] = useState(0);
+          const [writingTelcInputMode, setWritingTelcInputMode] = useState('pen');
+          const [writingTelcTypedText, setWritingTelcTypedText] = useState('');
+          const [writingTelcLastOcrText, setWritingTelcLastOcrText] = useState('');
+          const [writingTelcCoach, setWritingTelcCoach] = useState(null);
+          const [writingDictIdx, setWritingDictIdx] = useState(0);
+          const [writingLetterIdx, setWritingLetterIdx] = useState(0);
+          const [writingGuionWriteIdx, setWritingGuionWriteIdx] = useState(0);
+          const [writingDictReveal, setWritingDictReveal] = useState(false);
+          const [writingDictSource, setWritingDictSource] = useState('builtin');
+          const [writingDictScriptId, setWritingDictScriptId] = useState('__current__');
+          const [writingCanvasKey, setWritingCanvasKey] = useState(0);
+          const [writingCanvasSnapshot, setWritingCanvasSnapshot] = useState({ padKey: 0, data: '' });
+          const [writingVocabIdx, setWritingVocabIdx] = useState(0);
+          const [ocrHistoryList, setOcrHistoryList] = useState(() => {
+              try { return JSON.parse(localStorage.getItem(MULLER_OCR_HIST_KEY) || '[]'); } catch (e) { return []; }
+          });
+          const [pdfStudyDoc, setPdfStudyDoc] = useState(() => {
+              try {
+                  const raw = localStorage.getItem(MULLER_PDF_STUDY_STORAGE_KEY);
+                  return raw ? JSON.parse(raw) : null;
+              } catch (e) {
+                  return null;
+              }
+          });
+          const [pdfStudyPageIdx, setPdfStudyPageIdx] = useState(0);
+          const [pdfStudyExtracting, setPdfStudyExtracting] = useState(false);
+          const [pdfStudyErr, setPdfStudyErr] = useState('');
+          const [pdfStudyBusyMsg, setPdfStudyBusyMsg] = useState('');
+          const [pdfStudyOcrBusy, setPdfStudyOcrBusy] = useState(false);
+          const [pdfStudyLastApplied, setPdfStudyLastApplied] = useState('');
+          const [pdfStudyFullscreen, setPdfStudyFullscreen] = useState(false);
+          const [pdfStudyInkNonce, setPdfStudyInkNonce] = useState(0);
+          const [pdfStudyNotesByPage, setPdfStudyNotesByPage] = useState(() => {
+              try {
+                  const raw = localStorage.getItem(MULLER_PDF_NOTES_STORAGE_KEY);
+                  return raw ? JSON.parse(raw) : {};
+              } catch (e) {
+                  return {};
+              }
+          });
+          const [pdfStudySavedDocs, setPdfStudySavedDocs] = useState(() => {
+              try {
+                  const raw = localStorage.getItem(MULLER_PDF_STUDY_LIBRARY_KEY);
+                  return raw ? JSON.parse(raw) : [];
+              } catch (e) {
+                  return [];
+              }
+          });
+          const [pdfStudyBlobUrl, setPdfStudyBlobUrl] = useState('');
+          const [ttsPrefsEpoch, setTtsPrefsEpoch] = useState(0);
+          const [ttsDeUri, setTtsDeUri] = useState(() => { try { return localStorage.getItem('muller_tts_de') || ''; } catch (e) { return ''; } });
+          const [ttsEsUri, setTtsEsUri] = useState(() => { try { return localStorage.getItem('muller_tts_es') || ''; } catch (e) { return ''; } });
+          const [showMullerHub, setShowMullerHub] = useState(false);
+          const [mullerHubTab, setMullerHubTab] = useState('voices');
+
+          useEffect(() => {
+              const validTabs = new Set(['inicio', 'ruta', 'historia', 'lectura', 'shadowing', 'escritura', 'vocabulario', 'entrenamiento', 'bxbank', 'progreso', 'guiones', 'lexikon', 'telc', 'storybuilder', 'historiaspro', 'comunidad']);
+              if (!validTabs.has(activeTab)) setActiveTab('inicio');
+          }, [activeTab]);
+
+          useEffect(() => {
+              return () => {
+                  if (!pdfStudyBlobUrl) return;
+                  try { URL.revokeObjectURL(pdfStudyBlobUrl); } catch (e) {}
+              };
+          }, [pdfStudyBlobUrl]);
+
+          useEffect(() => {
+              const openSettings = (ev) => {
+                  const tab = ev && ev.detail && ev.detail.tab ? String(ev.detail.tab) : 'ajustes';
+                  setProfileSettingsTab(tab === 'perfil' || tab === 'atajos' ? tab : 'ajustes');
+                  setShowProfileSettingsModal(true);
+              };
+              window.addEventListener('muller-open-profile-settings', openSettings);
+              return () => window.removeEventListener('muller-open-profile-settings', openSettings);
+          }, []);
+
+          useEffect(() => {
+              let cancelled = false;
+              const GIST_VERB_DB = 'https://gist.githubusercontent.com/djplaza1/239d6ac0a999c5729b3cf133627771f7/raw/gistfile1.txt';
+              const parseVerbDbPayload = (raw) => {
+                  const txt = String(raw || '').trim();
+                  if (!txt) return null;
+                  const tryParse = (s) => { try { return JSON.parse(s); } catch (e) { return null; } };
+                  let data = tryParse(txt);
+                  if (!data && txt.startsWith('{') && txt.endsWith(']')) data = tryParse(txt + '\n}');
+                  if (!data && txt.startsWith('"id"')) data = tryParse('[{' + txt + '}]');
+                  if (!data) return null;
+                  const verbs = Array.isArray(data) ? data : (Array.isArray(data.verbs) ? data.verbs : []);
+                  if (!verbs.length) return null;
+                  return { meta: data.meta || null, verbs };
+              };
+              const loadVerbDb = async () => {
+                  const urls = [
+                      `${GIST_VERB_DB}?nocache=${Date.now()}`,
+                      './verbos-db.json'
+                  ];
+                  for (const u of urls) {
+                      try {
+                          const r = await fetch(u, { cache: 'no-cache' });
+                          if (!r.ok) continue;
+                          const raw = await r.text();
+                          const parsed = parseVerbDbPayload(raw);
+                          if (!parsed || !parsed.verbs.length) continue;
+                          if (cancelled) return;
+                          setRutaVerbDb(parsed);
+                          return;
+                      } catch (e) {}
+                  }
+              };
+              loadVerbDb();
+              return () => { cancelled = true; };
+          }, []);
+          useEffect(() => {
+              let cancelled = false;
+              const URL_ART = 'https://gist.githubusercontent.com/djplaza1/a53fde18c901a7f2d86977174b5b9a72/raw/articulos.json';
+              fetch(`${URL_ART}?nocache=${Date.now()}`, { cache: 'no-cache' })
+                  .then((r) => r.ok ? r.json() : null)
+                  .then((data) => {
+                      if (cancelled || !Array.isArray(data)) return;
+                      setRutaArticleDb(data);
+                  })
+                  .catch(() => {});
+              return () => { cancelled = true; };
+          }, []);
+          const rutaLevels = useMemo(() => {
+              const base = Array.isArray(window.MULLER_RUTA_LEVELS) ? window.MULLER_RUTA_LEVELS : [];
+              const curriculumByLevel = {
+                  A0: [
+                      { title: 'Alfabeto y sonidos base', topic: 'presentacion', grammarTip: 'Prioriza pronunciaciÃ³n de vocales largas/cortas y combinaciones ch, sch, ei, ie.', phrases: [{ de: 'Ich heiÃŸe Leo.', es: 'Me llamo Leo.' }, { de: 'Das ist Anna.', es: 'Esta es Anna.' }, { de: 'Wir lernen Deutsch.', es: 'Aprendemos alemÃ¡n.' }], fill: { prompt: 'Completa: Ich ___ Leo.', answer: 'heiÃŸe', hint: 'Verbo Â«heiÃŸenÂ», 1Âª persona.' }, speak: { target: 'Ich heiÃŸe Leo.' } },
+                      { title: 'NÃºmeros y datos personales', topic: 'tramites', grammarTip: 'Practica deletrear nombre, edad, telÃ©fono y paÃ­s.', phrases: [{ de: 'Ich bin 24 Jahre alt.', es: 'Tengo 24 aÃ±os.' }, { de: 'Meine Nummer ist null eins sieben.', es: 'Mi nÃºmero es 017.' }, { de: 'Ich komme aus Spanien.', es: 'Vengo de EspaÃ±a.' }], fill: { prompt: 'Completa: Ich bin 24 Jahre ___.', answer: 'alt', hint: 'ExpresiÃ³n fija para la edad.' }, speak: { target: 'Ich bin 24 Jahre alt.' } },
+                      { title: 'Aula y objetos cotidianos', topic: 'clase', grammarTip: 'Memoriza sustantivo con artÃ­culo: der Stift, die Tasche, das Heft.', phrases: [{ de: 'Das ist ein Stift.', es: 'Eso es un bolÃ­grafo.' }, { de: 'Die Tasche ist neu.', es: 'La mochila es nueva.' }, { de: 'Wo ist das Heft?', es: 'Â¿DÃ³nde estÃ¡ el cuaderno?' }], fill: { prompt: 'Completa: Das ist ___ Stift.', answer: 'ein', hint: 'Indefinido masculino.' }, speak: { target: 'Das ist ein Stift.' } },
+                      { title: 'Familia inmediata', topic: 'familia', grammarTip: 'Usa posesivos bÃ¡sicos: mein/meine y dein/deine.', phrases: [{ de: 'Das ist meine Mutter.', es: 'Esta es mi madre.' }, { de: 'Mein Bruder ist hier.', es: 'Mi hermano estÃ¡ aquÃ­.' }, { de: 'Hast du Geschwister?', es: 'Â¿Tienes hermanos?' }], fill: { prompt: 'Completa: Das ist ___ Mutter.', answer: 'meine', hint: 'Sustantivo femenino.' }, speak: { target: 'Das ist meine Mutter.' } },
+                      { title: 'Comidas y compras simples', topic: 'alimentos', grammarTip: 'Pide con Â«Ich mÃ¶chte ...Â» + Akkusativ.', phrases: [{ de: 'Ich mÃ¶chte Wasser.', es: 'Quiero agua.' }, { de: 'Wir kaufen Brot.', es: 'Compramos pan.' }, { de: 'Der Kaffee ist heiÃŸ.', es: 'El cafÃ© estÃ¡ caliente.' }], fill: { prompt: 'Completa: Ich ___ Wasser.', answer: 'mÃ¶chte', hint: 'Forma de cortesÃ­a comÃºn.' }, speak: { target: 'Ich mÃ¶chte Wasser.' } },
+                      { title: 'Rutina mÃ­nima diaria', topic: 'rutina', grammarTip: 'Separable verbs: Â«aufstehenÂ» separa en presente.', phrases: [{ de: 'Ich stehe um sieben auf.', es: 'Me levanto a las siete.' }, { de: 'Ich arbeite am Montag.', es: 'Trabajo el lunes.' }, { de: 'Abends lerne ich.', es: 'Por la noche estudio.' }], fill: { prompt: 'Completa: Ich ___ um sieben auf.', answer: 'stehe', hint: 'Verbo separable Â«aufstehenÂ».' }, speak: { target: 'Ich stehe um sieben auf.' } }
+                  ],
+                  A1: [
+                      { title: 'Presentarse con detalle', topic: 'presentacion', grammarTip: 'AmplÃ­a presentaciÃ³n con profesiÃ³n, ciudad y lenguas.', phrases: [{ de: 'Ich bin Ingenieurin und wohne in Madrid.', es: 'Soy ingeniera y vivo en Madrid.' }, { de: 'Ich spreche Spanisch und etwas Deutsch.', es: 'Hablo espaÃ±ol y algo de alemÃ¡n.' }, { de: 'Seit einem Jahr lerne ich Deutsch.', es: 'Desde hace un aÃ±o estudio alemÃ¡n.' }], fill: { prompt: 'Completa: Ich ___ in Madrid.', answer: 'wohne', hint: 'Verbo wohnen.' }, speak: { target: 'Ich spreche Spanisch und etwas Deutsch.' } },
+                      { title: 'Casa y habitaciones', topic: 'vivienda', grammarTip: 'Preposiciones de lugar frecuentes: in, auf, unter.', phrases: [{ de: 'Die KÃ¼che ist klein.', es: 'La cocina es pequeÃ±a.' }, { de: 'Das Buch liegt auf dem Tisch.', es: 'El libro estÃ¡ sobre la mesa.' }, { de: 'Wir wohnen in einer Wohnung.', es: 'Vivimos en un piso.' }], fill: { prompt: 'Completa: Das Buch liegt ___ dem Tisch.', answer: 'auf', hint: 'RelaciÃ³n Â«encima deÂ».' }, speak: { target: 'Das Buch liegt auf dem Tisch.' } },
+                      { title: 'Trabajo y horarios', topic: 'trabajo', grammarTip: 'Preguntar y responder horarios con Â«von ... bis ...Â».', phrases: [{ de: 'Ich arbeite von neun bis fÃ¼nf.', es: 'Trabajo de nueve a cinco.' }, { de: 'Wann beginnt dein Kurs?', es: 'Â¿CuÃ¡ndo empieza tu curso?' }, { de: 'Heute habe ich frei.', es: 'Hoy tengo libre.' }], fill: { prompt: 'Completa: Ich arbeite von neun ___ fÃ¼nf.', answer: 'bis', hint: 'ExpresiÃ³n de intervalo.' }, speak: { target: 'Ich arbeite von neun bis fÃ¼nf.' } },
+                      { title: 'Restaurante y pedidos', topic: 'alimentos', grammarTip: 'Usa Â«ich hÃ¤tte gernÂ» para sonar natural y cortÃ©s.', phrases: [{ de: 'Ich hÃ¤tte gern eine Suppe.', es: 'Quisiera una sopa.' }, { de: 'Wir zahlen zusammen.', es: 'Pagamos juntos.' }, { de: 'Die Rechnung, bitte.', es: 'La cuenta, por favor.' }], fill: { prompt: 'Completa: Ich hÃ¤tte ___ eine Suppe.', answer: 'gern', hint: 'PartÃ­cula fija en la fÃ³rmula.' }, speak: { target: 'Die Rechnung, bitte.' } },
+                      { title: 'Salud y farmacia', topic: 'salud', grammarTip: 'Estructura tÃ­pica: Â«Ich habe + sÃ­ntomaÂ».', phrases: [{ de: 'Ich habe Kopfschmerzen.', es: 'Tengo dolor de cabeza.' }, { de: 'Ich brauche einen Termin.', es: 'Necesito una cita.' }, { de: 'Nehmen Sie diese Tabletten.', es: 'Tome estas pastillas.' }], fill: { prompt: 'Completa: Ich ___ Kopfschmerzen.', answer: 'habe', hint: 'Verbo haben.' }, speak: { target: 'Ich habe Kopfschmerzen.' } },
+                      { title: 'Tiempo libre y planes', topic: 'tiempo_libre', grammarTip: 'Con Â«am WochenendeÂ» y Â«mit FreundenÂ» hablas de ocio.', phrases: [{ de: 'Am Wochenende spiele ich FuÃŸball.', es: 'El fin de semana juego al fÃºtbol.' }, { de: 'Heute Abend gehe ich ins Kino.', es: 'Esta tarde voy al cine.' }, { de: 'Morgen treffe ich Freunde.', es: 'MaÃ±ana quedo con amigos.' }], fill: { prompt: 'Completa: Heute Abend ___ ich ins Kino.', answer: 'gehe', hint: 'Verbo gehen, 1Âª persona.' }, speak: { target: 'Heute Abend gehe ich ins Kino.' } }
+                  ],
+                  A2: [
+                      { title: 'Narrar pasado con Perfekt', topic: 'gramatica', grammarTip: 'Combina auxiliares haben/sein y participio al final.', phrases: [{ de: 'Letztes Jahr habe ich in Berlin gearbeitet.', es: 'El aÃ±o pasado trabajÃ© en BerlÃ­n.' }, { de: 'Wir sind spÃ¤t angekommen.', es: 'Llegamos tarde.' }, { de: 'Sie hat viel gelernt.', es: 'Ella ha estudiado mucho.' }], fill: { prompt: 'Completa: Wir sind spÃ¤t ___.', answer: 'angekommen', hint: 'Participio de ankommen.' }, speak: { target: 'Wir sind spÃ¤t angekommen.' } },
+                      { title: 'Conectores de causa y contraste', topic: 'conectores', grammarTip: 'weil + verbo final; aber/deshalb en frase principal.', phrases: [{ de: 'Ich bleibe zu Hause, weil ich krank bin.', es: 'Me quedo en casa porque estoy enfermo.' }, { de: 'Es regnet, aber wir gehen raus.', es: 'Llueve, pero salimos.' }, { de: 'Ich bin mÃ¼de, deshalb schlafe ich frÃ¼h.', es: 'Estoy cansado, por eso duermo pronto.' }], fill: { prompt: 'Completa: Ich bleibe zu Hause, ___ ich krank bin.', answer: 'weil', hint: 'Conector causal con verbo al final.' }, speak: { target: 'Ich bin mÃ¼de, deshalb schlafe ich frÃ¼h.' } },
+                      { title: 'Viajes y transporte', topic: 'viajes', grammarTip: 'Bloques Ãºtiles: Fahrkarte, umsteigen, Abfahrt, Ankunft.', phrases: [{ de: 'Wo kann ich eine Fahrkarte kaufen?', es: 'Â¿DÃ³nde puedo comprar un billete?' }, { de: 'Der Zug hat VerspÃ¤tung.', es: 'El tren tiene retraso.' }, { de: 'Wir mÃ¼ssen in KÃ¶ln umsteigen.', es: 'Tenemos que hacer transbordo en Colonia.' }], fill: { prompt: 'Completa: Der Zug hat ___.', answer: 'VerspÃ¤tung', hint: 'Retraso.' }, speak: { target: 'Wir mÃ¼ssen in KÃ¶ln umsteigen.' } },
+                      { title: 'TrÃ¡mites y oficina', topic: 'tramites', grammarTip: 'Practica frases formales cortas en ventanilla.', phrases: [{ de: 'Ich mÃ¶chte dieses Formular abgeben.', es: 'Quiero entregar este formulario.' }, { de: 'Welche Unterlagen brauche ich?', es: 'Â¿QuÃ© documentos necesito?' }, { de: 'KÃ¶nnen Sie mir helfen?', es: 'Â¿Puede ayudarme?' }], fill: { prompt: 'Completa: Welche ___ brauche ich?', answer: 'Unterlagen', hint: 'Documentos.' }, speak: { target: 'Ich mÃ¶chte dieses Formular abgeben.' } },
+                      { title: 'Relaciones personales', topic: 'familia', grammarTip: 'OpiniÃ³n bÃ¡sica: Â«Ich finde..., weil...Â»', phrases: [{ de: 'Ich finde meinen Job interessant.', es: 'Encuentro mi trabajo interesante.' }, { de: 'Mit meiner Schwester spreche ich oft.', es: 'Hablo mucho con mi hermana.' }, { de: 'Wir verstehen uns gut.', es: 'Nos llevamos bien.' }], fill: { prompt: 'Completa: Wir ___ uns gut.', answer: 'verstehen', hint: 'Verbo separable no, forma plural.' }, speak: { target: 'Wir verstehen uns gut.' } },
+                      { title: 'A2 oral prÃ¡ctico', topic: 'trabajo', grammarTip: 'Entrena respuestas completas de 2-3 frases.', phrases: [{ de: 'In meiner Firma arbeite ich im Team.', es: 'En mi empresa trabajo en equipo.' }, { de: 'Meine Aufgaben sind klar.', es: 'Mis tareas estÃ¡n claras.' }, { de: 'Ich mÃ¶chte mich verbessern.', es: 'Quiero mejorar.' }], fill: { prompt: 'Completa: Ich arbeite ___ Team.', answer: 'im', hint: 'in + dem = im.' }, speak: { target: 'In meiner Firma arbeite ich im Team.' } }
+                  ],
+                  B1: [
+                      { title: 'OpiniÃ³n y argumentaciÃ³n', topic: 'conectores', grammarTip: 'Conecta ideas con auÃŸerdem, jedoch, deshalb.', phrases: [{ de: 'Meiner Meinung nach ist Homeoffice sinnvoll.', es: 'En mi opiniÃ³n, el teletrabajo tiene sentido.' }, { de: 'Einerseits spart man Zeit, andererseits fehlt Kontakt.', es: 'Por un lado ahorras tiempo, por otro falta contacto.' }, { de: 'Deshalb brauche ich einen Mix.', es: 'Por eso necesito un equilibrio.' }], fill: { prompt: 'Completa: Einerseits ..., ___ ...', answer: 'andererseits', hint: 'Conector correlativo.' }, speak: { target: 'Meiner Meinung nach ist Homeoffice sinnvoll.' } },
+                      { title: 'B1 trabajo y CV', topic: 'trabajo', grammarTip: 'Pasado relevante y logros concretos en frases breves.', phrases: [{ de: 'Ich habe drei Jahre im Kundenservice gearbeitet.', es: 'TrabajÃ© tres aÃ±os en atenciÃ³n al cliente.' }, { de: 'Ich bin zuverlÃ¤ssig und flexibel.', es: 'Soy fiable y flexible.' }, { de: 'Ich mÃ¶chte mich beruflich weiterentwickeln.', es: 'Quiero desarrollarme profesionalmente.' }], fill: { prompt: 'Completa: Ich habe drei Jahre im Kundenservice ___.', answer: 'gearbeitet', hint: 'Participio regular.' }, speak: { target: 'Ich mÃ¶chte mich beruflich weiterentwickeln.' } },
+                      { title: 'RelativsÃ¤tze Ãºtiles', topic: 'gramatica', grammarTip: 'der/die/das + verbo al final para aÃ±adir informaciÃ³n.', phrases: [{ de: 'Das ist der Kollege, der mir hilft.', es: 'Ese es el compaÃ±ero que me ayuda.' }, { de: 'Die Stadt, in der ich wohne, ist ruhig.', es: 'La ciudad donde vivo es tranquila.' }, { de: 'Ich suche ein Buch, das leicht ist.', es: 'Busco un libro que sea fÃ¡cil.' }], fill: { prompt: 'Completa: Das ist der Kollege, ___ mir hilft.', answer: 'der', hint: 'Relativo masculino nominativo.' }, speak: { target: 'Die Stadt, in der ich wohne, ist ruhig.' } },
+                      { title: 'B1 viajes e incidencias', topic: 'viajes', grammarTip: 'Describe problemas, pide soluciÃ³n y confirma pasos.', phrases: [{ de: 'Mein Flug wurde annulliert.', es: 'Mi vuelo fue cancelado.' }, { de: 'KÃ¶nnen Sie mir eine Alternative anbieten?', es: 'Â¿Puede ofrecerme una alternativa?' }, { de: 'Ich brauche eine BestÃ¤tigung per E-Mail.', es: 'Necesito una confirmaciÃ³n por correo.' }], fill: { prompt: 'Completa: Mein Flug wurde ___.', answer: 'annulliert', hint: 'Participio de annullieren.' }, speak: { target: 'KÃ¶nnen Sie mir eine Alternative anbieten?' } },
+                      { title: 'Konjunktiv II cotidiano', topic: 'gramatica', grammarTip: 'Usa wÃ¼rde + infinitivo para hipÃ³tesis y deseos.', phrases: [{ de: 'Ich wÃ¼rde gern in Deutschland arbeiten.', es: 'Me gustarÃ­a trabajar en Alemania.' }, { de: 'Wenn ich Zeit hÃ¤tte, wÃ¼rde ich mehr lesen.', es: 'Si tuviera tiempo, leerÃ­a mÃ¡s.' }, { de: 'KÃ¶nnten Sie das bitte wiederholen?', es: 'Â¿PodrÃ­a repetirlo, por favor?' }], fill: { prompt: 'Completa: Wenn ich Zeit hÃ¤tte, ___ ich mehr lesen.', answer: 'wÃ¼rde', hint: 'Estructura condicional.' }, speak: { target: 'Wenn ich Zeit hÃ¤tte, wÃ¼rde ich mehr lesen.' } }
+                  ],
+                  B2: [
+                      { title: 'Debate estructurado B2', topic: 'conectores', grammarTip: 'Estructura: tesis, argumentos, contraargumento, cierre.', phrases: [{ de: 'Ich vertrete die Auffassung, dass ...', es: 'Defiendo la postura de que...' }, { de: 'Zudem sprechen mehrere GrÃ¼nde dafÃ¼r.', es: 'AdemÃ¡s hay varias razones a favor.' }, { de: 'Dennoch mÃ¼ssen Risiken berÃ¼cksichtigt werden.', es: 'No obstante, deben considerarse riesgos.' }], fill: { prompt: 'Completa: ___ mÃ¼ssen Risiken berÃ¼cksichtigt werden.', answer: 'Dennoch', hint: 'Conector concesivo.' }, speak: { target: 'Ich vertrete die Auffassung, dass digitale Bildung wichtig ist.' } },
+                      { title: 'Correo formal y registro', topic: 'tramites', grammarTip: 'Registro formal: Sehr geehrte..., ich mÃ¶chte..., mit freundlichen GrÃ¼ÃŸen.', phrases: [{ de: 'Ich mÃ¶chte mich Ã¼ber den Kurs informieren.', es: 'Quiero informarme sobre el curso.' }, { de: 'FÃ¼r eine RÃ¼ckmeldung wÃ¤re ich dankbar.', es: 'AgradecerÃ­a una respuesta.' }, { de: 'Mit freundlichen GrÃ¼ÃŸen', es: 'Atentamente' }], fill: { prompt: 'Completa: FÃ¼r eine RÃ¼ckmeldung wÃ¤re ich ___.', answer: 'dankbar', hint: 'Adjetivo tÃ­pico en carta formal.' }, speak: { target: 'Ich mÃ¶chte mich Ã¼ber den Kurs informieren.' } },
+                      { title: 'NominalizaciÃ³n B2', topic: 'gramatica', grammarTip: 'Convierte verbos en sustantivos para estilo acadÃ©mico.', phrases: [{ de: 'Die Entscheidung wurde gestern getroffen.', es: 'La decisiÃ³n se tomÃ³ ayer.' }, { de: 'Die Verbesserung der Prozesse ist notwendig.', es: 'La mejora de procesos es necesaria.' }, { de: 'Nach der Analyse folgte die Umsetzung.', es: 'Tras el anÃ¡lisis siguiÃ³ la implementaciÃ³n.' }], fill: { prompt: 'Completa: Die ___ der Prozesse ist notwendig.', answer: 'Verbesserung', hint: 'Sustantivo de verbessern.' }, speak: { target: 'Die Entscheidung wurde gestern getroffen.' } },
+                      { title: 'ComprensiÃ³n de noticias', topic: 'trabajo', grammarTip: 'Extrae idea principal, datos y postura del autor.', phrases: [{ de: 'Laut dem Bericht steigt die Inflation.', es: 'SegÃºn el informe, sube la inflaciÃ³n.' }, { de: 'Die Experten fordern schnelle MaÃŸnahmen.', es: 'Los expertos piden medidas rÃ¡pidas.' }, { de: 'Die Folgen betreffen vor allem Haushalte.', es: 'Las consecuencias afectan sobre todo a los hogares.' }], fill: { prompt: 'Completa: Laut dem Bericht ___ die Inflation.', answer: 'steigt', hint: 'Verbo de la oraciÃ³n principal.' }, speak: { target: 'Die Experten fordern schnelle MaÃŸnahmen.' } }
+                  ],
+                  C1: [
+                      { title: 'Matiz y precisiÃ³n lÃ©xica', topic: 'gramatica', grammarTip: 'Selecciona verbo por intenciÃ³n: behaupten, erlÃ¤utern, einrÃ¤umen.', phrases: [{ de: 'Die Autorin rÃ¤umt ein, dass die Daten begrenzt sind.', es: 'La autora reconoce que los datos son limitados.' }, { de: 'Der Bericht legt nahe, dass Reformen nÃ¶tig sind.', es: 'El informe sugiere que las reformas son necesarias.' }, { de: 'Er erlÃ¤utert die Ursachen differenziert.', es: 'Explica las causas de forma matizada.' }], fill: { prompt: 'Completa: Der Bericht ___ nahe, dass Reformen nÃ¶tig sind.', answer: 'legt', hint: 'ExpresiÃ³n fija Â«nahelegenÂ».' }, speak: { target: 'Die Autorin rÃ¤umt ein, dass die Daten begrenzt sind.' } },
+                      { title: 'ArgumentaciÃ³n avanzada C1', topic: 'conectores', grammarTip: 'Conectores de alta precisiÃ³n: demzufolge, insofern, wohingegen.', phrases: [{ de: 'Die MaÃŸnahme ist teuer, demzufolge braucht sie klare Ziele.', es: 'La medida es costosa; por consiguiente, necesita metas claras.' }, { de: 'Insofern ist die Kritik nachvollziehbar.', es: 'En ese sentido, la crÃ­tica es comprensible.' }, { de: 'Wohingegen kurzfristige LÃ¶sungen selten nachhaltig sind.', es: 'Mientras que las soluciones a corto plazo rara vez son sostenibles.' }], fill: { prompt: 'Completa: Die MaÃŸnahme ist teuer, ___ braucht sie klare Ziele.', answer: 'demzufolge', hint: 'Conector de consecuencia formal.' }, speak: { target: 'Insofern ist die Kritik nachvollziehbar.' } },
+                      { title: 'PresentaciÃ³n profesional', topic: 'trabajo', grammarTip: 'Abrir, estructurar y cerrar exposiciÃ³n con naturalidad.', phrases: [{ de: 'Im Folgenden prÃ¤sentiere ich drei zentrale Punkte.', es: 'A continuaciÃ³n presento tres puntos centrales.' }, { de: 'AbschlieÃŸend lÃ¤sst sich festhalten, dass ...', es: 'Para concluir, puede sostenerse que...' }, { de: 'Gern beantworte ich anschlieÃŸend Ihre Fragen.', es: 'Con gusto respondo despuÃ©s sus preguntas.' }], fill: { prompt: 'Completa: ___ prÃ¤sentiere ich drei zentrale Punkte.', answer: 'Im Folgenden', hint: 'Inicio formal de exposiciÃ³n.' }, speak: { target: 'AbschlieÃŸend lÃ¤sst sich festhalten, dass nachhaltige Strategien nÃ¶tig sind.' } }
+                  ]
+              };
+              const premiumTopicPlan = {
+                  A0: ['presentacion', 'pronunciacion', 'numeros', 'clase', 'familia', 'alimentos', 'rutina', 'vivienda', 'viajes', 'salud', 'trabajo', 'tramites'],
+                  A1: ['presentacion', 'familia', 'vivienda', 'alimentos', 'compras', 'trabajo', 'rutina', 'tiempo_libre', 'viajes', 'salud', 'tramites', 'conectores'],
+                  A2: ['pasado', 'conectores', 'trabajo', 'familia', 'vivienda', 'viajes', 'salud', 'tramites', 'compras', 'tiempo_libre', 'telefonia', 'gramatica'],
+                  B1: ['argumentacion', 'trabajo', 'cv', 'entrevista', 'viajes', 'incidencias', 'relativsatz', 'konjunktiv2', 'conectores', 'salud', 'tramites', 'presentacion'],
+                  B2: ['debate', 'correo_formal', 'nominalizacion', 'noticias', 'trabajo', 'universidad', 'presentacion', 'conectores', 'pasiva', 'grafico', 'negociacion', 'medios'],
+                  C1: ['precision', 'argumentacion', 'registro', 'academico', 'presentacion', 'negociacion', 'conectores', 'resumen', 'analisis', 'matiz', 'retorica', 'debate']
+              };
+              const topicLabel = {
+                  presentacion: 'PresentaciÃ³n', pronunciacion: 'PronunciaciÃ³n', numeros: 'NÃºmeros', clase: 'Clase', familia: 'Familia', alimentos: 'Alimentos',
+                  rutina: 'Rutina', vivienda: 'Vivienda', viajes: 'Viajes', salud: 'Salud', trabajo: 'Trabajo', tramites: 'TrÃ¡mites', compras: 'Compras',
+                  tiempo_libre: 'Tiempo libre', conectores: 'Conectores', pasado: 'Pasado', telefonia: 'TelÃ©fono', gramatica: 'GramÃ¡tica',
+                  argumentacion: 'ArgumentaciÃ³n', cv: 'CV', entrevista: 'Entrevista', incidencias: 'Incidencias', relativsatz: 'Relativos', konjunktiv2: 'Konjunktiv II',
+                  debate: 'Debate', correo_formal: 'Correo formal', nominalizacion: 'NominalizaciÃ³n', noticias: 'Noticias', universidad: 'Universidad', pasiva: 'Pasiva',
+                  grafico: 'Describir grÃ¡ficos', negociacion: 'NegociaciÃ³n', medios: 'Medios', precision: 'PrecisiÃ³n lÃ©xica', registro: 'Registro', academico: 'AcadÃ©mico',
+                  resumen: 'Resumen', analisis: 'AnÃ¡lisis', matiz: 'Matiz', retorica: 'RetÃ³rica'
+              };
+              const mkPremiumUnit = (levelKey, topic, idx) => {
+                  const label = topicLabel[topic] || topic;
+                  const topicForUi = ({ pronunciacion: 'presentacion', numeros: 'tramites', pasado: 'gramatica', telefonia: 'tramites', argumentacion: 'conectores', cv: 'trabajo', entrevista: 'trabajo', incidencias: 'viajes', relativsatz: 'gramatica', konjunktiv2: 'gramatica', debate: 'conectores', correo_formal: 'tramites', nominalizacion: 'gramatica', noticias: 'trabajo', universidad: 'trabajo', pasiva: 'gramatica', grafico: 'trabajo', negociacion: 'trabajo', medios: 'trabajo', precision: 'gramatica', registro: 'gramatica', academico: 'gramatica', resumen: 'gramatica', analisis: 'gramatica', matiz: 'gramatica', retorica: 'conectores' }[topic]) || topic;
+                  const sentenceBank = {
+                      A0: [{ de: 'Ich bin neu hier.', es: 'Soy nuevo aqui.' }, { de: 'Das ist meine Familie.', es: 'Esta es mi familia.' }, { de: 'Ich lerne jeden Tag.', es: 'Aprendo cada dia.' }],
+                      A1: [{ de: 'Ich mÃ¶chte im Restaurant bestellen.', es: 'Quiero pedir en el restaurante.' }, { de: 'Am Wochenende treffe ich Freunde.', es: 'El fin de semana quedo con amigos.' }, { de: 'Wir fahren morgen mit dem Zug.', es: 'Viajamos manana en tren.' }],
+                      A2: [{ de: 'Letzte Woche habe ich viel gearbeitet.', es: 'La semana pasada trabaje mucho.' }, { de: 'Ich lerne Deutsch, weil ich umziehen mÃ¶chte.', es: 'Aprendo aleman porque quiero mudarme.' }, { de: 'KÃ¶nnen Sie mir bitte weiterhelfen?', es: 'Puede ayudarme, por favor?' }],
+                      B1: [{ de: 'Meiner Meinung nach ist das sinnvoll.', es: 'En mi opinion eso tiene sentido.' }, { de: 'Wenn ich mehr Zeit hÃ¤tte, wÃ¼rde ich reisen.', es: 'Si tuviera mas tiempo, viajaria.' }, { de: 'Das ist ein Punkt, den wir beachten mÃ¼ssen.', es: 'Es un punto que debemos considerar.' }],
+                      B2: [{ de: 'Die MaÃŸnahme sollte schrittweise umgesetzt werden.', es: 'La medida deberia aplicarse gradualmente.' }, { de: 'DarÃ¼ber hinaus sind die Kosten zu berÃ¼cksichtigen.', es: 'Ademas hay que considerar los costes.' }, { de: 'Ich beziehe mich auf die vorliegenden Daten.', es: 'Me refiero a los datos disponibles.' }],
+                      C1: [{ de: 'Insofern erscheint die Kritik nachvollziehbar.', es: 'En ese sentido, la critica resulta comprensible.' }, { de: 'Der Autor differenziert zwischen Ursache und Wirkung.', es: 'El autor diferencia entre causa y efecto.' }, { de: 'Nichtsdestotrotz bleibt die Kernfrage offen.', es: 'No obstante, la cuestion central sigue abierta.' }]
+                  };
+                  const sample = sentenceBank[levelKey] || sentenceBank.A1;
+                  const answerMap = { A0: 'bin', A1: 'mÃ¶chte', A2: 'habe', B1: 'wÃ¼rde', B2: 'werden', C1: 'bleibt' };
+                  return {
+                      title: `${label} Â· prÃ¡ctica ${idx + 1}`,
+                      topic: topicForUi,
+                      grammarTip: `Nivel ${levelKey}: bloque de ${label.toLowerCase()} con enfoque comunicativo y correcciÃ³n gramatical.`,
+                      phrases: [sample[idx % sample.length], sample[(idx + 1) % sample.length], sample[(idx + 2) % sample.length]],
+                      fill: { prompt: `Completa (${levelKey}): Ich ___ weiter Deutsch.`, answer: answerMap[levelKey] || 'lerne', hint: `Forma habitual de ${levelKey}.` },
+                      speak: { target: sample[idx % sample.length].de }
+                  };
+              };
+              Object.keys(premiumTopicPlan).forEach((levelKey) => {
+                  const generated = (premiumTopicPlan[levelKey] || []).map((topic, idx) => mkPremiumUnit(levelKey, topic, idx));
+                  const curr = Array.isArray(curriculumByLevel[levelKey]) ? curriculumByLevel[levelKey] : [];
+                  curriculumByLevel[levelKey] = [...curr, ...generated];
+              });
+              const byLevel = { A0: [], A1: [], A2: [], B1: [], B2: [], C1: [] };
+              (rutaVerbDb.verbs || []).forEach((v) => {
+                  const lv = String(v && v.level ? v.level : '').toUpperCase();
+                  if (byLevel[lv]) byLevel[lv].push(v);
+              });
+              const normalizeRutaLevelKey = (value) => {
+                  const s = String(value || '').toUpperCase();
+                  if (s.startsWith('A0')) return 'A0';
+                  if (s.startsWith('A1')) return 'A1';
+                  if (s.startsWith('A2')) return 'A2';
+                  if (s.startsWith('B1')) return 'B1';
+                  if (s.startsWith('B2')) return 'B2';
+                  if (s.startsWith('C1')) return 'C1';
+                  return s;
+              };
+              const mkCurriculumLesson = (levelKey, unit, idx) => ({
+                  id: `curr-${levelKey.toLowerCase()}-${idx + 1}`,
+                  title: `${levelKey} Â· ${unit.title}`,
+                  topic: unit.topic || 'general',
+                  rewardCoins: 14 + Math.min(20, idx * 2),
+                  rewardXp: 20 + Math.min(26, idx * 2),
+                  grammarTip: unit.grammarTip || `PrÃ¡ctica guiada ${levelKey}.`,
+                  phrases: Array.isArray(unit.phrases) && unit.phrases.length ? unit.phrases.slice(0, 3) : [{ de: 'Ich lerne Deutsch.', es: 'Aprendo alemÃ¡n.' }],
+                  fill: unit.fill || { prompt: 'Completa: Ich ___ Deutsch.', answer: 'lerne', hint: 'Verbo en presente.' },
+                  speak: unit.speak || { target: (unit.phrases && unit.phrases[0] && unit.phrases[0].de) || 'Ich lerne Deutsch.' }
+              });
+              const mkLesson = (levelKey, chunk, idx) => {
+                  const topicCycle = ['familia', 'trabajo', 'alimentos', 'viajes', 'vivienda', 'salud', 'tiempo_libre', 'tramites'];
+                  const topic = topicCycle[idx % topicCycle.length];
+                  const title = `${levelKey} Â· Verbos ${idx + 1}`;
+                  const phrases = chunk.slice(0, 3).map((v) => ({
+                      de: (v && v.examples && v.examples[0] && v.examples[0].de) || `Ich ${v.lemma}.`,
+                      es: (v && v.examples && v.examples[0] && v.examples[0].es) || (v.es || 'â€”')
+                  }));
+                  const p = chunk[0] || {};
+                  return {
+                      id: `auto-${levelKey.toLowerCase()}-${idx + 1}`,
+                      title,
+                      topic,
+                      rewardCoins: 16 + Math.min(16, idx),
+                      rewardXp: 22 + Math.min(20, idx * 2),
+                      grammarTip: `Nivel ${levelKey}: prÃ¡ctica de verbos frecuentes y sus formas.`,
+                      phrases,
+                      fill: {
+                          prompt: `Completa: Ich ___ (${p.lemma || 'lernen'}).`,
+                          answer: (p.forms && p.forms.praesens && p.forms.praesens.ich) || p.lemma || 'lerne',
+                          hint: `Forma de 1Âª persona (PrÃ¤sens) de Â«${p.lemma || 'lernen'}Â».`
+                      },
+                      speak: { target: (phrases[0] && phrases[0].de) || 'Ich lerne Deutsch.' }
+                  };
+              };
+              const mkLevel = (levelKey, title, badge, sourceVerbs) => {
+                  const chunks = [];
+                  const size = 8;
+                  for (let i = 0; i < sourceVerbs.length; i += size) chunks.push(sourceVerbs.slice(i, i + size));
+                  const lessons = chunks.map((c, i) => mkLesson(levelKey, c, i));
+                  return { id: `auto-${levelKey.toLowerCase()}`, title, badge, lessons };
+              };
+              const getArticleByLevel = (levelKey) => (rutaArticleDb || []).filter((a) => {
+                  const one = String(a && a.level ? a.level : '').toUpperCase();
+                  const many = Array.isArray(a && a.levels) ? a.levels.map((x) => String(x).toUpperCase()) : [];
+                  return one === levelKey || many.includes(levelKey);
+              });
+              const connectorByLevel = {
+                  A1: ['und', 'aber', 'oder', 'denn'],
+                  A2: ['weil', 'dass', 'wenn', 'deshalb', 'deswegen'],
+                  B1: ['obwohl', 'damit', 'trotzdem', 'auÃŸerdem', 'danach'],
+                  B2: ['wÃ¤hrend', 'sobald', 'falls', 'insofern', 'hingegen'],
+                  C1: ['demzufolge', 'folglich', 'somit', 'nichtsdestotrotz', 'infolgedessen']
+              };
+              const mkArticleLesson = (levelKey, items, idx) => {
+                  const topicCycle = ['familia', 'trabajo', 'alimentos', 'vivienda', 'viajes', 'salud'];
+                  const topic = topicCycle[idx % topicCycle.length];
+                  const sample = items[0] || {};
+                  const de = String(sample.de || 'das Buch');
+                  const article = de.split(/\s+/)[0] || 'das';
+                  return {
+                      id: `auto-art-${levelKey.toLowerCase()}-${idx + 1}`,
+                      title: `${levelKey} Â· ArtÃ­culos ${idx + 1}`,
+                      topic,
+                      rewardCoins: 15 + idx,
+                      rewardXp: 20 + idx * 2,
+                      grammarTip: `Nivel ${levelKey}: artÃ­culo + sustantivo y concordancia en frase.`,
+                      phrases: items.slice(0, 3).map((x) => ({ de: `${x.de} ist wichtig.`, es: `${x.es || x.de} es importante.` })),
+                      fill: { prompt: `Completa: ___ ${de.split(/\s+/).slice(1).join(' ')} ist hier.`, answer: article, hint: 'Piensa en el gÃ©nero del sustantivo.' },
+                      speak: { target: `${de} ist wichtig.` }
+                  };
+              };
+              const mkConnectorLesson = (levelKey, idx) => {
+                  const c = connectorByLevel[levelKey] || [];
+                  const con = c[idx % c.length] || 'weil';
+                  return {
+                      id: `auto-conn-${levelKey.toLowerCase()}-${idx + 1}`,
+                      title: `${levelKey} Â· Conectores ${idx + 1}`,
+                      topic: 'conectores',
+                      rewardCoins: 18 + idx,
+                      rewardXp: 24 + idx * 2,
+                      grammarTip: `Conector ${con}: practica posiciÃ³n verbal segÃºn tipo de oraciÃ³n.`,
+                      phrases: [
+                          { de: `Ich lerne Deutsch, ${con} ich in Deutschland arbeiten mÃ¶chte.`, es: `Aprendo alemÃ¡n, ${con === 'weil' ? 'porque' : 'usando conector'} quiero trabajar en Alemania.` },
+                          { de: `${con.charAt(0).toUpperCase() + con.slice(1)} es regnet, bleibe ich zu Hause.`, es: 'Si/como llueve, me quedo en casa.' }
+                      ],
+                      fill: { prompt: `Completa con conector (${levelKey}): Ich lerne Deutsch, ___ ich reisen will.`, answer: con, hint: 'Usa el conector trabajado en esta lecciÃ³n.' },
+                      speak: { target: `Ich lerne Deutsch, ${con} ich reisen will.` }
+                  };
+              };
+              const dynamic = [];
+              const baseEnriched = (base || []).map((lv) => {
+                  const key = normalizeRutaLevelKey((lv && lv.badge) || (lv && lv.title) || '');
+                  const extra = (curriculumByLevel[key] || []).map((unit, idx) => mkCurriculumLesson(key, unit, idx));
+                  const existingIds = new Set((lv.lessons || []).map((x) => x.id));
+                  const mergedLessons = [...(lv.lessons || []), ...extra.filter((x) => !existingIds.has(x.id))];
+                  return { ...lv, lessons: mergedLessons };
+              });
+              const mkMergedLevel = (levelKey, title, badge, sourceVerbs) => {
+                  const lv = mkLevel(levelKey, title, badge, sourceVerbs);
+                  const curriculumExtra = (curriculumByLevel[levelKey] || []).map((unit, idx) => mkCurriculumLesson(levelKey, unit, idx));
+                  lv.lessons.push(...curriculumExtra);
+                  const arts = getArticleByLevel(levelKey);
+                  for (let i = 0; i < arts.length; i += 10) lv.lessons.push(mkArticleLesson(levelKey, arts.slice(i, i + 10), Math.floor(i / 10)));
+                  const cc = connectorByLevel[levelKey] || [];
+                  for (let i = 0; i < Math.max(1, Math.ceil(cc.length / 2)); i++) lv.lessons.push(mkConnectorLesson(levelKey, i));
+                  return lv;
+              };
+              if (byLevel.A2.length || getArticleByLevel('A2').length) dynamic.push(mkMergedLevel('A2', 'Nivel A2 Â· ConsolidaciÃ³n', 'A2', byLevel.A2));
+              if (byLevel.B1.length || getArticleByLevel('B1').length) dynamic.push(mkMergedLevel('B1', 'Nivel B1 Â· Intermedio', 'B1', byLevel.B1));
+              if (byLevel.B2.length || getArticleByLevel('B2').length) dynamic.push(mkMergedLevel('B2', 'Nivel B2 Â· Avanzado', 'B2', byLevel.B2));
+              if (byLevel.C1.length || getArticleByLevel('C1').length) dynamic.push(mkMergedLevel('C1', 'Nivel C1 Â· Dominio', 'C1', byLevel.C1));
+              const existingKeys = new Set([...baseEnriched, ...dynamic].map((lv) => normalizeRutaLevelKey((lv && lv.badge) || (lv && lv.title) || '')));
+              const fallbackTitles = {
+                  A0: { id: 'a0-ext', title: 'Nivel 0 Â· Fundamentos', badge: 'A0' },
+                  A1: { id: 'a1-ext', title: 'Nivel A1 Â· ComunicaciÃ³n bÃ¡sica', badge: 'A1' },
+                  A2: { id: 'a2-ext', title: 'Nivel A2 Â· ConsolidaciÃ³n', badge: 'A2' },
+                  B1: { id: 'b1-ext', title: 'Nivel B1 Â· Intermedio', badge: 'B1' },
+                  B2: { id: 'b2-ext', title: 'Nivel B2 Â· Avanzado', badge: 'B2' },
+                  C1: { id: 'c1-ext', title: 'Nivel C1 Â· Dominio', badge: 'C1' }
+              };
+              Object.keys(curriculumByLevel).forEach((k) => {
+                  if (existingKeys.has(k)) return;
+                  const meta = fallbackTitles[k];
+                  const lessons = (curriculumByLevel[k] || []).map((unit, idx) => mkCurriculumLesson(k, unit, idx));
+                  dynamic.push({ id: meta.id, title: meta.title, badge: meta.badge, lessons });
+              });
+              return [...baseEnriched, ...dynamic];
+          }, [rutaVerbDb, rutaArticleDb]);
+          useEffect(() => {
+              const onToast = (ev) => {
+                  const d = (ev && ev.detail) || {};
+                  const msg = String(d.message || '').trim();
+                  if (!msg) return;
+                  const t = { id: Date.now() + Math.random(), message: msg, kind: String(d.kind || 'info') };
+                  setToastItems((prev) => [...prev.slice(-3), t]);
+                  setTimeout(() => setToastItems((prev) => prev.filter((x) => x.id !== t.id)), 2600);
+              };
+              window.addEventListener('muller-toast', onToast);
+              return () => window.removeEventListener('muller-toast', onToast);
+          }, []);
+          useEffect(() => {
+              try { localStorage.setItem('muller_show_floating_tools', showFloatingTools ? '1' : '0'); } catch (e) {}
+              try { window.dispatchEvent(new CustomEvent('muller-floating-tools-updated', { detail: { enabled: !!showFloatingTools } })); } catch (e) {}
+          }, [showFloatingTools]);
+          useEffect(() => {
+              try { localStorage.setItem('muller_reduce_motion', reduceMotionUi ? '1' : '0'); } catch (e) {}
+              try {
+                  if (reduceMotionUi) document.documentElement.classList.add('muller-reduce-motion');
+                  else document.documentElement.classList.remove('muller-reduce-motion');
+              } catch (e) {}
+          }, [reduceMotionUi]);
+          const [uiTheme, setUiTheme] = useState(() => { try { return localStorage.getItem(MULLER_THEME_KEY) || 'dark'; } catch (e) { return 'dark'; } });
+          const [showOnboarding, setShowOnboarding] = useState(() => { try { return !localStorage.getItem(MULLER_ONBOARDING_KEY); } catch (e) { return true; } });
+          const [onboardingStep, setOnboardingStep] = useState(1);
+          const [onboardingNever, setOnboardingNever] = useState(false);
+          const [historiaAudioOnly, setHistoriaAudioOnly] = useState(false);
+          const [vocabDueFilterOnly, setVocabDueFilterOnly] = useState(false);
+          const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+          const [userMenuOpen, setUserMenuOpen] = useState(false);
+          const userMenuWrapRef = useRef(null);
+          const [communitySubTab, setCommunitySubTab] = useState('economia');
+          const [showProfileSettingsModal, setShowProfileSettingsModal] = useState(false);
+          const [profileSettingsTab, setProfileSettingsTab] = useState('perfil');
+          const [showFloatingTools, setShowFloatingTools] = useState(() => { try { return localStorage.getItem('muller_show_floating_tools') !== '0'; } catch (e) { return true; } });
+          const [reduceMotionUi, setReduceMotionUi] = useState(() => { try { return localStorage.getItem('muller_reduce_motion') === '1'; } catch (e) { return false; } });
+          const [authTick, setAuthTick] = useState(0);
+          const [authEmail, setAuthEmail] = useState('');
+          const [authPassword, setAuthPassword] = useState('');
+          const [authDisplayName, setAuthDisplayName] = useState('');
+          const [authBusy, setAuthBusy] = useState(false);
+          const [authError, setAuthError] = useState('');
+          const [authMode, setAuthMode] = useState('login');
+          const [supabaseUser, setSupabaseUser] = useState(null);
+          const [supabaseProfile, setSupabaseProfile] = useState(null);
+          const cloudApplyingRef = useRef(false);
+          const cloudLoadedRef = useRef(false);
+          const cloudPushTimerRef = useRef(null);
+          const [remoteLeagueRows, setRemoteLeagueRows] = useState(null);
+          const [remoteProfiles, setRemoteProfiles] = useState(null);
+          const [profileNameDraft, setProfileNameDraft] = useState('');
+          const [profileNameBusy, setProfileNameBusy] = useState(false);
+          const [profileNameMsg, setProfileNameMsg] = useState('');
+          const [toastItems, setToastItems] = useState([]);
+          const [walletCoins, setWalletCoins] = useState(null);
+          const [walletLoading, setWalletLoading] = useState(false);
+          const [walletIsCreator, setWalletIsCreator] = useState(false);
+          const [economyMsg, setEconomyMsg] = useState('');
+          const [adOpenedAt, setAdOpenedAt] = useState(0);
+          const [rewardStatus, setRewardStatus] = useState(null);
+          const [premiumStatus, setPremiumStatus] = useState(null);
+          const [cloudSyncState, setCloudSyncState] = useState('local');
+          const [cloudSyncLabel, setCloudSyncLabel] = useState('Local');
+          const [cloudSyncAt, setCloudSyncAt] = useState(null);
+          const [storiesProInputMode, setStoriesProInputMode] = useState('es');
+          const [storiesProOcrLang, setStoriesProOcrLang] = useState('es');
+          const [storiesProSourceText, setStoriesProSourceText] = useState('');
+          const [storiesProLevel, setStoriesProLevel] = useState('B1');
+          const [storiesProTone, setStoriesProTone] = useState('natural');
+          const [storiesProBusy, setStoriesProBusy] = useState(false);
+          const [storiesProErr, setStoriesProErr] = useState('');
+          const [storiesProResult, setStoriesProResult] = useState(null);
+          const unifiedAuth = useMemo(() => {
+              void authTick;
+              if (mullerSupabaseConfigured() && supabaseUser) {
+                  const dn = supabaseProfile && supabaseProfile.display_name
+                      ? supabaseProfile.display_name
+                      : (supabaseUser.user_metadata && supabaseUser.user_metadata.display_name) || 'Estudiante';
+                  return {
+                      source: 'supabase',
+                      email: supabaseUser.email,
+                      displayName: dn,
+                      userId: supabaseUser.id,
+                  };
+              }
+              const loc = mullerAuthGetSession();
+              if (loc) return { source: 'local', ...loc };
+              return null;
+          }, [authTick, supabaseUser, supabaseProfile]);
+          const isCreatorAccount = useMemo(() => {
+              if (walletIsCreator) return true;
+              if (!unifiedAuth || !unifiedAuth.email) return false;
+              const creatorEmail = String(window.MULLER_CREATOR_EMAIL || '').trim().toLowerCase();
+              return !!(creatorEmail && String(unifiedAuth.email || '').toLowerCase() === creatorEmail);
+          }, [walletIsCreator, unifiedAuth]);
+          const coinsUiLabel = isCreatorAccount ? 'âˆž' : userStats.coins;
+          const economyReasonText = (reason) => {
+              const r = String(reason || '');
+              if (r === 'already_claimed_today') return 'Ya has reclamado el bonus diario hoy.';
+              if (r === 'daily_limit_reached') return 'LÃ­mite diario de anuncios alcanzado (6/6).';
+              if (r === 'cooldown_15m') return 'Debes esperar 15 minutos entre anuncios.';
+              if (r === 'invalid_reward_type') return 'Tipo de recompensa invÃ¡lido.';
+              if (r === 'creator_unlimited') return 'Cuenta creador: saldo ilimitado.';
+              if (r === 'ok') return 'OperaciÃ³n completada.';
+              return r || 'No disponible.';
+          };
+          const leagueBoard = useMemo(() => {
+              const week = mullerIsoWeekMonday();
+              const bots = MULLER_BOT_PLAYERS.map((b) => ({
+                  id: b.id,
+                  name: b.name,
+                  isBot: true,
+                  isSelf: false,
+                  score: mullerBotWeekScore(b.id, week),
+                  sub: `${b.tag} Â· ${b.lvl}`,
+                  rank: 0,
+              }));
+              const meScore = mullerLeagueComputeUserScore(userStats);
+              const meName = userStats.username || 'Estudiante';
+              const ua = unifiedAuth;
+              let humans = [];
+              if (remoteLeagueRows && Array.isArray(remoteLeagueRows) && remoteLeagueRows.length > 0) {
+                  humans = remoteLeagueRows.map((r) => ({
+                      id: String(r.user_id),
+                      name: r.display_name || 'Estudiante',
+                      isBot: false,
+                      isSelf: !!(ua && ua.userId && r.user_id === ua.userId),
+                      score: Number(r.score) || 0,
+                      sub: 'Liga global (Supabase)',
+                      rank: 0,
+                  }));
+                  if (ua && ua.source === 'supabase' && !humans.some((h) => h.isSelf)) {
+                      humans.push({
+                          id: ua.userId,
+                          name: meName,
+                          isBot: false,
+                          isSelf: true,
+                          score: meScore,
+                          sub: 'Tu puntuaciÃ³n (se sube al jugar)',
+                          rank: 0,
+                      });
+                  }
+              } else {
+                  humans = [{
+                      id: 'local_player',
+                      name: meName,
+                      isBot: false,
+                      isSelf: true,
+                      score: meScore,
+                      sub: ua ? mullerMaskEmail(ua.email) : 'Invitado (sin cuenta)',
+                      rank: 0,
+                  }];
+              }
+                   const rows = [...humans, ...bots].sort((a, b) => b.score - a.score);
+              rows.forEach((r, i) => { r.rank = i + 1; });
+              return { week, rows };
+          }, [userStats, unifiedAuth, remoteLeagueRows]);
+          const directoryLocals = useMemo(() => {
+              void authTick;
+              const m = mullerAccountsLoad();
+              return Object.keys(m).map((email) => ({ email, displayName: m[email].displayName, userId: m[email].userId, createdAt: m[email].createdAt }));
+          }, [authTick]);
+          const [mainDailyGoal, setMainDailyGoal] = useState(() => mullerGetMainDailyGoalCards());
+          const [oralQIdx, setOralQIdx] = useState(0);
+          const [oralSecs, setOralSecs] = useState(90);
+          const [oralDeadline, setOralDeadline] = useState(null);
+          const [oralClock, setOralClock] = useState(0);
+          const [pwaDeferredPrompt, setPwaDeferredPrompt] = useState(null);
+          const [tourStep, setTourStep] = useState(0);
+          const [dailyChallenges, setDailyChallenges] = useState(() => {
+              try {
+                  const k = 'muller_daily_v1_' + new Date().toISOString().slice(0, 10);
+                  const j = localStorage.getItem(k);
+                  return j ? JSON.parse(j) : { vocab: false, shadow: false, write: false };
+              } catch (e) { return { vocab: false, shadow: false, write: false }; }
+          });
+          const [vocabSrsEpoch, setVocabSrsEpoch] = useState(0);
+          const vocabSrsMap = useMemo(() => mullerGetVocabSrsMap(), [vocabSrsEpoch]);
+          const vocabSrsDueCount = useMemo(() => {
+              if (!currentVocabList.length) return 0;
+              return mullerCountVocabSrsDue(currentVocabList, vocabSrsMap);
+          }, [currentVocabList, vocabSrsMap]);
+          const vocabDisplayList = useMemo(() => {
+              if (!vocabDueFilterOnly) return currentVocabList;
+              const todayStr = new Date().toISOString().slice(0, 10);
+              return currentVocabList.filter((w) => {
+                  const rec = vocabSrsMap[mullerVocabSrsKey(w)];
+                  if (!rec || !rec.due) return true;
+                  return rec.due <= todayStr;
+              });
+          }, [currentVocabList, vocabDueFilterOnly, vocabSrsMap]);
+
+          const [exerciseHelpId, setExerciseHelpId] = useState(null);
+          const historiaExerciseHelpId = useMemo(() => {
+              if (podcastMode) return 'historia_podcast';
+              if (mode === 'interview') return 'historia_interview';
+              if (mode === 'roleplay_wait') return 'historia_roleplay';
+              if (mode === 'dialogue' && puzzleMode) return 'historia_puzzle';
+              if (mode === 'dialogue' && diktatMode) return 'historia_diktat';
+              if (mode === 'dialogue' && lueckentextMode) return 'historia_huecos';
+              if (mode === 'dialogue' && artikelSniperMode) return 'historia_artikel';
+              if (mode === 'dialogue' && declinaMode) return 'historia_declinar';
+              if (mode === 'dialogue' && tempusMode) return 'historia_tempus';
+              if (mode === 'dialogue' && blindMode) return 'historia_blind';
+              if (mode === 'dialogue') return 'historia_dialogue';
+              return 'historia_base';
+          }, [mode, podcastMode, puzzleMode, diktatMode, lueckentextMode, artikelSniperMode, declinaMode, tempusMode, blindMode]);
+          const escrituraExerciseHelpId = useMemo(() => 'escritura_' + writingMode, [writingMode]);
+          const bxExerciseHelpId = useMemo(() => 'bx_' + bxCategory, [bxCategory]);
+
+          useEffect(() => {
+              const h = (e) => {
+                  const id = e && e.detail && e.detail.id;
+                  if (id && MULLER_EXERCISE_HELP[id]) setExerciseHelpId(id);
+              };
+              window.addEventListener('mullerOpenExerciseHelp', h);
+              return () => window.removeEventListener('mullerOpenExerciseHelp', h);
+          }, []);
+
+          useEffect(() => {
+              if (!exerciseHelpId) return;
+              const k = (ev) => { if (ev.key === 'Escape') setExerciseHelpId(null); };
+              window.addEventListener('keydown', k);
+              return () => window.removeEventListener('keydown', k);
+          }, [exerciseHelpId]);
+
+          const ExerciseHelpBtn = ({ helpId, className = '', compact = false, title: titleOverride, ...rest }) => {
+              const entry = MULLER_EXERCISE_HELP[helpId];
+              if (!entry) return null;
+              const t = titleOverride || ('Ayuda: ' + entry.title);
+              return (
+                  <button type="button" onClick={() => setExerciseHelpId(helpId)} className={`inline-flex items-center justify-center gap-1 rounded-lg border border-white/15 bg-black/30 hover:bg-black/50 px-1.5 py-1 text-[10px] md:text-xs font-bold text-sky-200/95 shrink-0 ${className}`} title={t} aria-label={t} {...rest}>
+                      <Icon name="help-circle" className={compact ? 'w-3.5 h-3.5' : 'w-3.5 h-3.5 md:w-4 md:h-4'} />
+                      {!compact && <span className="hidden sm:inline">Ayuda</span>}
+                  </button>
+              );
+          };
+
+          const bxCatTabRef = useRef(null);
+          const isPlayingRef = useRef(false);
+          const timeoutRef = useRef(null);
+          const recognitionRef = useRef(null);
+          const spokenTextRef = useRef("");
+          const speechFinalRef = useRef("");
+          const micIgnoreMouseUntilRef = useRef(0);
+          const noiseContextRef = useRef(null);
+          const noiseSourceRef = useRef(null);
+          const noiseGainRef = useRef(null);
+          const submitKeyLockRef = useRef({});
+          const pdfStudyBufferRef = useRef(null);
+          const pdfStudyDocHandleRef = useRef(null);
+
+          /* Tras cada commit React los <i data-lucide> se restauran; hay que volver a pintar SVG en todo el documento */
+          useLayoutEffect(() => {
+              const t = requestAnimationFrame(() => {
+                  try {
+                      if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+                  } catch (e) {}
+              });
+              return () => cancelAnimationFrame(t);
+          });
+
+          useEffect(() => {
+              if (!showMullerHub) return;
+              try {
+                  setTtsDeUri(localStorage.getItem('muller_tts_de') || '');
+                  setTtsEsUri(localStorage.getItem('muller_tts_es') || '');
+              } catch (e) {}
+              try {
+                  if (window.speechSynthesis && typeof window.speechSynthesis.getVoices === 'function') {
+                      window.speechSynthesis.getVoices();
+                  }
+              } catch (e) {}
+          }, [showMullerHub]);
+
+          useEffect(() => {
+              if (!showMullerHub) return;
+              const onKey = (e) => { if (e.key === 'Escape') setShowMullerHub(false); };
+              window.addEventListener('keydown', onKey);
+              return () => window.removeEventListener('keydown', onKey);
+          }, [showMullerHub]);
+
+          useEffect(() => {
+              const onAb = (e) => setAudiobookPlaying(!!e.detail?.playing);
+              window.addEventListener('mullerAudiobookState', onAb);
+              return () => window.removeEventListener('mullerAudiobookState', onAb);
+          }, []);
+
+          // Cargar datos guardados
+          useEffect(() => {
+              const savedData = localStorage.getItem('mullerStats');
+              if (savedData) setUserStats(JSON.parse(savedData));
+              else setShowLoginModal(true);
+              const scripts = localStorage.getItem('mullerScripts');
+              if (scripts) {
+                  try {
+                      let arr = JSON.parse(scripts);
+                      if (Array.isArray(arr)) {
+                          let changed = false;
+                          arr = arr.map((s, i) => {
+                              if (s && s.id != null && s.id !== '') return s;
+                              changed = true;
+                              return { ...s, id: 'muller_script_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 9) };
+                          });
+                          if (changed) localStorage.setItem('mullerScripts', JSON.stringify(arr));
+                          setSavedScripts(arr);
+                      }
+                  } catch (e) { setSavedScripts([]); }
+              }
+              const savedCustomVocab = localStorage.getItem('mullerCustomVocab');
+              if(savedCustomVocab) setCustomVocabLessons(JSON.parse(savedCustomVocab));
+              setUserStats((prev) => ({ ...prev, streakDays: mullerComputeHonestStreakDays() }));
+          }, []);
+
+          const buildCloudSnapshot = useCallback(() => {
+              return {
+                  userStats,
+                  savedScripts,
+                  customVocabLessons,
+                  prefs: {
+                      showFloatingTools,
+                      reduceMotionUi,
+                      uiTheme,
+                  },
+                  storiesProDraft: {
+                      inputMode: storiesProInputMode,
+                      sourceText: storiesProSourceText,
+                      level: storiesProLevel,
+                      tone: storiesProTone,
+                  }
+              };
+          }, [userStats, savedScripts, customVocabLessons, showFloatingTools, reduceMotionUi, uiTheme, storiesProInputMode, storiesProSourceText, storiesProLevel, storiesProTone]);
+
+          const applyCloudSnapshot = useCallback((payload) => {
+              if (!payload || typeof payload !== 'object') return;
+              cloudApplyingRef.current = true;
+              try {
+                  if (payload.userStats && typeof payload.userStats === 'object') {
+                      setUserStats(payload.userStats);
+                      try { localStorage.setItem('mullerStats', JSON.stringify(payload.userStats)); } catch (e) {}
+                  }
+                  if (Array.isArray(payload.savedScripts)) {
+                      setSavedScripts(payload.savedScripts);
+                      try { localStorage.setItem('mullerScripts', JSON.stringify(payload.savedScripts)); } catch (e) {}
+                  }
+                  if (Array.isArray(payload.customVocabLessons)) {
+                      setCustomVocabLessons(payload.customVocabLessons);
+                      try { localStorage.setItem('mullerCustomVocab', JSON.stringify(payload.customVocabLessons)); } catch (e) {}
+                  }
+                  if (payload.prefs && typeof payload.prefs === 'object') {
+                      if (typeof payload.prefs.showFloatingTools === 'boolean') setShowFloatingTools(payload.prefs.showFloatingTools);
+                      if (typeof payload.prefs.reduceMotionUi === 'boolean') setReduceMotionUi(payload.prefs.reduceMotionUi);
+                      if (typeof payload.prefs.uiTheme === 'string') setUiTheme(payload.prefs.uiTheme);
+                  }
+                  if (payload.storiesProDraft && typeof payload.storiesProDraft === 'object') {
+                      if (typeof payload.storiesProDraft.inputMode === 'string') setStoriesProInputMode(payload.storiesProDraft.inputMode);
+                      if (typeof payload.storiesProDraft.sourceText === 'string') setStoriesProSourceText(payload.storiesProDraft.sourceText);
+                      if (typeof payload.storiesProDraft.level === 'string') setStoriesProLevel(payload.storiesProDraft.level);
+                      if (typeof payload.storiesProDraft.tone === 'string') setStoriesProTone(payload.storiesProDraft.tone);
+                  }
+              } finally {
+                  window.setTimeout(() => { cloudApplyingRef.current = false; }, 50);
+              }
+          }, []);
+
+          useEffect(() => {
+              if (activeTab !== 'lexikon') return;
+              try {
+                  const raw = localStorage.getItem('mullerCustomVocab');
+                  if (raw) {
+                      const parsed = JSON.parse(raw);
+                      if (Array.isArray(parsed)) setCustomVocabLessons(parsed);
+                  }
+              } catch (e) {}
+          }, [activeTab]);
+
+          useEffect(() => {
+              if (activeTab !== 'lexikon') return;
+              if (customVocabLessons.length > 0 && !lexikonSaveLessonId) {
+                  setLexikonSaveLessonId(customVocabLessons[0].id);
+              }
+          }, [activeTab, customVocabLessons, lexikonSaveLessonId]);
+
+          useEffect(() => {
+              const id = setInterval(() => {
+                  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+                  let st = mullerGetStreakTodayStats();
+                  const today = new Date().toISOString().slice(0, 10);
+                  if (st.date !== today) st = { date: today, vocabRated: 0, points: 0, activeSec: 0 };
+                  st.activeSec = (st.activeSec || 0) + 60;
+                  mullerSaveStreakTodayStats(st);
+                  mullerUpdateQualifyingForStats(st);
+                  setUserStats((prev) => ({ ...prev, streakDays: mullerComputeHonestStreakDays() }));
+              }, 60000);
+              return () => clearInterval(id);
+          }, []);
+
+          useEffect(() => { try { localStorage.setItem('muller_active_tab_v1', activeTab); } catch {} }, [activeTab]);
+
+          useEffect(() => {
+              if (!showSplash) {
+                  setSplashLogoBlink(false);
+                  return undefined;
+              }
+              const t = window.setTimeout(() => setSplashLogoBlink(true), 3000);
+              return () => window.clearTimeout(t);
+          }, [showSplash]);
+
+          useEffect(() => {
+              const onKey = (e) => {
+                  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+                  if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                      e.preventDefault();
+                      setShowShortcutsModal(true);
+                  }
+                  if (e.key === 'i' || e.key === 'I') {
+                      if (!e.ctrlKey && !e.metaKey) { setActiveTab('inicio'); stopAudio(); setPracticeActive(null); }
+                  }
+                  if (e.key === 'r' || e.key === 'R') {
+                      if (!e.ctrlKey && !e.metaKey) { setActiveTab('ruta'); stopAudio(); setPracticeActive(null); }
+                  }
+                  if (e.key === 'h' || e.key === 'H') {
+                      if (!e.ctrlKey && !e.metaKey) { setActiveTab('historia'); setMode('dialogue'); }
+                  }
+                  if (e.key === 'v' || e.key === 'V') {
+                      if (!e.ctrlKey && !e.metaKey) setActiveTab('vocabulario');
+                  }
+                  if (e.key === 'p' || e.key === 'P') {
+                      if (!e.ctrlKey && !e.metaKey) setActiveTab('progreso');
+                  }
+                  if (e.key === 'm' || e.key === 'M') {
+                      if (!e.ctrlKey && !e.metaKey) { setShowMullerHub(true); setMullerHubTab('voices'); }
+                  }
+                  if (e.key === 'o' || e.key === 'O') {
+                      if (!e.ctrlKey && !e.metaKey) { setActiveTab('comunidad'); stopAudio(); setPracticeActive(null); }
+                  }
+                  if (e.key === 'Escape') { setShowShortcutsModal(false); setUserMenuOpen(false); }
+              };
+              window.addEventListener('keydown', onKey);
+              return () => window.removeEventListener('keydown', onKey);
+          }, []);
+
+          useEffect(() => {
+              if (activeTab !== 'ruta') return undefined;
+              rutaTabTimerRef.current = Date.now();
+              return () => {
+                  const start = rutaTabTimerRef.current;
+                  if (!start) return;
+                  const ms = Date.now() - start;
+                  setRutaProgress((prev) => {
+                      const next = { ...prev, playTimeMs: (prev.playTimeMs || 0) + ms };
+                      if (typeof window.mullerRutaSave === 'function') window.mullerRutaSave(next);
+                      return next;
+                  });
+              };
+          }, [activeTab]);
+
+          useEffect(() => {
+              if (!userMenuOpen) return undefined;
+              const close = (e) => {
+                  if (userMenuWrapRef.current && !userMenuWrapRef.current.contains(e.target)) setUserMenuOpen(false);
+              };
+              document.addEventListener('mousedown', close);
+              document.addEventListener('touchstart', close, { passive: true });
+              return () => {
+                  document.removeEventListener('mousedown', close);
+                  document.removeEventListener('touchstart', close);
+              };
+          }, [userMenuOpen]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client) return undefined;
+              client.auth.getSession().then(({ data: { session } }) => {
+                  setSupabaseUser(session && session.user ? session.user : null);
+              });
+              const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+                  setSupabaseUser(session && session.user ? session.user : null);
+                  setAuthTick((x) => x + 1);
+              });
+              return () => { try { subscription.unsubscribe(); } catch (err) {} };
+          }, []);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || !supabaseUser || !supabaseUser.id) {
+                  setSupabaseProfile(null);
+                  return undefined;
+              }
+              let cancelled = false;
+              client.from('profiles').select('*').eq('id', supabaseUser.id).maybeSingle().then(({ data, error }) => {
+                  if (cancelled || error) return;
+                  if (data) setSupabaseProfile(data);
+              });
+              return () => { cancelled = true; };
+          }, [supabaseUser]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || !supabaseUser || !supabaseUser.id) {
+                  setWalletCoins(null);
+                  setWalletIsCreator(false);
+                  return undefined;
+              }
+              let cancelled = false;
+              setWalletLoading(true);
+              client.rpc('muller_get_wallet').then(({ data, error }) => {
+                  if (cancelled) return;
+                  setWalletLoading(false);
+                  if (error || !Array.isArray(data) || !data[0]) return;
+                  const row = data[0];
+                  setWalletCoins(Number(row.coins || 0));
+                  setWalletIsCreator(!!row.is_creator);
+              });
+              return () => { cancelled = true; };
+          }, [supabaseUser, authTick]);
+
+          useEffect(() => {
+              if (!unifiedAuth || unifiedAuth.source !== 'supabase') return;
+              if (walletCoins == null) return;
+              if (isCreatorAccount) return;
+              setUserStats((prev) => {
+                  if ((Number(prev.coins) || 0) === walletCoins) return prev;
+                  const next = { ...prev, coins: walletCoins };
+                  try { localStorage.setItem('mullerStats', JSON.stringify(next)); } catch (e) {}
+                  return next;
+              });
+          }, [walletCoins, unifiedAuth, isCreatorAccount]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || !supabaseUser || !supabaseUser.id) return undefined;
+              const week = mullerIsoWeekMonday();
+              const score = mullerLeagueComputeUserScore(userStats);
+              const t = window.setTimeout(() => {
+                  client.rpc('muller_submit_league_score', {
+                      p_week_key: week,
+                      p_score: score,
+                      p_display_name: userStats.username || 'Estudiante',
+                  }).then(() => {});
+              }, 2800);
+              return () => window.clearTimeout(t);
+          }, [userStats, supabaseUser]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || activeTab !== 'comunidad' || communitySubTab !== 'ligas') return undefined;
+              const week = mullerIsoWeekMonday();
+              let cancelled = false;
+              client.from('league_scores').select('user_id, week_key, score, display_name, updated_at').eq('week_key', week).order('score', { ascending: false }).limit(80).then(({ data, error }) => {
+                  if (cancelled || error) return;
+                  setRemoteLeagueRows(data || []);
+              });
+              return () => { cancelled = true; };
+          }, [activeTab, communitySubTab, authTick, supabaseUser]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || activeTab !== 'comunidad' || communitySubTab !== 'directorio') return undefined;
+              let cancelled = false;
+              client.from('profiles').select('id, display_name, updated_at').order('updated_at', { ascending: false }).limit(120).then(({ data, error }) => {
+                  if (cancelled || error) return;
+                  setRemoteProfiles(data || []);
+              });
+              return () => { cancelled = true; };
+          }, [activeTab, communitySubTab, authTick]);
+
+          useEffect(() => {
+              const client = mullerGetSupabaseClient();
+              if (!client || activeTab !== 'comunidad' || communitySubTab !== 'economia' || !supabaseUser) {
+                  setRewardStatus(null);
+                  setPremiumStatus(null);
+                  return undefined;
+              }
+              let cancelled = false;
+              client.rpc('muller_reward_status').then(({ data, error }) => {
+                  if (cancelled || error || !Array.isArray(data) || !data[0]) return;
+                  setRewardStatus(data[0]);
+              });
+              client.rpc('muller_get_premium_status').then(({ data, error }) => {
+                  if (cancelled || error || !Array.isArray(data) || !data[0]) return;
+                  setPremiumStatus(data[0]);
+              });
+              return () => { cancelled = true; };
+          }, [activeTab, communitySubTab, authTick, supabaseUser]);
+
+          useEffect(() => {
+              if (!unifiedAuth) {
+                  setProfileNameDraft('');
+                  setProfileNameMsg('');
+                  return;
+              }
+              setProfileNameDraft(unifiedAuth.displayName || '');
+              setProfileNameMsg('');
+          }, [unifiedAuth]);
+
+          useEffect(() => {
+              if (!mullerSupabaseConfigured()) {
+                  setCloudSyncState('local');
+                  setCloudSyncLabel('Local');
+                  return;
+              }
+              if (!supabaseUser || !supabaseUser.id) {
+                  setCloudSyncState('local');
+                  setCloudSyncLabel('Local (sin sesiÃ³n)');
+                  return;
+              }
+              setCloudSyncState('syncing');
+              setCloudSyncLabel('Supabase conectandoâ€¦');
+              const client = mullerGetSupabaseClient();
+              if (!client) {
+                  setCloudSyncState('error');
+                  setCloudSyncLabel('Error Supabase');
+                  return;
+              }
+              let cancelled = false;
+              client.from('muller_user_state')
+                  .select('payload, updated_at')
+                  .eq('user_id', supabaseUser.id)
+                  .maybeSingle()
+                  .then(({ data, error }) => {
+                      if (cancelled) return;
+                      if (error) {
+                          setCloudSyncState('error');
+                          setCloudSyncLabel(mullerCloudSyncErrorLabel(error));
+                          if (window.__mullerToast) {
+                              const detail = String(error.message || error.code || 'fallo desconocido').slice(0, 140);
+                              window.__mullerToast(`Sync nube: ${detail}`, 'error');
+                          }
+                          return;
+                      }
+                      if (data && data.payload) {
+                          applyCloudSnapshot(data.payload);
+                          setCloudSyncAt(data.updated_at || new Date().toISOString());
+                      }
+                      cloudLoadedRef.current = true;
+                      setCloudSyncState('synced');
+                      setCloudSyncLabel('Supabase activo');
+                  })
+                  .catch(() => {
+                      if (cancelled) return;
+                      setCloudSyncState('error');
+                      setCloudSyncLabel('Error de red');
+                  });
+              return () => { cancelled = true; };
+          }, [supabaseUser, applyCloudSnapshot]);
+
+          useEffect(() => {
+              if (!mullerSupabaseConfigured() || !supabaseUser || !supabaseUser.id) return undefined;
+              if (!cloudLoadedRef.current || cloudApplyingRef.current) return undefined;
+              const client = mullerGetSupabaseClient();
+              if (!client) return undefined;
+              if (cloudPushTimerRef.current) window.clearTimeout(cloudPushTimerRef.current);
+              setCloudSyncState('syncing');
+              setCloudSyncLabel('Sincronizandoâ€¦');
+              cloudPushTimerRef.current = window.setTimeout(async () => {
+                  try {
+                      const payload = buildCloudSnapshot();
+                      const nowIso = new Date().toISOString();
+                      const { error } = await client.from('muller_user_state').upsert({
+                          user_id: supabaseUser.id,
+                          payload,
+                          updated_at: nowIso
+                      }, { onConflict: 'user_id' });
+                      if (error) throw error;
+                      setCloudSyncState('synced');
+                      setCloudSyncLabel('Supabase activo');
+                      setCloudSyncAt(nowIso);
+                  } catch (err) {
+                      setCloudSyncState('error');
+                      setCloudSyncLabel('Sync con errores');
+                  }
+              }, 1200);
+              return () => {
+                  if (cloudPushTimerRef.current) window.clearTimeout(cloudPushTimerRef.current);
+              };
+          }, [supabaseUser, buildCloudSnapshot, userStats, savedScripts, customVocabLessons, showFloatingTools, reduceMotionUi, uiTheme, storiesProInputMode, storiesProSourceText, storiesProLevel, storiesProTone]);
+
+          useEffect(() => {
+              const onBip = (e) => {
+                  e.preventDefault();
+                  setPwaDeferredPrompt(e);
+              };
+              window.addEventListener('beforeinstallprompt', onBip);
+              return () => window.removeEventListener('beforeinstallprompt', onBip);
+          }, []);
+
+          useEffect(() => {
+              if (mode !== 'interview' || !oralDeadline) return;
+              const id = setInterval(() => setOralClock((c) => c + 1), 1000);
+              return () => clearInterval(id);
+          }, [mode, oralDeadline, oralQIdx]);
+
+          const vocabViewKey = vocabDisplayList[vocabReviewIndex] ? mullerVocabSrsKey(vocabDisplayList[vocabReviewIndex]) : '';
+          useEffect(() => {
+              if (activeTab !== 'vocabulario' || !vocabViewKey) return;
+              const w = vocabDisplayList[vocabReviewIndex];
+              if (!w) return;
+              try {
+                  const map = mullerIncrementSrsView(mullerGetVocabSrsMap(), w);
+                  mullerSetVocabSrsMap(map);
+                  setVocabSrsEpoch((x) => x + 1);
+              } catch (err) {}
+          }, [vocabReviewIndex, activeTab, vocabViewKey]);
+
+          useEffect(() => {
+              if (vocabReviewIndex >= vocabDisplayList.length) setVocabReviewIndex(0);
+          }, [vocabDisplayList.length, vocabReviewIndex]);
+
+          useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+
+          useEffect(() => {
+              window.__MULLER_ACTIVE_GUION__ = guionData;
+          }, [guionData]);
+
+          useEffect(() => {
+              if (activeTab !== 'shadowing') return;
+              setSpokenText("");
+              setPronunciationScore(null);
+              setPronunciationFeedback([]);
+              setGrammarPolizeiMsg("");
+          }, [sceneIndex, activeTab]);
+
+          const saveProgress = (newStatsUpdates) => {
+              const today = new Date().toISOString().split('T')[0];
+              let st = mullerGetStreakTodayStats();
+              if (st.date !== today) st = { date: today, vocabRated: 0, points: 0, activeSec: 0 };
+              const mergedStats = { ...userStats, ...newStatsUpdates, lastPlayedDate: today };
+              if (isCreatorAccount) mergedStats.coins = 999999999;
+              if (unifiedAuth && unifiedAuth.source === 'supabase' && !isCreatorAccount && walletCoins != null) {
+                  mergedStats.coins = walletCoins;
+              }
+              const dayMap = mergedStats.activityByDay || {};
+              st.points = Math.max(st.points || 0, dayMap[today] || 0);
+              mullerSaveStreakTodayStats(st);
+              mullerUpdateQualifyingForStats(st);
+              mergedStats.streakDays = mullerComputeHonestStreakDays();
+              const goalCards = mullerGetMainDailyGoalCards();
+              if (st.vocabRated >= goalCards) {
+                  try {
+                      if (localStorage.getItem(MULLER_GOAL_CLAIM_KEY) !== today) {
+                          localStorage.setItem(MULLER_GOAL_CLAIM_KEY, today);
+                          mergedStats.coins = (mergedStats.coins || 0) + 10;
+                      }
+                  } catch (e) {}
+              }
+              setUserStats(mergedStats);
+              localStorage.setItem('mullerStats', JSON.stringify(mergedStats));
+          };
+
+          const handleRegister = () => {
+              if(tempUsername.trim() === "") return;
+              saveProgress({ username: tempUsername, isPremium: true });
+              setShowLoginModal(false);
+          };
+
+          const deductHeart = () => {
+              if (userStats.hearts <= 1) { saveProgress({ hearts: 0 }); stopAudio(); setShowDeathModal(true); } 
+              else { saveProgress({ hearts: userStats.hearts - 1 }); }
+          };
+
+          const buyHearts = () => {
+              if (isCreatorAccount) { saveProgress({ hearts: 5 }); setShowDeathModal(false); return; }
+              if (unifiedAuth && unifiedAuth.source === 'supabase') {
+                  const client = mullerGetSupabaseClient();
+                  if (!client) { alert("Supabase no disponible."); return; }
+                  client.rpc('muller_spend_coins', { p_amount: 50, p_reason: 'buy_hearts' }).then(({ data, error }) => {
+                      if (error || !Array.isArray(data) || !data[0] || !data[0].ok) {
+                          alert("No tienes suficientes Monedas (Coins).");
+                          return;
+                      }
+                      const newBalance = Number(data[0].balance || 0);
+                      setWalletCoins(newBalance);
+                      saveProgress({ hearts: 5, coins: newBalance });
+                      setShowDeathModal(false);
+                  });
+                  return;
+              }
+              if (userStats.coins >= 50) { saveProgress({ coins: userStats.coins - 50, hearts: 5 }); setShowDeathModal(false); }
+              else { alert("No tienes suficientes Monedas (Coins). Completa ejercicios para ganar mÃ¡s."); }
+          };
+
+          const getLast7Days = () => {
+              const days = [];
+              const dayNames = ['Dom', 'Lun', 'Mar', 'MiÃ©', 'Jue', 'Vie', 'SÃ¡b'];
+              for(let i=6; i>=0; i--) {
+                  const d = new Date(); d.setDate(d.getDate() - i);
+                  days.push(`${dayNames[d.getDay()]} ${d.getDate()}`);
+              }
+              return days;
+          };
+
+          const mergeActivityPoints = (extra) => {
+              const today = new Date().toISOString().slice(0, 10);
+              const dayMap = { ...(userStats.activityByDay || {}) };
+              dayMap[today] = (dayMap[today] || 0) + extra;
+              return dayMap;
+          };
+
+          const completeRutaLesson = (levelIdx, lessonIdx) => {
+              const levels = rutaLevels || [];
+              const lesson = levels[levelIdx] && levels[levelIdx].lessons[lessonIdx];
+              if (!lesson) return;
+              if (rutaProgress.completed && rutaProgress.completed[lesson.id]) {
+                  saveProgress({ xp: userStats.xp + 5, activityByDay: mergeActivityPoints(12) });
+                  window.__mullerPlaySfx && window.__mullerPlaySfx('ok');
+                  setCelebrationModal({ title: 'Repaso listo', subtitle: lesson.title, xp: 5, coins: 0, recap: true });
+                  setRutaRun(null);
+                  setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr('');
+                  return;
+              }
+              const nextCount = (rutaProgress.lessonsCompleted || 0) + 1;
+              let bonus = 0;
+              if (nextCount % 3 === 0) bonus = 35;
+              const nextProg = {
+                  ...rutaProgress,
+                  completed: { ...(rutaProgress.completed || {}), [lesson.id]: true },
+                  lessonsCompleted: nextCount,
+              };
+              if (typeof window.mullerRutaSave === 'function') window.mullerRutaSave(nextProg);
+              setRutaProgress(nextProg);
+              saveProgress({
+                  xp: userStats.xp + lesson.rewardXp,
+                  coins: userStats.coins + lesson.rewardCoins + bonus,
+                  activityByDay: mergeActivityPoints(45),
+              });
+              window.__mullerPlaySfx && window.__mullerPlaySfx('complete');
+              setCelebrationModal({
+                  title: 'Â¡Lo lograste!',
+                  subtitle: lesson.title,
+                  xp: lesson.rewardXp,
+                  coins: lesson.rewardCoins + bonus,
+                  milestone: bonus > 0,
+              });
+              setRutaRun(null);
+              setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr('');
+          };
+
+      // ========== NUEVO TEST ADAPTATIVO (30 PREGUNTAS) ==========
+const startPlacementTest = () => {
+  const initialQuestions = selectQuestionsForLevel('A2', 5);
+  setPlacementQuestions(initialQuestions);
+  setPlacementAnswers(new Array(initialQuestions.length).fill(null));
+  setPlacementIndex(0);
+  setPlacementLevel('A2');
+  setPlacementScore({ correct: 0, total: 0 });
+  setPlacementFinished(false);
+};
+
+const selectQuestionsForLevel = (level, count) => {
+  const allQuestions = window.MULLER_PLACEMENT_QUESTIONS || [];
+  const levelQuestions = allQuestions.filter(q => q.level === level);
+  const shuffled = [...levelQuestions].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, levelQuestions.length));
+};
+
+const handlePlacementAnswer = (selectedOpt) => {
+  const currentQ = placementQuestions[placementIndex];
+  if (!currentQ) return;
+  
+  const isCorrect = (selectedOpt === currentQ.ok);
+  
+  // Actualizar respuestas
+  const newAnswers = [...placementAnswers];
+  newAnswers[placementIndex] = selectedOpt;
+  setPlacementAnswers(newAnswers);
+  
+  // Actualizar puntuaciÃ³n del nivel actual
+  const newScore = {
+    correct: placementScore.correct + (isCorrect ? 1 : 0),
+    total: placementScore.total + 1
+  };
+  setPlacementScore(newScore);
+  
+  // Reproducir sonido de acierto/fallo
+  if (window.__mullerNotifyExerciseOutcome) {
+    window.__mullerNotifyExerciseOutcome(isCorrect);
+  }
+  
+  // LÃ³gica adaptativa
+  const performanceRatio = newScore.correct / newScore.total;
+  let nextLevel = placementLevel;
+  let shouldFinish = false;
+  
+  if (newScore.total >= 5) {
+    if (performanceRatio >= 0.7) {
+      // Buen rendimiento: subir de nivel
+      if (placementLevel === 'A1') nextLevel = 'A2';
+      else if (placementLevel === 'A2') nextLevel = 'B1';
+      else if (placementLevel === 'B1') nextLevel = 'B2';
+      else if (placementLevel === 'B2') shouldFinish = true;
+    } else if (performanceRatio <= 0.3) {
+      // Mal rendimiento: bajar de nivel
+      if (placementLevel === 'B2') nextLevel = 'B1';
+      else if (placementLevel === 'B1') nextLevel = 'A2';
+      else if (placementLevel === 'A2') nextLevel = 'A1';
+      else if (placementLevel === 'A1') shouldFinish = true;
+    } else {
+      // Rendimiento intermedio: continuar mismo nivel
+      if (newScore.total >= 8) shouldFinish = true;
+    }
+  }
+  
+  // Si no hay mÃ¡s preguntas del nivel, finalizar
+  if (placementIndex >= placementQuestions.length - 1) {
+    shouldFinish = true;
+  }
+  
+  if (shouldFinish) {
+    const recommendedLevel = calculateRecommendedLevel();
+    finishPlacementWithLevel(recommendedLevel);
+    return;
+  }
+  
+  if (nextLevel !== placementLevel) {
+    // Cambiar de nivel
+    const newQuestions = selectQuestionsForLevel(nextLevel, 5);
+    setPlacementQuestions(newQuestions);
+    setPlacementAnswers(new Array(newQuestions.length).fill(null));
+    setPlacementIndex(0);
+    setPlacementLevel(nextLevel);
+    setPlacementScore({ correct: 0, total: 0 });
+  } else {
+    // Siguiente pregunta mismo nivel
+    setPlacementIndex(placementIndex + 1);
+  }
+};
+
+const calculateRecommendedLevel = () => {
+  const ratio = placementScore.total > 0 ? placementScore.correct / placementScore.total : 0;
+  if (placementLevel === 'A1' && ratio >= 0.6) return 'A2';
+  if (placementLevel === 'A2' && ratio >= 0.6) return 'B1';
+  if (placementLevel === 'B1' && ratio >= 0.6) return 'B2';
+  return placementLevel;
+};
+
+const finishPlacementWithLevel = (finalLevel) => {
+  const levelIndexMap = { 'A1': 0, 'A2': 1, 'B1': 2, 'B2': 3 };
+  const suggestedIdx = levelIndexMap[finalLevel] || 0;
+  
+  const next = { ...rutaProgress, placementDone: true, suggestedLevelIdx: suggestedIdx };
+  if (typeof window.mullerRutaSave === 'function') window.mullerRutaSave(next);
+  setRutaProgress(next);
+  setRutaSubTab('camino');
+  
+  if (window.__mullerPlaySfx) window.__mullerPlaySfx('levelup');
+  
+  setCelebrationModal({
+    title: 'Test de nivel completado',
+    subtitle: `Nivel recomendado: ${finalLevel}`,
+    xp: 0,
+    coins: 20,
+    milestone: false,
+    placement: true
+  });
+  
+  saveProgress({
+    coins: userStats.coins + 20,
+    activityByDay: mergeActivityPoints(25)
+  });
+  
+  // Resetear test
+  setPlacementQuestions([]);
+  setPlacementAnswers([]);
+  setPlacementIndex(0);
+  setPlacementFinished(false);
+};
+
+// ========== FIN NUEVO TEST ADAPTATIVO ==========
+
+          const checkRutaFillAnswer = (lesson) => {
+              if (!lesson || !lesson.fill) return false;
+              const got = (rutaFillInput || '').trim().toLowerCase().replace(/\s+/g, ' ');
+              const exp = String(lesson.fill.answer || '').trim().toLowerCase();
+              if (got === exp) { window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true); setRutaSpeakErr(''); return true; }
+              window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(false);
+              setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Sigue practicando.');
+              return false;
+          };
+
+          const checkRutaSpeakAnswer = (target) => {
+              const a = normalizeGermanSpeechText(rutaTranscript || '');
+              const b = normalizeGermanSpeechText(target || '');
+              if (!a || !b) { setRutaSpeakErr('Graba de nuevo con el micrÃ³fono.'); return false; }
+              const dist = levenshteinDistance(a, b);
+              const tol = Math.max(2, Math.floor(b.length / 5));
+              if (a === b || dist <= tol) { window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true); setRutaSpeakErr(''); return true; }
+              window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(false);
+              setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Casi â€” prueba otra vez.');
+              return false;
+          };
+
+          const runSingleSubmitAction = useCallback((actionKey, actionFn) => {
+              const now = Date.now();
+              const lastTs = submitKeyLockRef.current[actionKey] || 0;
+              if (now - lastTs < 350) return;
+              submitKeyLockRef.current[actionKey] = now;
+              actionFn();
+          }, []);
+
+          const handleExerciseEnterSubmit = useCallback((e, actionKey, actionFn, opts = {}) => {
+              const { requireCtrlOrMeta = false } = opts;
+              if (e.key !== 'Enter') return;
+              if (e.repeat) {
+                  e.preventDefault();
+                  return;
+              }
+              if (requireCtrlOrMeta) {
+                  if (!(e.ctrlKey || e.metaKey)) return;
+              } else if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) {
+                  return;
+              }
+              e.preventDefault();
+              runSingleSubmitAction(actionKey, actionFn);
+          }, [runSingleSubmitAction]);
+
+          const loadPdfStudyFile = useCallback(async (file) => {
+              if (!file) return;
+              if (!window.pdfjsLib || typeof window.pdfjsLib.getDocument !== 'function') {
+                  setPdfStudyErr('PDF no disponible en este navegador.');
+                  return;
+              }
+              try {
+                  const nextUrl = URL.createObjectURL(file);
+                  setPdfStudyBlobUrl((prev) => {
+                      if (prev) {
+                          try { URL.revokeObjectURL(prev); } catch (e) {}
+                      }
+                      return nextUrl;
+                  });
+              } catch (e) {
+                  setPdfStudyBlobUrl('');
+              }
+              setPdfStudyExtracting(true);
+              setPdfStudyErr('');
+              setPdfStudyBusyMsg('Leyendo PDFâ€¦');
+              pdfStudyBufferRef.current = null;
+              pdfStudyDocHandleRef.current = null;
+              try {
+                  window.pdfjsLib.GlobalWorkerOptions.workerSrc = MULLER_PDFJS_WORKER_URL;
+                  const buffer = await file.arrayBuffer();
+                  pdfStudyBufferRef.current = buffer;
+                  const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+                  pdfStudyDocHandleRef.current = pdf;
+                  const totalPages = Math.max(1, Number(pdf.numPages) || 1);
+                  const pages = [];
+                  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                      setPdfStudyBusyMsg(`Extrayendo pÃ¡gina ${pageNum}/${totalPages}â€¦`);
+                      let text = '';
+                      try {
+                          const pg = await pdf.getPage(pageNum);
+                          const tc = await pg.getTextContent();
+                          const raw = (tc.items || []).map((it) => String((it && it.str) || '')).join(' ');
+                          text = mullerPdfCleanText(raw);
+                      } catch (err) {}
+                      const firstSlice = text.slice(0, 400);
+                      const meta = mullerPdfGuessUnitLesson(firstSlice);
+                      pages.push({
+                          page: pageNum,
+                          unit: meta.unit,
+                          lesson: meta.lesson,
+                          text: text.slice(0, MULLER_PDF_STORED_TEXT_MAX),
+                          ocrPending: !text
+                      });
+                      if ((pageNum % MULLER_PDF_EXTRACT_YIELD_EVERY) === 0) {
+                          await new Promise((resolve) => setTimeout(resolve, 0));
+                      }
+                  }
+                  const compactPages = pages.slice(0, MULLER_PDF_STORED_PAGES_MAX);
+                  const payload = {
+                      id: `pdf-${Date.now()}`,
+                      name: file.name || 'Libro PDF',
+                      size: file.size || 0,
+                      totalPages,
+                      pages: compactPages,
+                      importedAt: new Date().toISOString()
+                  };
+                  setPdfStudyDoc(payload);
+                  setPdfStudyPageIdx(0);
+                  try { localStorage.setItem(MULLER_PDF_STUDY_STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
+                  const extractedCount = compactPages.filter((p) => p.text).length;
+                  setPdfStudyBusyMsg(`PDF listo: ${extractedCount}/${compactPages.length} pÃ¡ginas con texto.`);
+              } catch (err) {
+                  setPdfStudyErr(err && err.message ? err.message : 'No se pudo leer el PDF.');
+              } finally {
+                  setPdfStudyExtracting(false);
+              }
+          }, []);
+
+          const runPdfPageOcr = useCallback(async (pageNumber) => {
+              if (!pdfStudyDoc) return;
+              const idx = Math.max(0, (Number(pageNumber) || 1) - 1);
+              const pages = Array.isArray(pdfStudyDoc.pages) ? pdfStudyDoc.pages : [];
+              const page = pages[idx];
+              if (!page) return;
+              if (page.text && page.text.length >= 40) {
+                  setPdfStudyBusyMsg('Esta pÃ¡gina ya tiene texto; OCR no es necesario.');
+                  return;
+              }
+              if (typeof Tesseract === 'undefined') {
+                  setPdfStudyErr('No se pudo cargar OCR (Tesseract).');
+                  return;
+              }
+              if (!window.pdfjsLib || typeof window.pdfjsLib.getDocument !== 'function') {
+                  setPdfStudyErr('OCR PDF no disponible en este navegador.');
+                  return;
+              }
+              if (!pdfStudyBufferRef.current && !pdfStudyDocHandleRef.current) {
+                  setPdfStudyErr('Para OCR real de pÃ¡gina, vuelve a subir el PDF en esta sesiÃ³n.');
+                  setPdfStudyBusyMsg('OCR no disponible: falta el PDF en memoria.');
+                  return;
+              }
+              setPdfStudyOcrBusy(true);
+              let worker = null;
+              let attemptNo = 0;
+              const attemptCap = 1 + Math.max(0, Number(MULLER_PDF_OCR_RETRY_MAX) || 0);
+              try {
+                  setPdfStudyErr('');
+                  const safePage = Math.max(1, Number(page.page || pageNumber) || 1);
+                  while (attemptNo < attemptCap) {
+                      try {
+                          setPdfStudyBusyMsg(`Preparando OCR pÃ¡gina ${safePage}${attemptNo > 0 ? ` (reintento ${attemptNo}/${attemptCap - 1})` : ''}â€¦`);
+                          window.pdfjsLib.GlobalWorkerOptions.workerSrc = MULLER_PDFJS_WORKER_URL;
+                          let pdf = pdfStudyDocHandleRef.current;
+                          if (!pdf) {
+                              pdf = await window.pdfjsLib.getDocument({ data: pdfStudyBufferRef.current }).promise;
+                              pdfStudyDocHandleRef.current = pdf;
+                          }
+                          const pg = await pdf.getPage(safePage);
+                          let ocrText = '';
+                          const scales = [1.6, 2.1];
+                          for (let attempt = 0; attempt < scales.length; attempt++) {
+                              const scale = scales[attempt];
+                              const viewport = pg.getViewport({ scale });
+                              const canvas = document.createElement('canvas');
+                              canvas.width = Math.max(1, Math.floor(viewport.width));
+                              canvas.height = Math.max(1, Math.floor(viewport.height));
+                              const ctx = canvas.getContext('2d');
+                              if (!ctx) throw new Error('No se pudo crear el contexto de imagen para OCR.');
+                              await pg.render({ canvasContext: ctx, viewport }).promise;
+                              setPdfStudyBusyMsg(`OCR pÃ¡gina ${safePage}: intento ${attempt + 1}/${scales.length}${attemptNo > 0 ? ` Â· retry ${attemptNo}` : ''}â€¦`);
+                              worker = await Tesseract.createWorker('deu', 1, {
+                                  logger: (m) => {
+                                      if (m && m.status === 'recognizing text' && typeof m.progress === 'number') {
+                                          setPdfStudyBusyMsg(`OCR pÃ¡gina ${safePage}: ${Math.round(100 * m.progress)}%`);
+                                      }
+                                  }
+                              });
+                              const result = await worker.recognize(canvas);
+                              await worker.terminate();
+                              worker = null;
+                              const raw = result && result.data ? result.data.text : '';
+                              ocrText = mullerPdfCleanText(raw);
+                              if (ocrText.length >= 24 || attempt === scales.length - 1) break;
+                          }
+                          if (!ocrText) {
+                              setPdfStudyErr('OCR sin texto. Prueba una pÃ¡gina mÃ¡s nÃ­tida o con mÃ¡s contraste.');
+                              setPdfStudyBusyMsg(`OCR pÃ¡gina ${safePage}: sin texto detectado.`);
+                              return;
+                          }
+                          const meta = mullerPdfGuessUnitLesson(ocrText.slice(0, 400));
+                          const nextPages = pages.map((p, pIdx) => {
+                              if (pIdx !== idx) return p;
+                              return {
+                                  ...p,
+                                  unit: p.unit || meta.unit,
+                                  lesson: p.lesson || meta.lesson,
+                                  text: ocrText.slice(0, MULLER_PDF_STORED_TEXT_MAX),
+                                  ocrPending: false,
+                                  ocrUpdatedAt: new Date().toISOString()
+                              };
+                          });
+                          const nextDoc = { ...pdfStudyDoc, pages: nextPages, updatedAt: new Date().toISOString() };
+                          setPdfStudyDoc(nextDoc);
+                          try { localStorage.setItem(MULLER_PDF_STUDY_STORAGE_KEY, JSON.stringify(nextDoc)); } catch (e) {}
+                          setPdfStudyBusyMsg(`OCR completado en pÃ¡gina ${safePage}.`);
+                          return;
+                      } catch (attemptErr) {
+                          if (worker) {
+                              try { await worker.terminate(); } catch (e) {}
+                              worker = null;
+                          }
+                          attemptNo += 1;
+                          if (attemptNo >= attemptCap) throw attemptErr;
+                          setPdfStudyBusyMsg(`OCR pÃ¡gina ${safePage}: error temporal, reintentandoâ€¦`);
+                          await new Promise((resolve) => setTimeout(resolve, 220));
+                      }
+                  }
+              } catch (err) {
+                  setPdfStudyErr(err && err.message ? err.message : 'Error al ejecutar OCR de pÃ¡gina.');
+              } finally {
+                  if (worker) {
+                      try { await worker.terminate(); } catch (e) {}
+                  }
+                  setPdfStudyOcrBusy(false);
+              }
+          }, [pdfStudyDoc]);
+
+          const applyPdfStudyTextToReading = useCallback((pageNumber) => {
+              if (!pdfStudyDoc) return;
+              const idx = Math.max(0, (Number(pageNumber) || 1) - 1);
+              const page = pdfStudyDoc.pages && pdfStudyDoc.pages[idx];
+              const txt = page && page.text ? String(page.text).trim() : '';
+              if (!txt) {
+                  setPdfStudyErr('PÃ¡gina sin texto extraÃ­do todavÃ­a.');
+                  return;
+              }
+              setReadingSource('paste');
+              setReadingTextInput(txt);
+              setPdfStudyBusyMsg(`PÃ¡gina ${page.page} enviada a Lectura.`);
+              setPdfStudyLastApplied(`âœ“ PÃ¡gina ${page.page} cargada en Lectura`);
+          }, [pdfStudyDoc]);
+
+          const applyPdfStudyTextToWriting = useCallback((pageNumber) => {
+              if (!pdfStudyDoc) return;
+              const idx = Math.max(0, (Number(pageNumber) || 1) - 1);
+              const page = pdfStudyDoc.pages && pdfStudyDoc.pages[idx];
+              const txt = page && page.text ? String(page.text).trim() : '';
+              if (!txt) {
+                  setPdfStudyErr('PÃ¡gina sin texto extraÃ­do todavÃ­a.');
+                  return;
+              }
+              setActiveTab('escritura');
+              setWritingMode('telc');
+              setWritingTelcInputMode('keyboard');
+              setWritingTelcTypedText(txt);
+              setPdfStudyBusyMsg(`PÃ¡gina ${page.page} enviada a Escritura TELC.`);
+              setPdfStudyLastApplied(`âœ“ PÃ¡gina ${page.page} cargada en Escritura TELC`);
+          }, [pdfStudyDoc]);
+
+          const updatePdfStudyPageMeta = useCallback((pageNumber, patch = {}) => {
+              if (!pdfStudyDoc) return;
+              const idx = Math.max(0, (Number(pageNumber) || 1) - 1);
+              const pages = Array.isArray(pdfStudyDoc.pages) ? pdfStudyDoc.pages : [];
+              const page = pages[idx];
+              if (!page) return;
+              const nextPages = pages.map((p, pIdx) => {
+                  if (pIdx !== idx) return p;
+                  return {
+                      ...p,
+                      unit: patch && typeof patch.unit === 'string' ? patch.unit.trim() : p.unit,
+                      lesson: patch && typeof patch.lesson === 'string' ? patch.lesson.trim() : p.lesson
+                  };
+              });
+              const nextDoc = { ...pdfStudyDoc, pages: nextPages, updatedAt: new Date().toISOString() };
+              setPdfStudyDoc(nextDoc);
+              try { localStorage.setItem(MULLER_PDF_STUDY_STORAGE_KEY, JSON.stringify(nextDoc)); } catch (e) {}
+          }, [pdfStudyDoc]);
+
+          const activePdfPageData = useMemo(() => {
+              if (!pdfStudyDoc || !Array.isArray(pdfStudyDoc.pages) || !pdfStudyDoc.pages.length) return {};
+              const idx = Math.max(0, Math.min(pdfStudyDoc.pages.length - 1, pdfStudyPageIdx));
+              return pdfStudyDoc.pages[idx] || {};
+          }, [pdfStudyDoc, pdfStudyPageIdx]);
+          const activePdfPageNotes = useMemo(() => {
+              const page = activePdfPageData && activePdfPageData.page ? Number(activePdfPageData.page) : 0;
+              if (!page || !pdfStudyNotesByPage || typeof pdfStudyNotesByPage !== 'object') return { drawing: '', typed: '' };
+              const entry = pdfStudyNotesByPage[String(page)] || {};
+              return {
+                  drawing: typeof entry.drawing === 'string' ? entry.drawing : '',
+                  typed: typeof entry.typed === 'string' ? entry.typed : ''
+              };
+          }, [activePdfPageData, pdfStudyNotesByPage]);
+          const pdfStudyCanvasPadKey = useMemo(() => {
+              const basePage = Math.max(1, Number(activePdfPageData && activePdfPageData.page ? activePdfPageData.page : 1));
+              const nonce = Math.max(0, Number(pdfStudyInkNonce) || 0);
+              return (basePage * 1000) + nonce;
+          }, [activePdfPageData, pdfStudyInkNonce]);
+
+          const updatePdfPageNotes = useCallback((pageNumber, patch = {}) => {
+              const safePage = Math.max(1, Number(pageNumber) || 1);
+              setPdfStudyNotesByPage((prev) => {
+                  const base = prev && typeof prev === 'object' ? prev : {};
+                  const key = String(safePage);
+                  const current = base[key] && typeof base[key] === 'object' ? base[key] : {};
+                  const next = {
+                      ...base,
+                      [key]: {
+                          ...current,
+                          drawing: patch && typeof patch.drawing === 'string' ? patch.drawing : (typeof current.drawing === 'string' ? current.drawing : ''),
+                          typed: patch && typeof patch.typed === 'string' ? patch.typed : (typeof current.typed === 'string' ? current.typed : ''),
+                          updatedAt: new Date().toISOString()
+                      }
+                  };
+                  try { localStorage.setItem(MULLER_PDF_NOTES_STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
+                  return next;
+              });
+          }, []);
+          const clearPdfStudyDoc = useCallback(() => {
+              setPdfStudyFullscreen(false);
+              setPdfStudyDoc(null);
+              setPdfStudyPageIdx(0);
+              setPdfStudyErr('');
+              setPdfStudyBusyMsg('PDF eliminado del panel.');
+              setPdfStudyLastApplied('');
+              setPdfStudyNotesByPage({});
+              try { localStorage.removeItem(MULLER_PDF_STUDY_STORAGE_KEY); } catch (e) {}
+              try { localStorage.removeItem(MULLER_PDF_NOTES_STORAGE_KEY); } catch (e) {}
+              try {
+                  setPdfStudyBlobUrl((prev) => {
+                      if (prev) {
+                          try { URL.revokeObjectURL(prev); } catch (e) {}
+                      }
+                      return '';
+                  });
+              } catch (e) {}
+              pdfStudyBufferRef.current = null;
+              pdfStudyDocHandleRef.current = null;
+          }, []);
+
+          const saveCurrentPdfStudyDoc = useCallback(() => {
+              if (!pdfStudyDoc) return;
+              const pagesCount = Array.isArray(pdfStudyDoc.pages) ? pdfStudyDoc.pages.length : 0;
+              const entry = {
+                  id: pdfStudyDoc.id || `pdf-${Date.now()}`,
+                  name: pdfStudyDoc.name || 'Libro PDF',
+                  importedAt: pdfStudyDoc.importedAt || new Date().toISOString(),
+                  totalPages: pdfStudyDoc.totalPages || pagesCount,
+                  updatedAt: new Date().toISOString(),
+                  doc: pdfStudyDoc
+              };
+              setPdfStudySavedDocs((prev) => {
+                  const arr = Array.isArray(prev) ? prev : [];
+                  const withoutSame = arr.filter((x) => String(x.id || '') !== String(entry.id));
+                  const next = [entry, ...withoutSame].slice(0, 20);
+                  try { localStorage.setItem(MULLER_PDF_STUDY_LIBRARY_KEY, JSON.stringify(next)); } catch (e) {}
+                  return next;
+              });
+              setPdfStudyBusyMsg(`PDF guardado en biblioteca: ${entry.name}.`);
+          }, [pdfStudyDoc]);
+
+          const loadPdfStudyFromLibrary = useCallback((libraryId) => {
+              const arr = Array.isArray(pdfStudySavedDocs) ? pdfStudySavedDocs : [];
+              const hit = arr.find((x) => String(x.id || '') === String(libraryId));
+              if (!hit || !hit.doc) return;
+              setPdfStudyDoc(hit.doc);
+              setPdfStudyPageIdx(0);
+              setPdfStudyErr('');
+              setPdfStudyLastApplied('');
+              setPdfStudyBusyMsg(`PDF cargado desde biblioteca: ${hit.name || 'Libro PDF'}.`);
+              pdfStudyBufferRef.current = null;
+              pdfStudyDocHandleRef.current = null;
+              try { localStorage.setItem(MULLER_PDF_STUDY_STORAGE_KEY, JSON.stringify(hit.doc)); } catch (e) {}
+          }, [pdfStudySavedDocs]);
+
+          const removePdfStudyFromLibrary = useCallback((libraryId) => {
+              const id = String(libraryId || '');
+              if (!id) return;
+              setPdfStudySavedDocs((prev) => {
+                  const arr = Array.isArray(prev) ? prev : [];
+                  const next = arr.filter((x) => String((x && x.id) || '') !== id);
+                  try { localStorage.setItem(MULLER_PDF_STUDY_LIBRARY_KEY, JSON.stringify(next)); } catch (e) {}
+                  return next;
+              });
+              setPdfStudyBusyMsg('PDF eliminado de la biblioteca.');
+          }, []);
+
+          const clearPdfStudyLibrary = useCallback(() => {
+              setPdfStudySavedDocs([]);
+              try { localStorage.setItem(MULLER_PDF_STUDY_LIBRARY_KEY, JSON.stringify([])); } catch (e) {}
+              setPdfStudyBusyMsg('Biblioteca PDF vaciada.');
+          }, []);
+
+          const openPdfStudyFullscreen = useCallback((pageNumber) => {
+              if (!pdfStudyDoc) return;
+              const idx = Math.max(0, (Number(pageNumber) || 1) - 1);
+              setPdfStudyPageIdx(idx);
+              setPdfStudyInkNonce(0);
+              setPdfStudyFullscreen(true);
+          }, [pdfStudyDoc]);
+          const closePdfStudyFullscreen = useCallback(() => {
+              setPdfStudyFullscreen(false);
+          }, []);
+          const startRutaListen = async () => {
+              const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+              if (!SpeechRecognition) { alert('Para leer en voz alta usa Chrome o Edge en escritorio.'); return; }
+              const ok = await mullerEnsureMicPermission({ autoPrompt: true, showToast: true });
+              if (!ok) { setRutaSpeakErr('No hay permiso de micrÃ³fono. Puedes continuar sin grabar.'); return; }
+              try { if (rutaRecRef.current) rutaRecRef.current.stop(); } catch (e) {}
+              const rec = new SpeechRecognition();
+              rec.lang = 'de-DE';
+              rec.interimResults = false;
+              rec.maxAlternatives = 1;
+              rec.onresult = (e) => {
+                  const t = (e.results[0] && e.results[0][0] && e.results[0][0].transcript) ? e.results[0][0].transcript : '';
+                  setRutaTranscript(collapseStutterRepeats(t));
+                  setRutaListening(false);
+              };
+              rec.onerror = () => { setRutaListening(false); };
+              rec.onend = () => { setRutaListening(false); };
+              rutaRecRef.current = rec;
+              setRutaListening(true);
+              setRutaTranscript('');
+              setRutaSpeakErr('');
+              rec.start();
+          };
+
+          const readingScriptOptions = useMemo(() => {
+              return (savedScripts || []).map((s) => ({ id: String(s.id), title: s.title || 'Sin tÃ­tulo' }));
+          }, [savedScripts]);
+
+          const readingTargetText = useMemo(() => {
+              if (readingSource === 'paste') return String(readingTextInput || '').trim();
+              if (readingSource === 'current_story') {
+                  return (guionData || []).map((s) => String(s && s.text ? s.text : '').trim()).filter(Boolean).join(' ');
+              }
+              if (readingSource === 'one_saved') {
+                  const picked = (savedScripts || []).find((s) => String(s.id) === String(readingScriptId));
+                  if (!picked) return '';
+                  try {
+                      const rows = JSON.parse(picked.data || '[]');
+                      return (rows || []).map((s) => String(s && s.text ? s.text : '').trim()).filter(Boolean).join(' ');
+                  } catch (e) { return ''; }
+              }
+              return '';
+          }, [readingSource, readingTextInput, guionData, savedScripts, readingScriptId]);
+
+          const readingProgress = useMemo(() => {
+              const targetWords = normalizeGermanSpeechText(readingTargetText || '').split(/\s+/).filter(Boolean);
+              const spokenWords = normalizeGermanSpeechText(readingTranscript || '').split(/\s+/).filter(Boolean);
+              if (!targetWords.length) return { matched: 0, total: 0, pct: 0 };
+              let i = 0;
+              while (i < targetWords.length && i < spokenWords.length && targetWords[i] === spokenWords[i]) i++;
+              const pct = Math.round((i / targetWords.length) * 100);
+              return { matched: i, total: targetWords.length, pct };
+          }, [readingTargetText, readingTranscript]);
+
+          const readingWordTokens = useMemo(() => mullerReadingTokenizeText(readingTargetText), [readingTargetText]);
+          const readingVerbLookup = useMemo(() => {
+              const map = new Map();
+              (rutaVerbDb && Array.isArray(rutaVerbDb.verbs) ? rutaVerbDb.verbs : []).forEach((verb) => {
+                  if (!verb) return;
+                  const lemmaKey = mullerNormalizeGermanWordToken(verb.lemma || verb.id || '');
+                  if (lemmaKey && !map.has(lemmaKey)) map.set(lemmaKey, verb);
+                  const forms = verb.forms || {};
+                  Object.keys(forms).forEach((tenseKey) => {
+                      const tense = forms[tenseKey];
+                      if (!tense || typeof tense !== 'object') return;
+                      Object.values(tense).forEach((v) => {
+                          const w = mullerNormalizeGermanWordToken(v);
+                          if (w && !map.has(w)) map.set(w, verb);
+                      });
+                  });
+                  const p2 = mullerNormalizeGermanWordToken(verb.partizip2 || '');
+                  if (p2 && !map.has(p2)) map.set(p2, verb);
+              });
+              return map;
+          }, [rutaVerbDb]);
+          const readingSelectedWord = readingWordInfo ? String(readingWordInfo.word || '') : '';
+          const readingVerbInfo = useMemo(() => {
+              const key = mullerNormalizeGermanWordToken(readingSelectedWord);
+              if (!key) return null;
+              const hit = readingVerbLookup.get(key) || null;
+              if (hit) {
+                  const forms = (hit && hit.forms) || {};
+                  const pr = forms.praeteritum && (forms.praeteritum.ich || forms.praeteritum.er_sie_es || forms.praeteritum.wir || forms.praeteritum.sie_Sie || forms.praeteritum.du);
+                  const pf = forms.perfekt && (forms.perfekt.ich || forms.perfekt.er_sie_es || forms.perfekt.wir || forms.perfekt.sie_Sie || forms.perfekt.du);
+                  return {
+                      infinitive: hit.lemma || hit.id || key,
+                      translation: hit.es || '',
+                      praeteritum: pr || '',
+                      perfekt: pf || '',
+                      level: hit.level || '',
+                      source: 'db'
+                  };
+              }
+              const fallback = resolveTempusVerbInfo(key);
+              if (!fallback) return null;
+              return {
+                  infinitive: fallback.infinitive || key,
+                  translation: '',
+                  praeteritum: '',
+                  perfekt: '',
+                  formsHint: fallback.forms || '',
+                  source: 'fallback'
+              };
+          }, [readingSelectedWord, readingVerbLookup]);
+          const runReadingWordLookup = useCallback(async (rawWord) => {
+              const cleanWord = mullerNormalizeGermanWordToken(rawWord);
+              if (!cleanWord) return;
+              setReadingWordInfo({ word: cleanWord, loading: true, translation: '', error: '', ts: Date.now() });
+              try {
+                  const r = await mullerTranslateGtxFull(cleanWord, 'de', 'es');
+                  const out = String((r && r.text) || '').trim();
+                  if (out) {
+                      setReadingWordInfo((prev) => {
+                          if (!prev || prev.word !== cleanWord) return prev;
+                          return { ...prev, loading: false, translation: out, error: '' };
+                      });
+                      return;
+                  }
+              } catch (e) {}
+              try {
+                  const mm = await mullerTranslateViaMyMemory(cleanWord, 'de|es');
+                  setReadingWordInfo((prev) => {
+                      if (!prev || prev.word !== cleanWord) return prev;
+                      return { ...prev, loading: false, translation: String(mm || '').trim(), error: '' };
+                  });
+              } catch (e2) {
+                  setReadingWordInfo((prev) => {
+                      if (!prev || prev.word !== cleanWord) return prev;
+                      return { ...prev, loading: false, translation: '', error: 'No se pudo traducir ahora mismo.' };
+                  });
+              }
+          }, []);
+          const readingSentences = useMemo(() => {
+              const chunks = String(readingTargetText || '').match(/[^.!?â€¦\n]+[.!?â€¦]?/g) || [];
+              return chunks.map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+          }, [readingTargetText]);
+          const readingCaptureCurrentSelection = useCallback(() => {
+              try {
+                  if (typeof window === 'undefined' || typeof window.getSelection !== 'function') return;
+                  const host = readingTextSurfaceRef.current;
+                  if (!host) return;
+                  const sel = window.getSelection();
+                  if (!sel || sel.rangeCount === 0) return;
+                  const anchorNode = sel.anchorNode;
+                  const focusNode = sel.focusNode;
+                  if ((anchorNode && !host.contains(anchorNode)) || (focusNode && !host.contains(focusNode))) return;
+                  const raw = String(sel.toString() || '');
+                  const text = raw.replace(/\s+/g, ' ').trim();
+                  if (!text || text.length < 2) return;
+                  setReadingSelectedSnippet(text);
+              } catch (e) {}
+          }, []);
+          const readingSpeakText = useCallback((rawText, opts = {}) => {
+              const text = String(rawText || '').replace(/\s+/g, ' ').trim();
+              if (!text) return false;
+              const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+              if (!synth || typeof window.SpeechSynthesisUtterance !== 'function') {
+                  if (window.__mullerToast) window.__mullerToast('Tu navegador no soporta reproducciÃ³n de voz.', 'error');
+                  return false;
+              }
+              const defaultRate = Number(opts.rate);
+              const fallbackRate = Number.isFinite(defaultRate) ? defaultRate : 0.92;
+              let finalRate = fallbackRate;
+              try {
+                  const storedRate = parseFloat(localStorage.getItem(MULLER_TTS_RATE_KEY) || String(fallbackRate));
+                  if (Number.isFinite(storedRate) && storedRate >= 0.5 && storedRate <= 1.5) finalRate = storedRate;
+              } catch (e) {}
+              try {
+                  setReadingWordAudioBusy(true);
+                  synth.cancel();
+                  const utter = new SpeechSynthesisUtterance(text);
+                  utter.lang = 'de-DE';
+                  utter.rate = finalRate;
+                  if (typeof window.__mullerApplyPreferredDeVoice === 'function') window.__mullerApplyPreferredDeVoice(utter);
+                  utter.onend = () => setReadingWordAudioBusy(false);
+                  utter.onerror = () => setReadingWordAudioBusy(false);
+                  synth.speak(utter);
+                  return true;
+              } catch (e) {
+                  setReadingWordAudioBusy(false);
+                  if (window.__mullerToast) window.__mullerToast('No se pudo reproducir el audio ahora.', 'error');
+                  return false;
+              }
+          }, []);
+          const speakReadingWord = useCallback((rawWord) => {
+              const cleanWord = mullerNormalizeGermanWordToken(rawWord);
+              if (!cleanWord) return;
+              readingSpeakText(cleanWord, { rate: 0.9 });
+          }, [readingSpeakText]);
+          const speakReadingSentenceWithWord = useCallback((rawWord) => {
+              const pickedSnippet = String(readingSelectedSnippet || '').replace(/\s+/g, ' ').trim();
+              if (pickedSnippet) {
+                  readingSpeakText(pickedSnippet, { rate: 0.92 });
+                  return;
+              }
+              const cleanWord = mullerNormalizeGermanWordToken(rawWord);
+              if (!cleanWord) {
+                  if (window.__mullerToast) window.__mullerToast('Selecciona una palabra o una frase.', 'info');
+                  return;
+              }
+              const sentence = readingSentences.find((s) => {
+                  const tokens = mullerReadingTokenizeText(s);
+                  return tokens.some((t) => t.word === cleanWord);
+              });
+              if (sentence) {
+                  readingSpeakText(sentence, { rate: 0.92 });
+                  return;
+              }
+              readingSpeakText(cleanWord, { rate: 0.92 });
+          }, [readingSelectedSnippet, readingSentences, readingSpeakText]);
+          useEffect(() => {
+              try { localStorage.setItem(MULLER_READING_FONT_STORAGE, String(readingFontPx)); } catch (e) {}
+          }, [readingFontPx]);
+          useEffect(() => {
+              setReadingSelectedSnippet('');
+          }, [readingTargetText]);
+          useEffect(() => {
+              if (activeTab !== 'lectura') return undefined;
+              const onSelection = () => readingCaptureCurrentSelection();
+              document.addEventListener('selectionchange', onSelection);
+              return () => document.removeEventListener('selectionchange', onSelection);
+          }, [activeTab, readingCaptureCurrentSelection]);
+
+          const readingTipForWord = (w) => {
+              const x = String(w || '').toLowerCase();
+              if (/[Ã¤Ã¶Ã¼]/.test(x)) return 'AtenciÃ³n a umlauts: Ã¤ (tipo e abierta), Ã¶ (o redondeada), Ã¼ (i con labios redondos).';
+              if (x.includes('sch')) return 'sch suena como "sh".';
+              if (x.includes('ch')) return 'ch no suena como "ch" espaÃ±ol; en alemÃ¡n suele ser mÃ¡s suave/gutural.';
+              if (x.includes('ei')) return 'ei suena parecido a "ai".';
+              if (x.includes('ie')) return 'ie suena como i larga.';
+              if (x.includes('eu') || x.includes('Ã¤u')) return 'eu/Ã¤u suena parecido a "oi".';
+              if (x.includes('z')) return 'z suena como "ts".';
+              if (x.includes('v')) return 'En alemÃ¡n muchas veces v suena como "f".';
+              return 'Repite lento por sÃ­labas, luego a velocidad normal.';
+          };
+
+          const runReadingCompare = (targetText, transcript) => {
+              const a = normalizeGermanSpeechText(targetText || '');
+              const b = normalizeGermanSpeechText(transcript || '');
+              if (!a || !b) { setReadingScore(null); setReadingFeedback([]); return; }
+              const aw = a.split(/\s+/).filter(Boolean);
+              const bw = b.split(/\s+/).filter(Boolean);
+              const feedback = matchGermanWordsSequential(aw, bw);
+              const ok = feedback.filter((f) => f.correct).length;
+              const pct = aw.length ? Math.round((ok / aw.length) * 100) : 0;
+              const enriched = feedback.filter((f) => !f.correct).slice(0, 18).map((f) => ({ ...f, tip: readingTipForWord(f.word) }));
+              setReadingScore(pct);
+              setReadingFeedback(enriched);
+          };
+          const finalizeReadingSession = useCallback(() => {
+              const finalText = collapseStutterRepeats((readingFinalRef.current || readingLiveTranscriptRef.current || '').trim());
+              setReadingTranscript(finalText);
+              runReadingCompare(readingTargetText, finalText);
+          }, [readingTargetText]);
+
+          const startReadingListen = async () => {
+              const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+              if (!SpeechRecognition) { alert('Para lectura en voz alta usa Chrome o Edge.'); return; }
+              const ok = await mullerEnsureMicPermission({ autoPrompt: true, showToast: true });
+              if (!ok) return;
+              try { if (readingRecRef.current) readingRecRef.current.stop(); } catch (e) {}
+              if (readingRestartTimerRef.current) {
+                  window.clearTimeout(readingRestartTimerRef.current);
+                  readingRestartTimerRef.current = null;
+              }
+              readingStopRequestedRef.current = false;
+              readingAutoRestartRef.current = true;
+              const sessionId = Date.now();
+              readingSessionIdRef.current = sessionId;
+              readingFinalRef.current = '';
+              readingLiveTranscriptRef.current = '';
+              setReadingTranscript('');
+              setReadingScore(null);
+              setReadingFeedback([]);
+
+              const startCycle = () => {
+                  if (readingSessionIdRef.current !== sessionId) return;
+                  if (readingStopRequestedRef.current || !readingAutoRestartRef.current) return;
+                  const rec = new SpeechRecognition();
+                  rec.lang = 'de-DE';
+                  rec.continuous = true;
+                  rec.interimResults = true;
+                  rec.maxAlternatives = 1;
+                  rec.onresult = (event) => {
+                      if (readingSessionIdRef.current !== sessionId) return;
+                      let interim = '';
+                      for (let i = event.resultIndex; i < event.results.length; i++) {
+                          const r = event.results[i];
+                          const t = (r[0] && r[0].transcript) ? String(r[0].transcript).trim() : '';
+                          if (!t) continue;
+                          if (r.isFinal) readingFinalRef.current = mergeSpeechFinalChunk(readingFinalRef.current, t);
+                          else interim = t;
+                      }
+                      const merged = collapseStutterRepeats((readingFinalRef.current + (interim ? (' ' + interim) : '')).trim());
+                      readingLiveTranscriptRef.current = merged;
+                      setReadingTranscript(merged);
+                  };
+                  rec.onerror = (evt) => {
+                      if (readingSessionIdRef.current !== sessionId) return;
+                      const errType = evt && evt.error ? String(evt.error) : '';
+                      if (errType === 'not-allowed' || errType === 'service-not-allowed') {
+                          readingStopRequestedRef.current = true;
+                          readingAutoRestartRef.current = false;
+                          setReadingListening(false);
+                          if (window.__mullerToast) window.__mullerToast('Permiso de micrÃ³fono no disponible.', 'error');
+                      }
+                  };
+                  rec.onend = () => {
+                      if (readingSessionIdRef.current !== sessionId) return;
+                      if (readingRecRef.current === rec) readingRecRef.current = null;
+                      if (readingStopRequestedRef.current || !readingAutoRestartRef.current) {
+                          setReadingListening(false);
+                          finalizeReadingSession();
+                          return;
+                      }
+                      readingRestartTimerRef.current = window.setTimeout(() => {
+                          startCycle();
+                      }, 120);
+                  };
+                  readingRecRef.current = rec;
+                  setReadingListening(true);
+                  try {
+                      rec.start();
+                  } catch (e) {
+                      readingRestartTimerRef.current = window.setTimeout(() => {
+                          startCycle();
+                      }, 260);
+                  }
+              };
+              startCycle();
+          };
+
+          const stopReadingListen = () => {
+              readingStopRequestedRef.current = true;
+              readingAutoRestartRef.current = false;
+              if (readingRestartTimerRef.current) {
+                  window.clearTimeout(readingRestartTimerRef.current);
+                  readingRestartTimerRef.current = null;
+              }
+              const r = readingRecRef.current;
+              if (!r) {
+                  setReadingListening(false);
+                  finalizeReadingSession();
+                  return;
+              }
+              try { r.stop(); } catch (e) {
+                  setReadingListening(false);
+                  finalizeReadingSession();
+              }
+          };
+          useEffect(() => {
+              if (activeTab === 'lectura') return;
+              readingSessionIdRef.current = Date.now();
+              readingStopRequestedRef.current = true;
+              readingAutoRestartRef.current = false;
+              if (readingRestartTimerRef.current) {
+                  window.clearTimeout(readingRestartTimerRef.current);
+                  readingRestartTimerRef.current = null;
+              }
+              try { if (readingRecRef.current) readingRecRef.current.stop(); } catch (e) {}
+              setReadingListening(false);
+          }, [activeTab]);
+          useEffect(() => {
+              // Evita que una grabaciÃ³n de una pestaÃ±a siga viva al cambiar a otra.
+              try { if (recognitionRef.current) recognitionRef.current.stop(); } catch (e) {}
+              try { if (rutaRecRef.current) rutaRecRef.current.stop(); } catch (e) {}
+              try { if (readingRecRef.current) readingRecRef.current.stop(); } catch (e) {}
+              readingSessionIdRef.current = Date.now();
+              readingStopRequestedRef.current = true;
+              readingAutoRestartRef.current = false;
+              if (readingRestartTimerRef.current) {
+                  window.clearTimeout(readingRestartTimerRef.current);
+                  readingRestartTimerRef.current = null;
+              }
+              setIsListening(false);
+              setRutaListening(false);
+              setReadingListening(false);
+          }, [activeTab]);
+          useEffect(() => {
+              return () => {
+                  if (readingRestartTimerRef.current) {
+                      window.clearTimeout(readingRestartTimerRef.current);
+                      readingRestartTimerRef.current = null;
+                  }
+              };
+          }, []);
+
+          const getWeeklyChartBars = () => {
+              const raw = [];
+              for (let i = 6; i >= 0; i--) {
+                  const d = new Date();
+                  d.setDate(d.getDate() - i);
+                  const key = d.toISOString().slice(0, 10);
+                  raw.push((userStats.activityByDay && userStats.activityByDay[key]) || 0);
+              }
+              const maxVal = Math.max(...raw, 1);
+              const normalized = raw.map((h) => Math.max(5, Math.round((h / maxVal) * 100)));
+              const hasReal = raw.some((x) => x > 0);
+              if (!hasReal && userStats.activityLog && userStats.activityLog.length >= 7) {
+                  return userStats.activityLog.slice(-7).map((v) => Math.max(5, Math.min(100, v)));
+              }
+              return normalized;
+          };
+
+          useEffect(() => {
+              if (activeTab !== 'progreso') return;
+              const refreshMuller = () => {
+                  try {
+                      if (typeof getAdvancedDashboard === 'function') setMullerProgresoSnapshot(getAdvancedDashboard());
+                  } catch (e) { setMullerProgresoSnapshot(null); }
+              };
+              refreshMuller();
+              window.addEventListener('advancedProgressUpdated', refreshMuller);
+              return () => window.removeEventListener('advancedProgressUpdated', refreshMuller);
+          }, [activeTab]);
+
+          useEffect(() => {
+              if (activeTab !== 'vocabulario') {
+                  const allVocab = [];
+                  guionData.forEach(scene => { if (scene.vocab) scene.vocab.forEach(v => { if (!allVocab.some(existing => existing.de === v.de)) allVocab.push(v); }); });
+                  setCurrentVocabList(mullerSortVocabBySrs(allVocab, mullerGetVocabSrsMap())); setVocabReviewIndex(0); setShowVocabTranslation(false);
+              }
+          }, [guionData, activeTab]);
+
+          useEffect(() => {
+              let cancelled = false;
+              fetch('./b1-b2-database.json', { cache: 'no-cache' })
+                  .then((r) => { if (!r.ok) throw new Error('bx'); return r.json(); })
+                  .then((data) => {
+                      if (cancelled) return;
+                      const n = normalizeBxPayload(data);
+                      setBxRemoteDatabases(n);
+                      try { sessionStorage.setItem('muller_b1b2_json_v1', JSON.stringify(data)); } catch (e) {}
+                  })
+                  .catch(() => {
+                      if (cancelled) return;
+                      setBxRemoteDatabases((prev) => prev || BX_DB_FALLBACK);
+                  });
+              return () => { cancelled = true; };
+          }, []);
+
+          useEffect(() => {
+              const pack = bxEffectiveDatabases;
+              const dbToUse = bxBankLevel === 'b1' ? pack.b1 : pack.b2;
+              let newList;
+              if (bxCategory === 'mix') {
+                  newList = [];
+                  Object.values(dbToUse).forEach((arr) => { newList = newList.concat(arr); });
+                  newList.sort(() => Math.random() - 0.5);
+              } else {
+                  newList = dbToUse[bxCategory] || [];
+              }
+              setBxCurrentList(newList);
+              const catTabChanged = !bxCatTabRef.current || bxCatTabRef.current.c !== bxCategory || bxCatTabRef.current.t !== activeTab;
+              bxCatTabRef.current = { c: bxCategory, t: activeTab };
+              if (catTabChanged) setBxIndex(0);
+              else setBxIndex((i) => (newList.length === 0 ? 0 : Math.min(i, newList.length - 1)));
+          }, [bxCategory, activeTab, bxEffectiveDatabases]);
+
+          useEffect(() => {
+              const item = bxCurrentList[bxIndex];
+              if (!item || !item._mullerUser) return;
+              const level = bxBankLevel === 'b1' ? 'b1' : 'b2';
+              const src = bxCategory === 'mix' ? (item._mullerCategory || mullerFindUserBxCategory(bxUserOverlay, level, item._mullerUid)) : bxCategory;
+              if (!src) return;
+              const others = Object.keys(BX_DB_EMPTY).filter((c) => c !== src);
+              setBxMoveTargetCat((prev) => (others.includes(prev) ? prev : others[0] || 'vocabulario'));
+          }, [bxIndex, bxCategory, bxCurrentList, bxUserOverlay, activeTab]);
+
+          useEffect(() => {
+            const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+            if (!synth) return undefined;
+            const handleVoicesChanged = () => setVoicesLoaded(true);
+            try {
+                if (typeof synth.getVoices === 'function' && synth.getVoices().length > 0) setVoicesLoaded(true);
+            } catch (e) {}
+            if (typeof synth.addEventListener === 'function') {
+                synth.addEventListener('voiceschanged', handleVoicesChanged);
+                return () => {
+                    try { synth.removeEventListener('voiceschanged', handleVoicesChanged); } catch (e) {}
+                };
+            }
+            const previous = synth.onvoiceschanged;
+            synth.onvoiceschanged = handleVoicesChanged;
+            return () => {
+                try {
+                    if (synth.onvoiceschanged === handleVoicesChanged) synth.onvoiceschanged = previous || null;
+                } catch (e) {}
+            };
+          }, []);
+
+          const updateTempusVerbList = (text) => {
+              if (!tempusMode || !text) { setTempusVerbList([]); return; }
+              const words = text.split(/\s+/);
+              const foundVerbs = [];
+              const processed = new Set();
+              words.forEach(word => {
+                  const cleanWord = word.toLowerCase().replace(/[.,!?;:()]/g, '');
+                  if (TEMPUS_DICT[cleanWord]) {
+                      if (!processed.has(cleanWord)) { foundVerbs.push({ infinitive: cleanWord, forms: TEMPUS_DICT[cleanWord] }); processed.add(cleanWord); }
+                  } else if (cleanWord.match(/^(?:[a-zÃ¤Ã¶Ã¼ÃŸ]+)(?:en|eln|ern)$/i) && cleanWord.length > 3) {
+                      const infinitive = cleanWord;
+                      if (!processed.has(infinitive)) {
+                          const base = infinitive.slice(0, -2);
+                          const praet = base + 'te';
+                          const perf = 'hat ' + infinitive;
+                          foundVerbs.push({ infinitive, forms: `PrÃ¤t: ${praet} | Perf: ${perf} (regular estimado)` });
+                          processed.add(infinitive);
+                      }
+                  }
+              });
+              setTempusVerbList(foundVerbs);
+          };
+
+          function resolveTempusVerbInfo(rawWord) {
+              const clean = String(rawWord || '').toLowerCase().replace(/[.,!?;:()"]/g, '').trim();
+              if (!clean) return null;
+              if (TEMPUS_DICT[clean]) {
+                  const forms = TEMPUS_DICT[clean];
+                  const isInf = /(?:en|eln|ern)$/.test(clean);
+                  let infinitive = clean;
+                  if (!isInf) {
+                      const alt = Object.keys(TEMPUS_DICT).find((k) => TEMPUS_DICT[k] === forms && /(?:en|eln|ern)$/.test(k));
+                      if (alt) infinitive = alt;
+                  }
+                  return { touched: clean, infinitive, forms };
+              }
+              if (/(?:en|eln|ern)$/.test(clean) && clean.length > 3) {
+                  const base = clean.slice(0, -2);
+                  return { touched: clean, infinitive: clean, forms: `PrÃ¤t: ${base}te | Perf: hat ${clean} (regular estimado)` };
+              }
+              return null;
+          }
+
+          function inferTempusContextLabel(word) {
+              const w = String(word || '').toLowerCase();
+              if (!w) return '';
+              if (w.startsWith('ge') && (w.endsWith('t') || w.endsWith('en'))) return 'Forma probable: Partizip II (Perfekt/Plusquamperfekt).';
+              if (/(te|test|ten|tet)$/.test(w)) return 'Forma probable: PrÃ¤teritum (regular).';
+              if (/(st|t|en)$/.test(w)) return 'Forma probable: PrÃ¤sens (segÃºn contexto/persona).';
+              return 'Tiempo/persona: revisa contexto de la frase.';
+          }
+
+          useEffect(() => {
+              const actualIdx = getActualSceneIndex();
+              const currentScene = guionData[actualIdx];
+              if (currentScene && tempusMode) updateTempusVerbList(currentScene.text);
+              else setTempusVerbList([]);
+          }, [sceneIndex, isReviewing, tempusMode, guionData]);
+          useEffect(() => {
+              if (!tempusMode) setTempusSelectedVerb(null);
+          }, [tempusMode, sceneIndex, isReviewing]);
+
+          const getVoice = (lang, gender, isOlder = false) => {
+            const allVoices = window.speechSynthesis.getVoices();
+            if (lang === 'de' && window.__mullerResolveVoice) {
+                const pref = window.__mullerResolveVoice('muller_tts_de');
+                if (pref) return pref;
+            }
+            if (lang === 'es' && window.__mullerResolveVoice) {
+                const pref = window.__mullerResolveVoice('muller_tts_es');
+                if (pref) return pref;
+            }
+            const langVoices = allVoices.filter(v => v.lang.startsWith(lang));
+            if (langVoices.length === 0) return allVoices[0]; 
+            const femaleVoices = langVoices.filter(v => /female|woman|Katja|Marlene|Vicki/i.test(v.name));
+            const maleVoices = langVoices.filter(v => /male|man|Stefan|Conrad|Klaus/i.test(v.name));
+            if (gender === 'female') return femaleVoices.length > 0 ? femaleVoices[0] : langVoices[0];
+            if (gender === 'male') {
+                if (isOlder && maleVoices.length > 1) return maleVoices[1];
+                if (maleVoices.length > 0) return maleVoices[0];
+                return langVoices[langVoices.length - 1]; 
+            }
+            return langVoices[0];
+          };
+
+          const speakRutaDe = (text) => {
+              if (!text) return;
+              window.speechSynthesis.cancel();
+              const u = new SpeechSynthesisUtterance(text);
+              u.lang = 'de-DE';
+              if (typeof window.__mullerApplyPreferredDeVoice === 'function') window.__mullerApplyPreferredDeVoice(u);
+              else {
+                  u.voice = rutaMentor === 'tom' ? getVoice('de', 'male') : getVoice('de', 'female');
+              }
+              if (rutaMentor === 'lena') { u.pitch = 1.12; u.rate = parseFloat(localStorage.getItem(MULLER_TTS_RATE_KEY) || '0.92') || 0.92; }
+              else if (rutaMentor === 'tom') { u.pitch = 0.88; u.rate = 0.9; }
+              else { u.pitch = 1.32; u.rate = 0.96; }
+              window.speechSynthesis.speak(u);
+          };
+
+          const stopAudio = () => { 
+              window.speechSynthesis.cancel(); 
+              if (timeoutRef.current) clearTimeout(timeoutRef.current); 
+              setIsPlaying(false); 
+              stopNoise(); // Detener ruido si estÃ¡ activo
+          };
+
+          // Funciones para ruido de fondo
+          const startNoise = () => {
+              if (!noiseEnabled) return;
+              try {
+                  const AudioContext = window.AudioContext || window.webkitAudioContext;
+                  const ctx = new AudioContext();
+                  noiseContextRef.current = ctx;
+                  const bufferSize = 4096;
+                  const noiseNode = ctx.createScriptProcessor(bufferSize, 1, 1);
+                  noiseNode.onaudioprocess = (e) => {
+                      const output = e.outputBuffer.getChannelData(0);
+                      for (let i = 0; i < bufferSize; i++) {
+                          output[i] = (Math.random() * 2 - 1) * 0.15; // Ruido blanco a bajo volumen
+                      }
+                  };
+                  const gainNode = ctx.createGain();
+                  gainNode.gain.value = 0.08; // Volumen muy bajo
+                  noiseGainRef.current = gainNode;
+                  noiseNode.connect(gainNode);
+                  gainNode.connect(ctx.destination);
+                  noiseSourceRef.current = noiseNode;
+              } catch(e) { console.warn("No se pudo iniciar ruido de fondo:", e); }
+          };
+
+          const stopNoise = () => {
+              if (noiseSourceRef.current) {
+                  noiseSourceRef.current.disconnect();
+                  noiseSourceRef.current = null;
+              }
+              if (noiseContextRef.current) {
+                  noiseContextRef.current.close();
+                  noiseContextRef.current = null;
+              }
+          };
+
+          useEffect(() => {
+              if (noiseEnabled && isPlaying) startNoise();
+              else stopNoise();
+              return () => stopNoise();
+          }, [noiseEnabled, isPlaying]);
+
+          const resetModes = () => { 
+              setDiktatInput(""); setShowDiktatResult(false); 
+              setSpokenText(""); setPronunciationScore(null); setGrammarPolizeiMsg(""); setPronunciationFeedback([]);
+              setShowPuzzleResult(false); setPuzzleLastOk(null); setShowCurrentTranslation(false); 
+              initPuzzle(guionData[getActualSceneIndex()]?.text || ""); 
+          };
+          
+          const getActualSceneIndex = () => isReviewing ? userStats.failedDiktatScenes[reviewIndexPointer] : sceneIndex;
+
+          const getNextPlaylistScript = () => {
+              if (!savedScripts || savedScripts.length === 0) return null;
+              if (isDefaultScript) return savedScripts[0];
+              const i = savedScripts.findIndex((s) => String(s.id) === String(activeSavedScriptId));
+              if (i < 0) return savedScripts[0];
+              if (i + 1 < savedScripts.length) return savedScripts[i + 1];
+              return null;
+          };
+
+          const proceedToNextStage = () => {
+              if (isReviewing) {
+                  if (reviewIndexPointer < userStats.failedDiktatScenes.length - 1) { setReviewIndexPointer(p => p + 1); setMode('dialogue'); resetModes(); } 
+                  else { saveProgress({ failedDiktatScenes: [] }); setIsReviewing(false); stopAudio(); }
+              } else {
+                  if (sceneIndex < guionData.length - 1) { setSceneIndex(s => s + 1); setMode('dialogue'); resetModes(); } 
+                  else {
+                      if (historiaPlaylistAllScripts && !isReviewing) {
+                          const nextScr = getNextPlaylistScript();
+                          if (nextScr) {
+                              loadSavedScript(nextScr);
+                              return;
+                          }
+                      }
+                      if (userStats.failedDiktatScenes.length > 0) {
+                          alert("Â¡Historia terminada! Tienes fallos pendientes en Diktat. Iniciando Repaso.");
+                          setIsReviewing(true); setReviewIndexPointer(0); setMode('dialogue'); resetModes();
+                      } else {
+                          stopAudio();
+                          if (historiaPlaylistAllScripts && savedScripts.length > 0) {
+                              alert('Â¡Has escuchado todos los guiones guardados en secuencia!');
+                          } else {
+                              alert("Â¡Has completado el guion!");
+                          }
+                      }
+                  }
+              }
+          };
+
+          const handleNext = () => { stopAudio(); proceedToNextStage(); };
+          const handlePrev = () => { stopAudio(); if (!isReviewing && sceneIndex > 0) { setSceneIndex(s => s - 1); setMode('dialogue'); resetModes(); } };
+          const togglePlay = () => { 
+              if (userStats.hearts <= 0) { setShowDeathModal(true); return; }
+              if (isPlaying) stopAudio(); else setIsPlaying(true); 
+          };
+
+          const initPuzzle = (text) => {
+              if (!text) return;
+              const words = text.split(/\s+/).map((w, i) => ({ id: i, text: w }));
+              setPuzzleWords(words.sort(() => Math.random() - 0.5)); setPuzzleAnswer([]);
+          };
+
+          useEffect(() => { if (puzzleMode && activeTab === 'historia') initPuzzle(guionData[getActualSceneIndex()]?.text); }, [sceneIndex, isReviewing, puzzleMode, guionData, activeTab]);
+
+          const handleSaveCustomVocab = () => {
+              if (!vocabTitleInput.trim()) { alert("Por favor, dale un tÃ­tulo a la lecciÃ³n."); return; }
+              if (!vocabTextInput.trim()) { alert("Por favor, pega el vocabulario."); return; }
+              const lines = vocabTextInput.split(/\r?\n/);
+              let parsedWords = [];
+              const cleanStr = (str) => {
+                  let s = str.replace(/[\x00-\x1F\x7F-\x9F\u200B-\u200D\uFEFF]/g, ''); 
+                  s = s.replace(/[\u{1F000}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|\u{FE0F}/gu, ''); 
+                  return s.trim();
+              };
+              lines.forEach(line => {
+                  let text = line.trim().replace(/â€“/g, '-').replace(/â€”/g, '-');
+                  if (!text) return;
+                  let isDiff = false;
+                  if (text.startsWith('1')) { isDiff = true; text = text.replace(/^1[.\-):\]]*\s*/, '').trim(); }
+                  text = text.replace(/^[-*â€¢+>]\s*/, '').trim();
+                  text = text.replace(/^\d+[.\-):\]]+\s*/, '').trim();
+                  let de = ""; let es = "";
+                  const match = text.match(/(\s+-\s+|\s+=\s+|\t|\s{2,}|={1,})/);
+                  if (match) {
+                      const sepIndex = text.indexOf(match[0]);
+                      de = cleanStr(text.substring(0, sepIndex));
+                      es = cleanStr(text.substring(sepIndex + match[0].length));
+                  } else {
+                      const hyphenMatch = text.match(/(^|\s)-(?!\w)|(?<!\w)-(\s|$)/);
+                      if (hyphenMatch) {
+                          const sepIndex = text.indexOf(hyphenMatch[0]);
+                          de = cleanStr(text.substring(0, sepIndex));
+                          es = cleanStr(text.substring(sepIndex + hyphenMatch[0].length));
+                      } else {
+                          let words = text.split(' ');
+                          let splitPoint = 1;
+                          if (words.length > 2 && /^(sich|der|die|das|ein|eine)$/i.test(words[0])) splitPoint = 2;
+                          if (words.length > splitPoint && words[splitPoint].startsWith('(')) splitPoint++;
+                          de = cleanStr(words.slice(0, splitPoint).join(' '));
+                          es = cleanStr(words.slice(splitPoint).join(' '));
+                          if (!es) es = "???";
+                      }
+                  }
+                  de = de.replace(/^1[.\-):\]]*\s*/, '').trim();
+                  es = es.replace(/^1[.\-):\]]*\s*/, '').trim();
+                  if (de) parsedWords.push({ de, es, diff: isDiff ? 1 : 0 });
+              });
+              if (parsedWords.length > 0) {
+                  const newLesson = { id: Date.now().toString() + Math.random().toString(36).substring(7), title: vocabTitleInput, words: parsedWords };
+                  const updatedLessons = [...customVocabLessons, newLesson];
+                  setCustomVocabLessons(updatedLessons);
+                  localStorage.setItem('mullerCustomVocab', JSON.stringify(updatedLessons));
+                  setVocabTitleInput(""); setVocabTextInput("");
+                  alert(`Â¡Genial! Se ha guardado la lecciÃ³n "${vocabTitleInput}" con ${parsedWords.length} palabras.`);
+              } else { alert("No pude detectar vocabulario vÃ¡lido. Pega texto para guardar."); }
+          };
+
+  const handleSaveScript = () => {
+    if (!newScriptTitle.trim()) { alert("Dale un tÃ­tulo al guion primero."); return; }
+    try {
+        const lines = scriptInput.split('\n');
+        const newGuion = [];
+        lines.forEach(line => {
+            let cleanLine = line.trim();
+            if (!cleanLine) return;
+
+            // 1. Extraer Hablante (Nombre:)
+            const speakerMatch = cleanLine.match(/^([^:]+):/);
+            if (!speakerMatch) return;
+            const speaker = speakerMatch[1].trim();
+            let content = cleanLine.substring(speakerMatch[0].length).trim();
+
+            // 2. Extraer Redemittel [R]
+            let isRedemittel = false;
+            if (content.includes('[R]')) {
+                isRedemittel = true;
+                content = content.replace('[R]', '').trim();
+            }
+
+            // 3. Extraer Vocabulario [...]
+            let vocab = [];
+            const vocabMatch = content.match(/\[(.*?)\]/);
+            if (vocabMatch) {
+                const vocabPairs = vocabMatch[1].split(',');
+                vocabPairs.forEach(pair => {
+                    const parts = pair.split('-');
+                    if (parts.length >= 2) {
+                        const cleanDe = parts[0].trim().replace(/[ðŸ”´ðŸ”µðŸŸ¢â€¢]/g, '');
+                        vocab.push({ de: cleanDe, es: parts[1].trim(), diff: 1 });
+                    }
+                });
+                content = content.replace(vocabMatch[0], '').trim();
+            }
+
+            // 4. Extraer TraducciÃ³n (...)
+            let translation = "TraducciÃ³n no proporcionada";
+            const transMatch = content.match(/\(([^)]+)\)/);
+            if (transMatch) {
+                translation = transMatch[1].trim();
+                content = content.replace(transMatch[0], '').trim();
+            }
+
+            // 5. AlemÃ¡n (limpio de cÃ­rculos para el audio)
+            const germanText = content.replace(/[ðŸ”´ðŸ”µðŸŸ¢]/g, '').trim();
+
+            if (germanText) {
+                newGuion.push({ speaker, text: germanText, translation, isRedemittel, vocab });
+            }
+        });
+
+        if (newGuion.length === 0) throw new Error("Formato no reconocido");
+
+        const scriptObj = { id: Date.now().toString(), title: newScriptTitle, data: JSON.stringify(newGuion), timestamp: Date.now() };
+        const newSaved = [...savedScripts, scriptObj].sort((a,b)=>a.title.localeCompare(b.title));
+        setSavedScripts(newSaved);
+        localStorage.setItem('mullerScripts', JSON.stringify(newSaved));
+        try {
+            if (typeof caches !== 'undefined') {
+                const meta = { lastScriptTitle: newScriptTitle, lastSceneCount: newGuion.length, savedAt: new Date().toISOString() };
+                caches.open('muller-offline-user-v1').then((cache) => cache.put(
+                    new Request(new URL('./.muller-offline-meta.json', window.location.href).toString()),
+                    new Response(JSON.stringify(meta), { headers: { 'Content-Type': 'application/json' } })
+                )).catch(function () {});
+            }
+        } catch (e) {}
+        setGuionData(newGuion); setActiveScriptTitle(newScriptTitle); setIsDefaultScript(false);
+        setActiveSavedScriptId(String(scriptObj.id));
+        setSceneIndex(0); setMode('dialogue'); stopAudio(); resetModes(); setIsReviewing(false);
+        setNewScriptTitle(""); setActiveTab('historia');
+    } catch (e) { 
+        alert("Error al procesar. AsegÃºrate de usar el formato: Nombre: Texto AlemÃ¡n. (TraducciÃ³n) [vocab-trad]"); 
+    }
+};
+
+          const handleBxDistribToLevels = (target) => {
+              const text = (bxImportText || '').trim() || (scriptInput || '').trim();
+              if (!text) { alert('Pega texto en el cuadro de â€œDistribuir a B1/B2â€ o en el guion de arriba.'); return; }
+              const flat = mullerBibliotecaFlatItems(text);
+              if (flat.length === 0) { alert('No se detectaron frases. Usa formato Nombre: AlemÃ¡n. (TraducciÃ³n) o listas â€œalemÃ¡n - espaÃ±olâ€ por lÃ­nea.'); return; }
+              const z = () => ({ vocabulario: 0, verbos: 0, preposiciones: 0, conectores: 0, redemittel: 0 });
+              let snap = null;
+              setBxUserOverlay((prev) => {
+                  const base = normalizeBxPayload(prev);
+                  const c1 = z();
+                  const c2 = z();
+                  let nuevos = 0;
+                  flat.forEach(({ cat, item, seg }) => {
+                      const lv = target === 'auto' ? mullerGuessBibliotecaItemLevel(item, seg) : target;
+                      const trickBase = 'Biblioteca Â· ' + cat + (target === 'auto' ? ' Â· nivel estimado ' + lv.toUpperCase() : ' Â· heurÃ­stica local (sin IA)');
+                      const it = { ...item, trick: trickBase };
+                      const ky = mullerBxItemKey(item);
+                      const exists = (base[lv][cat] || []).some((x) => mullerBxItemKey(x) === ky);
+                      if (exists) return;
+                      base[lv][cat].push({
+                          ...it,
+                          _mullerUser: true,
+                          _mullerUid: 'bx_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 11),
+                          _mullerCategory: cat,
+                          ...(activeSavedScriptId ? { _mullerSourceScriptId: String(activeSavedScriptId) } : {})
+                      });
+                      if (lv === 'b2') c2[cat]++; else c1[cat]++;
+                      nuevos++;
+                  });
+                  try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(base)); } catch (e) {}
+                  snap = { c1, c2, nuevos, target, detectados: flat.length };
+                  return base;
+              });
+              const sum = (c) => `vocab ${c.vocabulario}, vb. ${c.verbos}, prep. ${c.preposiciones}, conn. ${c.conectores}, R ${c.redemittel}`;
+              if (snap) {
+                  if (snap.target === 'auto') {
+                      setBxImportSummary(`Nivel automÃ¡tico Â· B1: ${sum(snap.c1)} Â· B2: ${sum(snap.c2)} Â· nuevos: ${snap.nuevos} (detectados: ${snap.detectados})`);
+                  } else {
+                      const c = snap.target === 'b2' ? snap.c2 : snap.c1;
+                      setBxImportSummary(`Todo a ${snap.target.toUpperCase()}: ${sum(c)} Â· nuevos: ${snap.nuevos} (detectados: ${snap.detectados})`);
+                  }
+              }
+          };
+
+          const clearBxUserOverlay = () => {
+              if (!window.confirm('Esto borra solo lo que aÃ±adiste con Â«Distribuir textoÂ» (tu biblioteca local). Las tarjetas del archivo b1-b2-database.json del proyecto no se quitan: seguirÃ¡n viÃ©ndose en B1/B2. Â¿Borrar tus aportaciones?')) return;
+              const empty = normalizeBxPayload({});
+              setBxUserOverlay(empty);
+              try {
+                  localStorage.removeItem(MULLER_BX_USER_OVERLAY_KEY);
+                  localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(empty));
+              } catch (e) {}
+              setBxImportSummary('');
+              setBxIndex(0);
+          };
+
+          const clearBxUserLevelAllCategories = (levelKey) => {
+              const lab = levelKey === 'b1' ? 'B1' : 'B2';
+              if (!window.confirm(`Â¿Seguro? Se borrarÃ¡n TODAS tus aportaciones en ${lab} (vocabulario, verbos, preposiciones, conectores y Redemittel). No se toca el archivo b1-b2-database.json.`)) return;
+              setBxUserOverlay((prev) => {
+                  const base = normalizeBxPayload(prev);
+                  Object.keys(BX_DB_EMPTY).forEach((cat) => { base[levelKey][cat] = []; });
+                  try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(base)); } catch (e) {}
+                  return base;
+              });
+              setBxIndex(0);
+          };
+
+          const clearBxUserOneCategory = (levelKey, catKey) => {
+              const lab = levelKey === 'b1' ? 'B1' : 'B2';
+              const name = { vocabulario: 'Vocabulario', verbos: 'Verbos', preposiciones: 'Preposiciones', conectores: 'Conectores', redemittel: 'Redemittel' }[catKey] || catKey;
+              if (!window.confirm(`Â¿Seguro? Se borran solo tus aportaciones en Â«${name}Â» (${lab}). El resto de categorÃ­as y el JSON base no se tocan.`)) return;
+              setBxUserOverlay((prev) => {
+                  const base = normalizeBxPayload(prev);
+                  base[levelKey][catKey] = [];
+                  try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(base)); } catch (e) {}
+                  return base;
+              });
+              setBxIndex(0);
+          };
+
+          const mullerTranslateGtxFull = async (text, sl, tl) => {
+              const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
+              const r = await fetch(url);
+              if (!r.ok) throw new Error('gtx');
+              const data = await r.json();
+              let out = '';
+              if (data && data[0]) data[0].forEach((p) => { if (p && p[0]) out += p[0]; });
+              const detected = data && data[2] != null ? String(data[2]) : '';
+              return { text: out.trim(), detected };
+          };
+
+          const mullerTranslateViaGtx = async (text, sl, tl) => {
+              const { text: out } = await mullerTranslateGtxFull(text, sl, tl);
+              return out;
+          };
+
+          const mullerTranslateViaMyMemory = async (text, pair) => {
+              const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(pair)}`);
+              const j = await r.json();
+              const st = j && j.responseStatus;
+              if (!r.ok || (st != null && Number(st) !== 200 && st !== '200')) throw new Error('mm');
+              return String((j.responseData && j.responseData.translatedText) || '').trim();
+          };
+
+        const mullerStoryClean = (t) => String(t || '').replace(/\s+/g, ' ').replace(/\s([,.;:!?])/g, '$1').trim();
+        const mullerStorySimplifyGerman = (txt) => {
+            return String(txt || '')
+                .replace(/\bjedoch\b/gi, 'aber')
+                .replace(/\bdennoch\b/gi, 'trotzdem')
+                .replace(/\baufgrund\b/gi, 'wegen')
+                .replace(/\bbeziehungsweise\b/gi, 'oder')
+                .replace(/\bauÃŸerdem\b/gi, 'auch')
+                .replace(/\binsbesondere\b/gi, 'vor allem')
+                .replace(/\ballerdings\b/gi, 'aber')
+                .replace(/\bdaher\b/gi, 'deshalb');
+        };
+        const mullerStoryStylizeGerman = (txt, level, tone) => {
+            let out = mullerStoryClean(txt);
+            if (!out) return '';
+            if (tone === 'natural') out = out.replace(/\s,\s/g, ', ');
+            if (tone === 'formal') {
+                out = out
+                    .replace(/\bich\b/g, 'Ich')
+                    .replace(/\bwir\b/g, 'Wir')
+                    .replace(/\bman\b/g, 'man');
+            }
+            if (level === 'A2') out = mullerStorySimplifyGerman(out);
+            if (level === 'B1') out = mullerStorySimplifyGerman(out).replace(/\bwelche[rnms]?\b/gi, 'die');
+            return out;
+        };
+        const mullerStorySplitScenes = (deText, esText) => {
+            const deParts = String(deText || '').split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+            const esParts = String(esText || '').split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+            const out = deParts.slice(0, 14).map((line, i) => ({
+                speaker: i % 2 === 0 ? 'Lukas' : 'Elena',
+                text: line,
+                translation: esParts[i] || ''
+            }));
+            return out.length ? out : [{ speaker: 'Lukas', text: mullerStoryClean(deText), translation: mullerStoryClean(esText) }];
+        };
+        const mullerStoryGlossary = (deText) => {
+            const words = String(deText || '')
+                .toLowerCase()
+                .replace(/[^a-zÃ¤Ã¶Ã¼ÃŸ\s-]/gi, ' ')
+                .split(/\s+/)
+                .map((w) => w.trim())
+                .filter((w) => w.length >= 6 && !/^\d+$/.test(w));
+            const unique = Array.from(new Set(words)).slice(0, 10);
+            return unique.map((w) => ({ de: w, es: '(revÃ­salo en Lexikon)' }));
+        };
+
+          const mullerLexikonApplyPairsFromTranslate = (sourceText, translated, detectedLang, targetLang) => {
+              const d = String(detectedLang || '').toLowerCase();
+              const t = String(targetLang || '').toLowerCase();
+              const outClean = String(translated || '').replace(/^\(sin resultado\)$/, '');
+              const src = String(sourceText || '').trim();
+              if (!outClean) return;
+              if (t === 'de') {
+                  if (d === 'de' || d.startsWith('de')) {
+                      setLexikonPairDe(src);
+                      setLexikonPairEs(outClean);
+                  } else {
+                      setLexikonPairEs(src);
+                      setLexikonPairDe(outClean);
+                  }
+              } else if (t === 'es') {
+                  if (d === 'de' || d.startsWith('de')) {
+                      setLexikonPairDe(src);
+                      setLexikonPairEs(outClean);
+                  } else {
+                      setLexikonPairEs(src);
+                      setLexikonPairDe(outClean);
+                  }
+              }
+          };
+
+          const runLexikonDictionarySearch = async () => {
+              const q = lexikonSearch.trim();
+              if (!q) { alert('Escribe una palabra o inicio de palabra.'); return; }
+              setLexikonDictLoading(true);
+              setLexikonResults(null);
+              try {
+                  if (lexikonDictKind === 'tr-es-de' || lexikonDictKind === 'tr-de-es') {
+                      const tl = lexikonDictKind === 'tr-es-de' ? 'de' : 'es';
+                      let out = '';
+                      let detected = '';
+                      const r = await mullerTranslateGtxFull(q, 'auto', tl);
+                      out = r.text;
+                      detected = r.detected;
+                      if (!out) {
+                          try {
+                              out = await mullerTranslateViaMyMemory(q, tl === 'de' ? 'es|de' : 'de|es');
+                          } catch (eM) { /* ignore */ }
+                      }
+                      setLexikonResults({ dictTranslate: true, query: q, out: out || '', detected, tl, error: false });
+                  } else {
+                      const wiki = lexikonDictKind === 'wiki-es' ? 'es' : 'de';
+                      const url = `https://${wiki}.wiktionary.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=14&namespace=0&format=json&origin=*`;
+                      const r = await fetch(url);
+                      if (!r.ok) throw new Error('wiki');
+                      const data = await r.json();
+                      setLexikonResults({ titles: data[1] || [], descriptions: data[2] || [], urls: data[3] || [], wiki });
+                  }
+              } catch (e) {
+                  alert('No se pudo completar la bÃºsqueda (red o bloqueo). Prueba otra vez.');
+                  setLexikonResults({ error: true });
+              } finally {
+                  setLexikonDictLoading(false);
+              }
+          };
+
+          const runLexikonTranslate = async () => {
+              const text = lexikonTransText.trim();
+              if (!text) { alert('Escribe un texto o frase.'); return; }
+              setLexikonTransLoading(true);
+              setLexikonTransOut('');
+              const tl = lexikonTransTarget === 'es' ? 'es' : 'de';
+              try {
+                  const { text: outRaw, detected } = await mullerTranslateGtxFull(text, 'auto', tl);
+                  let out = outRaw;
+                  if (!out) {
+                      try {
+                          out = await mullerTranslateViaMyMemory(text, tl === 'de' ? 'es|de' : 'de|es');
+                      } catch (eM) { /* ignore */ }
+                  }
+                  const finalOut = out || '(sin resultado)';
+                  setLexikonTransOut(finalOut);
+                  mullerLexikonApplyPairsFromTranslate(text, finalOut, detected, tl);
+              } catch (e1) {
+                  try {
+                      let out = await mullerTranslateViaMyMemory(text, tl === 'de' ? 'es|de' : 'de|es');
+                      if (!out) out = await mullerTranslateViaMyMemory(text, tl === 'de' ? 'de|es' : 'es|de');
+                      const finalOut = out || '(sin resultado)';
+                      setLexikonTransOut(finalOut);
+                      mullerLexikonApplyPairsFromTranslate(text, finalOut, tl === 'de' ? 'es' : 'de', tl);
+                  } catch (e2) {
+                      setLexikonTransOut('Error de traducciÃ³n. Comprueba la conexiÃ³n.');
+                  }
+              } finally {
+                  setLexikonTransLoading(false);
+              }
+          };
+
+          const runHistoriasProOcr = async (file) => {
+              if (!file) return;
+              if (typeof Tesseract === 'undefined') {
+                  setStoriesProErr('No se pudo cargar OCR (Tesseract).');
+                  return;
+              }
+              setStoriesProErr('');
+              setStoriesProBusy(true);
+              try {
+                  const worker = await Tesseract.createWorker(storiesProOcrLang === 'de' ? 'deu' : 'spa', 1);
+                  const { data: { text } } = await worker.recognize(file);
+                  await worker.terminate();
+                  const cleaned = mullerStoryClean(text);
+                  setStoriesProSourceText(cleaned);
+                  setStoriesProInputMode(storiesProOcrLang === 'de' ? 'de' : 'es');
+              } catch (err) {
+                  setStoriesProErr(err && err.message ? err.message : 'Error leyendo OCR');
+              } finally {
+                  setStoriesProBusy(false);
+              }
+          };
+
+          const runHistoriasProGenerate = async () => {
+              const src = mullerStoryClean(storiesProSourceText);
+              if (!src) {
+                  setStoriesProErr('Escribe o carga un texto antes de generar.');
+                  return;
+              }
+              setStoriesProBusy(true);
+              setStoriesProErr('');
+              try {
+                  let deNatural = '';
+                  let esBase = '';
+                  if (storiesProInputMode === 'es') {
+                      esBase = src;
+                      deNatural = await mullerTranslateViaGtx(src, 'auto', 'de');
+                  } else {
+                      deNatural = src;
+                      esBase = await mullerTranslateViaGtx(src, 'auto', 'es');
+                  }
+                  deNatural = mullerStoryStylizeGerman(deNatural, storiesProLevel, storiesProTone);
+                  const deSimple = mullerStorySimplifyGerman(deNatural);
+                  const scenes = mullerStorySplitScenes(deNatural, esBase);
+                  const glossary = mullerStoryGlossary(deNatural);
+                  setStoriesProResult({
+                      deNatural,
+                      deSimple,
+                      esBase,
+                      scenes,
+                      glossary,
+                      mode: storiesProInputMode === 'de' ? 'correccion' : 'conversion'
+                  });
+              } catch (err) {
+                  setStoriesProErr(err && err.message ? err.message : 'No se pudo generar la historia.');
+              } finally {
+                  setStoriesProBusy(false);
+              }
+          };
+
+          const sendHistoriasProToHistoria = () => {
+              if (!storiesProResult || !Array.isArray(storiesProResult.scenes) || storiesProResult.scenes.length === 0) {
+                  setStoriesProErr('Primero genera la historia.');
+                  return;
+              }
+              const title = `Historias Pro Â· ${storiesProLevel} Â· ${new Date().toLocaleDateString()}`;
+              setGuionData(storiesProResult.scenes);
+              setSceneIndex(0);
+              setMode('dialogue');
+              setShowCurrentTranslation(false);
+              setIsDefaultScript(false);
+              setActiveScriptTitle(title);
+              setActiveSavedScriptId(null);
+              setActiveTab('historia');
+              stopAudio();
+          };
+
+          const appendPairToCustomLesson = (de, es) => {
+              const d = String(de || '').trim();
+              const e = String(es || '').trim();
+              if (!d || !e) { alert('Falta alemÃ¡n o espaÃ±ol.'); return; }
+              let lessonId = lexikonSaveLessonId;
+              if (lessonId === '__new__') {
+                  const t = (lexikonNewLessonTitle || '').trim() || `Lexikon ${new Date().toLocaleDateString()}`;
+                  const newLesson = { id: Date.now().toString() + Math.random().toString(36).slice(2, 9), title: t, words: [{ de: d, es: e, diff: 0 }] };
+                  const updated = [...customVocabLessons, newLesson];
+                  setCustomVocabLessons(updated);
+                  try { localStorage.setItem('mullerCustomVocab', JSON.stringify(updated)); } catch (err) {}
+                  setLexikonSaveLessonId(newLesson.id);
+                  setLexikonNewLessonTitle('');
+                  alert(`Guardado en nueva lecciÃ³n: Â«${t}Â». Puedes practicarla en Vocab.`);
+                  return;
+              }
+              if (!lessonId) { alert('Elige una lecciÃ³n o Â«Nueva lecciÃ³nâ€¦Â».'); return; }
+              setCustomVocabLessons((prev) => {
+                  let hit = false;
+                  const next = prev.map((l) => {
+                      if (l.id !== lessonId) return l;
+                      hit = true;
+                      if (l.words.some((w) => w.de === d && w.es === e)) return l;
+                      return { ...l, words: [...l.words, { de: d, es: e, diff: 0 }] };
+                  });
+                  if (!hit) {
+                      alert('No se encontrÃ³ esa lecciÃ³n.');
+                      return prev;
+                  }
+                  try { localStorage.setItem('mullerCustomVocab', JSON.stringify(next)); } catch (err) {}
+                  return next;
+              });
+              alert('Palabra aÃ±adida a la lecciÃ³n.');
+          };
+
+          const handleBxUserCardDelete = () => {
+              const item = bxCurrentList[bxIndex];
+              if (!item || !item._mullerUser || !item._mullerUid) return;
+              const level = bxBankLevel === 'b1' ? 'b1' : 'b2';
+              let srcCat = bxCategory === 'mix' ? (item._mullerCategory || mullerFindUserBxCategory(bxUserOverlay, level, item._mullerUid)) : bxCategory;
+              if (!srcCat) {
+                  alert('No se encontrÃ³ la categorÃ­a de esta tarjeta.');
+                  return;
+              }
+              if (!window.confirm('Â¿Eliminar esta tarjeta solo de tu biblioteca local?')) return;
+              setBxUserOverlay((prev) => {
+                  const base = JSON.parse(JSON.stringify(normalizeBxPayload(prev)));
+                  base[level][srcCat] = (base[level][srcCat] || []).filter((x) => x._mullerUid !== item._mullerUid);
+                  try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(base)); } catch (e) {}
+                  return base;
+              });
+          };
+
+          const handleBxUserCardMove = () => {
+              const item = bxCurrentList[bxIndex];
+              if (!item || !item._mullerUser || !item._mullerUid) return;
+              const level = bxBankLevel === 'b1' ? 'b1' : 'b2';
+              let srcCat = bxCategory === 'mix' ? (item._mullerCategory || mullerFindUserBxCategory(bxUserOverlay, level, item._mullerUid)) : bxCategory;
+              if (!srcCat) {
+                  alert('No se encontrÃ³ la categorÃ­a de origen.');
+                  return;
+              }
+              const toCat = bxMoveTargetCat;
+              if (srcCat === toCat) {
+                  alert('Elige otra categorÃ­a distinta.');
+                  return;
+              }
+              setBxUserOverlay((prev) => {
+                  const base = JSON.parse(JSON.stringify(normalizeBxPayload(prev)));
+                  const fromArr = base[level][srcCat] || [];
+                  const fi = fromArr.findIndex((x) => x._mullerUid === item._mullerUid);
+                  if (fi === -1) return prev;
+                  const moved = { ...fromArr[fi], _mullerCategory: toCat };
+                  fromArr.splice(fi, 1);
+                  if (!base[level][toCat]) base[level][toCat] = [];
+                  base[level][toCat].push(moved);
+                  try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(base)); } catch (e) {}
+                  return base;
+              });
+          };
+
+          const fillChromeAiFromScene = () => {
+              try {
+                  const idx = getActualSceneIndex();
+                  const scene = guionData[idx];
+                  if (!scene || !scene.text) { alert('No hay texto en la escena actual de Historia.'); return; }
+                  const block = [scene.text, scene.translation ? '(' + scene.translation + ')' : ''].filter(Boolean).join('\n');
+                  setChromeAiText(block);
+                  setChromeAiLine('Texto cargado desde la escena ' + (idx + 1) + '.');
+              } catch (e) { alert('No se pudo leer el guion.'); }
+          };
+
+          const runChromeLocalSummarize = async () => {
+              const text = (chromeAiText || '').trim();
+              if (text.length < 40) {
+                  alert('Pega un texto mÃ¡s largo o usa â€œCargar escena actualâ€.');
+                  return;
+              }
+              if (!('Summarizer' in self)) {
+                  setChromeAiLine('Tu navegador no expone la API Summarizer. Usa Google Chrome 138+ en escritorio con IA integrada (Gemini Nano). En Edge puede ir detrÃ¡s de flags; revisa la documentaciÃ³n de Built-in AI.');
+                  setChromeAiOut('');
+                  return;
+              }
+              setChromeAiBusy(true);
+              setChromeAiOut('');
+              setChromeAiLine('Comprobandoâ€¦');
+              try {
+                  const Summarizer = self.Summarizer;
+                  const availability = await Summarizer.availability();
+                  if (availability === 'unavailable') {
+                      setChromeAiLine('Gemini Nano no disponible en este equipo (requisitos de hardware, espacio ~22 GB libres en el perfil de Chrome, o polÃ­tica).');
+                      setChromeAiBusy(false);
+                      return;
+                  }
+                  setChromeAiLine('Preparando modelo local (la primera vez puede descargarse)â€¦');
+                  const summarizer = await Summarizer.create({
+                      type: 'key-points',
+                      format: 'markdown',
+                      length: 'short',
+                      expectedInputLanguages: ['de', 'en'],
+                      outputLanguage: 'es',
+                      sharedContext: 'Estudiante de alemÃ¡n TELC; resÃºmenes claros en espaÃ±ol.',
+                      monitor(m) {
+                          m.addEventListener('downloadprogress', (e) => {
+                              const p = typeof e.loaded === 'number' ? Math.round(e.loaded * 100) : 0;
+                              setChromeAiLine('Descarga del modelo en tu PCâ€¦ ' + p + '%');
+                          });
+                      }
+                  });
+                  setChromeAiLine('Generando resumen (proceso local)â€¦');
+                  const summary = await summarizer.summarize(text, { context: 'Texto o diÃ¡logo en alemÃ¡n para estudio.' });
+                  setChromeAiOut(typeof summary === 'string' ? summary : String(summary));
+                  setChromeAiLine('Listo: sin enviar datos a los servidores de MÃ¼ller.');
+                  try { if (typeof summarizer.destroy === 'function') summarizer.destroy(); } catch (e2) {}
+              } catch (err) {
+                  setChromeAiLine('Error: ' + (err && err.message ? err.message : String(err)));
+              } finally {
+                  setChromeAiBusy(false);
+              }
+          };
+
+          const loadSavedScript = (script) => {
+              setGuionData(JSON.parse(script.data)); setActiveScriptTitle(script.title); setIsDefaultScript(false);
+              setActiveSavedScriptId(script && script.id != null ? String(script.id) : null);
+              setSceneIndex(0); setMode('dialogue'); stopAudio(); resetModes(); setIsReviewing(false); setActiveTab('historia');
+          };
+
+          const loadDefaultGuion = () => {
+              try {
+                  setGuionData(JSON.parse(JSON.stringify(DEFAULT_GUION)));
+              } catch (e) {
+                  setGuionData(DEFAULT_GUION);
+              }
+              setActiveScriptTitle('Lektion 17: Kunst');
+              setIsDefaultScript(true);
+              setActiveSavedScriptId(null);
+              setSceneIndex(0);
+              setMode('dialogue');
+              stopAudio();
+              resetModes();
+              setIsReviewing(false);
+              setActiveTab('historia');
+          };
+
+          const deleteSavedScript = (e, script) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const sid = script && script.id != null ? String(script.id) : '';
+              if (!sid) {
+                  alert('Este guion no tiene id interno; recarga la pÃ¡gina y prueba de nuevo.');
+                  return;
+              }
+              if (!window.confirm('Â¿Eliminar este guion de la lista?')) return;
+              const stripBx = window.confirm(
+                  'Â¿Quitar tambiÃ©n de B1/B2 las frases que aÃ±adiste con Â«Distribuir textoÂ» mientras tenÃ­as cargado este guion en Historia?\n\n' +
+                  '(Solo afecta a tarjetas nuevas vinculadas a este guion. Las que enviaste antes sin esta vinculaciÃ³n, o el contenido del archivo b1-b2-database.json, no se tocan.)'
+              );
+              setSavedScripts((prev) => {
+                  const next = prev.filter((s) => String(s.id) !== sid);
+                  try { localStorage.setItem('mullerScripts', JSON.stringify(next)); } catch (err) {}
+                  return next;
+              });
+              if (stripBx) {
+                  setBxUserOverlay((prev) => {
+                      const stripped = mullerStripBxOverlayBySourceScriptId(prev, sid);
+                      try { localStorage.setItem(MULLER_BX_USER_OVERLAY_KEY, JSON.stringify(stripped)); } catch (err) {}
+                      return stripped;
+                  });
+                  setBxIndex(0);
+                  setBxImportSummary('');
+              }
+              if (String(activeSavedScriptId) === sid) setActiveSavedScriptId(null);
+          };
+
+          const handleGenerateAIStory = () => {
+              setIsGeneratingStory(true);
+              setTimeout(() => {
+                  let wordsArray = aiCustomWords.split(',').map(w => w.trim()).filter(w => w);
+                  let mockLongStory = [
+                      { speaker: 'ErzÃ¤hler', text: 'Es war ein kalter Morgen in der groÃŸen Stadt.', translation: 'Era una frÃ­a maÃ±ana en la gran ciudad.' },
+                      { speaker: 'Lukas', text: 'Ich muss heute so viel erledigen. Wo fange ich an?', translation: 'Tengo tanto que hacer hoy. Â¿Por dÃ³nde empiezo?' },
+                      { speaker: 'Anna', text: 'Vergiss nicht, dass wir spÃ¤ter zusammen essen gehen.', translation: 'No olvides que luego vamos a comer juntos.' },
+                      { speaker: 'Lukas', text: 'NatÃ¼rlich nicht! Ich habe den Tisch schon reserviert.', translation: 'Â¡Por supuesto que no! Ya he reservado la mesa.' },
+                      { speaker: 'Anna', text: 'Das ist wunderbar. Ich freue mich wirklich darauf.', translation: 'Eso es maravilloso. De verdad me alegro de ello.' },
+                      { speaker: 'ErzÃ¤hler', text: 'SpÃ¤ter am Abend trafen sie sich im neuen Restaurant.', translation: 'MÃ¡s tarde en la noche se encontraron en el nuevo restaurante.' },
+                      { speaker: 'Kellner', text: 'Guten Abend! Was darf ich Ihnen heute bringen?', translation: 'Â¡Buenas tardes! Â¿QuÃ© les puedo traer hoy?' },
+                      { speaker: 'Lukas', text: 'Wir hÃ¤tten gerne die Speisekarte und ein Wasser, bitte.', translation: 'Nos gustarÃ­a la carta y un agua, por favor.' },
+                      { speaker: 'Anna', text: 'Und ich hÃ¤tte gerne ein Glas Rotwein.', translation: 'Y a mÃ­ me gustarÃ­a una copa de vino tinto.' },
+                      { speaker: 'Kellner', text: 'Kommt sofort! Haben Sie schon gewÃ¤hlt?', translation: 'Â¡Enseguida! Â¿Ya han elegido?' }
+                  ];
+                  if (wordsArray.length > 0) {
+                      wordsArray.forEach((word, index) => {
+                          let i = (index + 1) * 2; 
+                          if (i >= mockLongStory.length) i = mockLongStory.length - 1;
+                          mockLongStory.splice(i, 0, {
+                              speaker: 'Anna', text: `Ãœbrigens, erinnerst du dich an ${word}? Das war eine interessante Erfahrung.`,
+                              translation: `Por cierto, Â¿te acuerdas de ${word}? Fue una experiencia interesante.`,
+                              vocab: [{ de: word, es: 'Palabra Custom', diff: 1 }]
+                          });
+                      });
+                  }
+                  setGuionData(mockLongStory); setActiveScriptTitle(`AI Generated: ${aiLevel} - ${aiTheme}`);
+                  setIsDefaultScript(false); setActiveSavedScriptId(null); setSceneIndex(0); setMode('dialogue'); stopAudio(); resetModes(); setIsReviewing(false);
+                  setIsGeneratingStory(false); setActiveTab('historia'); setAiCustomWords(""); 
+              }, 3000);
+          };
+
+          const sanitizeHistoriaSpeechText = (text) => {
+              return String(text || '')
+                  .replace(/\[R\]/gi, '')
+                  .replace(/\bN[Ã¼u]tzlich\b\.?/gi, '')
+                  .replace(/\b[ÃšU]TIL\b\.?/gi, '')
+                  .replace(/\s{2,}/g, ' ')
+                  .trim();
+          };
+
+          const playSceneAudio = (text, speaker) => {
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = 'de-DE';
+              if (speaker === 'Lukas') { utterance.voice = getVoice('de', 'male'); utterance.pitch = 1.1; } 
+              else if (speaker === 'Elena' || speaker === 'Anna') { utterance.voice = getVoice('de', 'female'); utterance.pitch = 1.2; } 
+              else if (speaker.includes('Weber') || speaker === 'Professor' || speaker === 'ErzÃ¤hler') { utterance.voice = getVoice('de', 'male', true); utterance.pitch = 0.8; } 
+              else { utterance.voice = getVoice('de', 'male'); }
+              utterance.rate = (speaker.includes('Weber') ? 0.9 : 1.0) * playbackRate;
+              if (fluesternMode) { utterance.volume = 0.3; utterance.pitch = utterance.pitch * 0.8; } 
+              else { utterance.volume = 1.0; }
+              return utterance;
+          };
+
+          useEffect(() => {
+            if (!isPlaying || !voicesLoaded || mode !== 'dialogue' || activeTab !== 'historia') return;
+            window.speechSynthesis.cancel(); 
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            const actualIdx = getActualSceneIndex();
+            const currentScene = guionData[actualIdx];
+            if ((currentScene.speaker === roleplayChar || roleplayChar === 'Todos') && mode === 'dialogue' && !podcastMode) {
+                setMode('roleplay_wait'); setIsPlaying(false); return; 
+            }
+           // Limpiamos el texto de sÃ­mbolos que el motor de voz lee por error (.;)
+const audioCleanText = sanitizeHistoriaSpeechText(currentScene.text).replace(/[.;;]/g, '.'); 
+const sentenceUtterance = playSceneAudio(audioCleanText, currentScene.speaker);
+            let utterances = [sentenceUtterance];
+            if (currentScene.vocab && currentScene.vocab.length > 0 && !podcastMode && !diktatMode && !puzzleMode && !declinaMode && !artikelSniperMode) {
+                currentScene.vocab.forEach(v => {
+                    const uDe = new SpeechSynthesisUtterance(v.de);
+                    uDe.lang = 'de-DE'; uDe.voice = getVoice('de', 'female'); uDe.rate = 0.85;
+                    utterances.push(uDe);
+                    const uEs = new SpeechSynthesisUtterance(v.es);
+                    uEs.lang = 'es-ES'; uEs.voice = getVoice('es', 'male'); uEs.rate = 0.9;
+                    utterances.push(uEs);
+                });
+            }
+            if (podcastMode) {
+                const esUtter = new SpeechSynthesisUtterance(currentScene.translation || "TraducciÃ³n no disponible");
+                esUtter.lang = 'es-ES'; esUtter.voice = getVoice('es', 'male'); esUtter.rate = 1.0;
+                utterances = [sentenceUtterance, esUtter];
+            }
+            utterances[utterances.length - 1].onend = () => {
+                if (!isPlayingRef.current) return;
+                if (diktatMode || puzzleMode || declinaMode || artikelSniperMode) { setIsPlaying(false); return; } 
+                if (podcastMode) timeoutRef.current = setTimeout(() => proceedToNextStage(), 1500);
+                else timeoutRef.current = setTimeout(() => proceedToNextStage(), 800);
+            };
+            utterances.forEach(u => window.speechSynthesis.speak(u));
+            return () => { window.speechSynthesis.cancel(); if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+          }, [sceneIndex, mode, isPlaying, voicesLoaded, playbackRate, roleplayChar, diktatMode, puzzleMode, declinaMode, artikelSniperMode, isReviewing, fluesternMode, activeTab, podcastMode, ttsPrefsEpoch]);
+
+          const trySaveGrammarStructure = () => {
+              const text = guionData[getActualSceneIndex()].text;
+              const translation = guionData[getActualSceneIndex()].translation || "";
+              let found = false;
+              let newGrammar = [...userStats.difficultGrammar];
+              GRAMMAR_PATTERNS.forEach(p => {
+                  if (text.match(p.regex)) {
+                      if (!newGrammar.some(g => g.base === p.base)) { newGrammar.push({ base: p.base, exampleDe: text, exampleEs: translation }); found = true; }
+                  }
+              });
+              if (found) { saveProgress({ difficultGrammar: newGrammar }); alert("Â¡Estructura automÃ¡tica detectada y guardada en tu mazo!"); } 
+              else { setShowGrammarPrompt(true); }
+          };
+
+          const handleCustomGrammarSave = () => {
+              if(!customGrammarInput.trim()) return;
+              const text = guionData[getActualSceneIndex()].text;
+              const translation = guionData[getActualSceneIndex()].translation || "";
+              let newGrammar = [...userStats.difficultGrammar];
+              newGrammar.push({ base: customGrammarInput, exampleDe: text, exampleEs: translation });
+              saveProgress({ difficultGrammar: newGrammar });
+              setShowGrammarPrompt(false); setCustomGrammarInput(""); alert("Â¡Estructura personalizada guardada con Ã©xito!");
+          };
+
+          const generateTutorFeedback = (text) => {
+              let feedback = [];
+              const tLower = text.toLowerCase();
+              if (tLower.match(/\b(weil|dass|obwohl|wenn|als|damit|ob|bevor|nachdem)\b/i)) feedback.push("ðŸŸ£ **Nebensatz (Subordinada):** Has usado un conector subordinante. El verbo conjugado va a la Ãºltima posiciÃ³n de la frase.");
+              if (tLower.match(/\b(deshalb|deswegen|darum|trotzdem|dann|danach|auÃŸerdem)\b/i)) feedback.push("ðŸŸ  **Hauptsatz (InversiÃ³n):** Conector en PosiciÃ³n 1. Inmediatamente despuÃ©s tiene que ir el verbo (Pos 2), y luego el sujeto.");
+              if (tLower.match(/\b(und|aber|oder|denn|sondern)\b/i)) feedback.push("ðŸŸ¢ **Conector ADUSO (PosiciÃ³n 0):** Une dos frases sin alterar el orden normal (Sujeto + Verbo).");
+              if (tLower.match(/\b(habe|hast|hat|haben|habt|bin|bist|ist|sind|seid)\b.*\b(ge[a-zÃ¤Ã¶Ã¼ÃŸ]+t|ge[a-zÃ¤Ã¶Ã¼ÃŸ]+en|.+[ie]rt)\b/i)) feedback.push("ðŸ•°ï¸ **Perfekt:** Auxiliar (haben/sein) en PosiciÃ³n 2 y Participio al final.");
+              if (tLower.match(/\b(wurde|wurdest|wurden|wurdet|war|warst|waren|wart|hatte|hattest|hatten|hattet|gab|musste|konnte|wollte|sollte|durfte)\b/i) && !tLower.match(/\b(worden)\b/i)) feedback.push("ðŸ“– **PrÃ¤teritum:** Pasado simple. Usado para verbos auxiliares, modales o narraciÃ³n.");
+              if (tLower.match(/\b(wurde|worden)\b/i) || (tLower.match(/\b(werden|wird|werden|werdet)\b/i) && tLower.match(/\b(ge[a-zÃ¤Ã¶Ã¼ÃŸ]+t|ge[a-zÃ¤Ã¶Ã¼ÃŸ]+en)\b/i))) feedback.push("ðŸ›ï¸ **Passiv:** 'Werden' + Participio II. Lo importante es la acciÃ³n, no el sujeto.");
+              if (tLower.match(/\b(muss|musst|mÃ¼ssen|kann|kannst|kÃ¶nnen|darf|darfst|dÃ¼rfen|soll|sollst|sollen|will|willst|wollen|mÃ¶chte|mÃ¶chtest|mÃ¶chten)\b/i)) feedback.push("ðŸ’ª **Modalverben:** Verbo modal en Pos 2, obliga al verbo principal en Infinitivo al final.");
+              if (tLower.match(/\b(an|ein|auf|zu|mit|aus|vor|nach|ab|her|hin|los|teil)\s*[.,!?]*$/i)) feedback.push("âœ‚ï¸ **Trennbare Verben:** El prefijo del verbo se ha separado al final de la frase.");
+              if (tLower.match(/\b(aus|bei|mit|nach|seit|von|zu|ab)\b/i)) feedback.push("ðŸ”µ **Dativo (PreposiciÃ³n):** PreposiciÃ³n que rige Dativo estricto.");
+              if (tLower.match(/\b(durch|fÃ¼r|gegen|ohne|um)\b/i)) feedback.push("ðŸ”´ **Acusativo (PreposiciÃ³n):** PreposiciÃ³n que rige Acusativo estricto.");
+              if (tLower.match(/\b(in|an|auf|neben|hinter|Ã¼ber|unter|vor|zwischen)\b/i)) feedback.push("ðŸŸ¡ **WechselprÃ¤position:** Rige Dativo (Wo?) o Acusativo (Wohin?).");
+              GRAMMAR_PATTERNS.forEach(p => { if (text.match(p.regex)) feedback.push(`ðŸŒŸ **Verbo con PreposiciÃ³n Fija:** ${p.tooltip}.`); });
+              return feedback.join("\n\n") || "ðŸŸ¢ **Hauptsatz:** Estructura estÃ¡ndar perfecta.";
+          };
+
+          const showAITutor = () => {
+              setTutorMessage(generateTutorFeedback(guionData[getActualSceneIndex()].text));
+              setShowTutor(true);
+          };
+
+          const handleDiktatCheck = () => {
+              if (!diktatInput.trim()) { alert("Por favor, escribe lo que has escuchado primero."); return; }
+              setShowDiktatResult(true);
+              const cleanText = (t) => t.toLowerCase().replace(/[.,!?]/g, '').trim();
+              const originalText = cleanText(guionData[getActualSceneIndex()].text);
+              const typedText = cleanText(diktatInput);
+              if (originalText !== typedText) {
+                  window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(false);
+                  setDiktatMotivationMsg(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Sigue intentÃ¡ndolo.');
+                  if (!isReviewing && !userStats.failedDiktatScenes.includes(sceneIndex)) {
+                      saveProgress({ failedDiktatScenes: [...userStats.failedDiktatScenes, sceneIndex], diktatAttempts: userStats.diktatAttempts + 1, activityByDay: mergeActivityPoints(6) });
+                  }
+                  deductHeart();
+              } else {
+                  setDiktatMotivationMsg('');
+                  window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true);
+                  saveProgress({ coins: userStats.coins + 5, diktatCorrect: userStats.diktatCorrect + 1, diktatAttempts: userStats.diktatAttempts + 1, activityByDay: mergeActivityPoints(25) });
+              }
+          };
+
+          const handleVoiceStart = async (targetText = null, evalOpts = {}) => {
+              if (userStats.hearts <= 0 && evalOpts.mode !== 'shadow') { setShowDeathModal(true); return; }
+              const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+              if (!SpeechRecognition) { alert("Tu navegador no soporta esta funciÃ³n. Usa Google Chrome."); return; }
+              const ok = await mullerEnsureMicPermission({ autoPrompt: true, showToast: true });
+              if (!ok) {
+                  setGrammarPolizeiMsg('Sin permiso de micrÃ³fono. Puedes seguir con texto y audio.');
+                  return;
+              }
+              if (recognitionRef.current) {
+                  try { recognitionRef.current.stop(); } catch (e) {}
+              }
+              const recognition = new SpeechRecognition();
+              recognition.lang = 'de-DE';
+              const mobileStt = typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || ''));
+              /* continuous: una sola sesiÃ³n por pulsaciÃ³n; en mÃ³vil interimResults=false reduce duplicados del motor */
+              recognition.continuous = true;
+              recognition.interimResults = !mobileStt;
+              recognition.maxAlternatives = mobileStt ? 1 : 3;
+              recognitionRef.current = recognition;
+              spokenTextRef.current = "";
+              speechFinalRef.current = "";
+              const opts = { mode: evalOpts.mode || 'default' };
+              const pickAlt = (res) => {
+                  let alt = res[0];
+                  for (let j = 1; j < res.length; j++) {
+                      const cj = res[j].confidence;
+                      const cb = alt.confidence;
+                      if (typeof cj === 'number' && (typeof cb !== 'number' || cj >= cb)) alt = res[j];
+                  }
+                  return alt;
+              };
+              recognition.onstart = () => {
+                  setIsListening(true);
+                  setSpokenText("");
+                  speechFinalRef.current = "";
+                  spokenTextRef.current = "";
+                  setPronunciationScore(null);
+                  setGrammarPolizeiMsg("");
+                  setPronunciationFeedback([]);
+              };
+              recognition.onresult = (event) => {
+                  const finals = [];
+                  let interim = "";
+                  for (let i = event.resultIndex; i < event.results.length; i++) {
+                      const res = event.results[i];
+                      const alt = pickAlt(res);
+                      const raw = (alt.transcript || "").trim();
+                      if (!raw) continue;
+                      if (res.isFinal) finals.push(raw);
+                      else interim = raw;
+                  }
+                  if (finals.length) {
+                      if (mobileStt) {
+                          if (finals.length === 1) {
+                              const f = finals[0];
+                              const cur = speechFinalRef.current || "";
+                              if (!cur) speechFinalRef.current = f;
+                              else if (f.startsWith(cur.trim())) speechFinalRef.current = f;
+                              else if (cur.startsWith(f) && f.length < cur.length) { /* mantener frase mÃ¡s larga */ }
+                              else if (f.length >= cur.length && (f.indexOf(cur) >= 0 || cur.indexOf(f) >= 0)) speechFinalRef.current = f.length >= cur.length ? f : cur;
+                              else speechFinalRef.current = mergeSpeechFinalChunk(cur, f);
+                          } else {
+                              const chunk = finals.join(" ").trim();
+                              speechFinalRef.current = mergeSpeechFinalChunk(speechFinalRef.current, chunk);
+                          }
+                      } else {
+                          for (const f of finals) {
+                              speechFinalRef.current = mergeSpeechFinalChunk(speechFinalRef.current, f);
+                          }
+                      }
+                  }
+                  const display = (speechFinalRef.current + (interim ? (speechFinalRef.current ? " " : "") + interim : "")).trim();
+                  const cleaned = collapseStutterRepeats(display);
+                  spokenTextRef.current = cleaned;
+                  setSpokenText(cleaned);
+              };
+              recognition.onerror = (event) => {
+                  console.error("Error de micro:", event.error);
+                  setIsListening(false);
+                  if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                      alert("Permiso de micrÃ³fono denegado. Activa el mic en la barra del navegador.");
+                  }
+              };
+              recognition.onend = () => {
+                  setIsListening(false);
+                  evaluatePronunciation(targetText, spokenTextRef.current || "", opts);
+              };
+              try { recognition.start(); } catch (e) {}
+          };
+
+          const handleVoiceStop = () => {
+              const r = recognitionRef.current;
+              if (!r) return;
+              try { r.stop(); } catch (e) {}
+          };
+
+          const micMouseDownGuard = (fn) => () => {
+              if (Date.now() < micIgnoreMouseUntilRef.current) return;
+              fn();
+          };
+          const micTouchStartGuard = (fn) => () => {
+              micIgnoreMouseUntilRef.current = Date.now() + 450;
+              fn();
+          };
+
+          const evaluatePronunciation = (targetText, transcript, opts = {}) => {
+              const mode = opts.mode || 'default';
+              if (!transcript || transcript.trim() === "") {
+                  if (mode === 'shadow') {
+                      setGrammarPolizeiMsg("No se detectÃ³ voz. Comprueba el micrÃ³fono o habla mÃ¡s cerca.");
+                      setPronunciationScore(null);
+                      setPronunciationFeedback([]);
+                      if (window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(false);
+                  }
+                  return;
+              }
+              const textToCompare = sanitizeHistoriaSpeechText(targetText || guionData[getActualSceneIndex()].text);
+              const cleanOrig = normalizeGermanSpeechText(textToCompare);
+              const cleanSpoken = normalizeGermanSpeechText(collapseStutterRepeats(transcript));
+              if (!cleanOrig) return;
+              const distance = levenshteinDistance(cleanOrig, cleanSpoken);
+              const maxLength = Math.max(cleanOrig.length, cleanSpoken.length, 1);
+              let scorePhrase = Math.round(((maxLength - distance) / maxLength) * 100);
+              const origWords = cleanOrig.split(/\s+/).filter(Boolean);
+              const spokenWords = cleanSpoken.split(/\s+/).filter(Boolean);
+              const feedbackArr = matchGermanWordsSequential(origWords, spokenWords);
+              const correctN = feedbackArr.filter((f) => f.correct).length;
+              const wordRatio = origWords.length ? correctN / origWords.length : 1;
+              let scoreWords = Math.round(wordRatio * 100);
+              let score = Math.round(scorePhrase * 0.45 + scoreWords * 0.55);
+              let polizeiMsg = "";
+              let penalty = false;
+              if (mode !== 'shadow' && cleanOrig.includes("wegen des") && cleanSpoken.includes("wegen dem")) {
+                  score -= 20;
+                  polizeiMsg = "ðŸš¨ Grammatik-Polizei: Has external DATIVO en vez de GENITIVO. -1 â¤ï¸";
+                  penalty = true;
+              }
+              const finalScore = score > 100 ? 100 : score < 0 ? 0 : score;
+              if (mode === 'shadow') setGrammarPolizeiMsg("");
+              else setGrammarPolizeiMsg(polizeiMsg);
+              setPronunciationScore(finalScore);
+              setPronunciationFeedback(feedbackArr);
+              if (mode === 'shadow') {
+                  saveProgress({
+                      pronunciationAttempts: (userStats.pronunciationAttempts || 0) + 1,
+                      pronunciationTotalScore: (userStats.pronunciationTotalScore || 0) + finalScore,
+                      ...(finalScore >= 85 ? { coins: userStats.coins + 2, activityByDay: mergeActivityPoints(8) } : {}),
+                  });
+                  if (window.__mullerNotifyExerciseOutcome) {
+                      window.__mullerNotifyExerciseOutcome(finalScore >= 75);
+                  }
+                  return;
+              }
+              if (penalty || finalScore < 50) { window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(false); deductHeart(); }
+              else {
+                  window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true);
+                  if (finalScore >= 90) saveProgress({ coins: userStats.coins + 5, activityByDay: mergeActivityPoints(12) });
+              }
+          };
+
+          const playVocabAudio = () => {
+              if(vocabDisplayList.length === 0) return;
+              window.speechSynthesis.cancel();
+              const currentVocab = vocabDisplayList[vocabReviewIndex];
+              const cleanDeAudio = currentVocab.de.replace(/^[0-9]+[.\-):\]]*\s*/g, '').replace(/^[a-zA-ZÃ¤Ã¶Ã¼ÃŸÃ„Ã–Ãœ]{1,10}\s*[.:]\s*/g, '').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|\u{FE0F}/gu, '').trim();
+              const cleanEsAudio = currentVocab.es.replace(/^[0-9]+[.\-):\]]*\s*/g, '').replace(/^[a-zA-ZÃ±Ã‘Ã¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“Ãš]{1,10}\s*[.:]\s*/g, '').replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{2B50}]|\u{FE0F}/gu, '').trim();
+              const utterDe = new SpeechSynthesisUtterance(cleanDeAudio);
+              utterDe.lang = 'de-DE'; utterDe.voice = getVoice('de', 'female'); utterDe.rate = 0.85;
+              utterDe.onend = () => {
+                  setTimeout(() => { setShowVocabTranslation(true);
+                     const utterEs = new SpeechSynthesisUtterance(cleanEsAudio);
+                     utterEs.lang = 'es-ES'; utterEs.voice = getVoice('es', 'male'); utterEs.rate = 0.9;
+                     window.speechSynthesis.speak(utterEs); }, 500); 
+              };
+              window.speechSynthesis.speak(utterDe);
+          };
+
+          const handleVocabDifficulty = (level) => {
+            const currentWord = vocabDisplayList[vocabReviewIndex];
+            if (!currentWord) return;
+            let newDiff = [...userStats.difficultVocab];
+            let newNorm = [...userStats.normalVocab];
+            if (level === 'hard') { if (!newDiff.some(w => w.de === currentWord.de)) newDiff.push(currentWord); } 
+            else if (level === 'normal') { if (!newNorm.some(w => w.de === currentWord.de)) newNorm.push(currentWord); }
+            if (window.__mullerNotifyExerciseOutcome) {
+                window.__mullerNotifyExerciseOutcome(level === 'easy' || level === 'normal');
+            }
+            mullerBumpVocabStreakRating();
+            saveProgress({ difficultVocab: newDiff, normalVocab: newNorm, activityByDay: mergeActivityPoints(15) });
+            try {
+                const nextMap = mullerApplyVocabSrsRating(mullerGetVocabSrsMap(), currentWord, level);
+                mullerSetVocabSrsMap(nextMap);
+                setVocabSrsEpoch((e) => e + 1);
+            } catch (e) {}
+            if (vocabReviewIndex < vocabDisplayList.length - 1) { setVocabReviewIndex(prev => prev + 1); setShowVocabTranslation(false); } 
+            else {
+                window.__mullerPlaySfx && window.__mullerPlaySfx('complete');
+                setCelebrationModal({ title: 'Â¡Lista completada!', subtitle: 'Has repasado todas las tarjetas de esta sesiÃ³n.', xp: 15, coins: 10 });
+                saveProgress({ xp: userStats.xp + 15, coins: userStats.coins + 10, activityByDay: mergeActivityPoints(35) });
+                setActiveTab('guiones');
+            }
+          };
+
+          const startPractice = (type) => {
+              if (type === 'diff' && (!userStats.difficultVocab || userStats.difficultVocab.length === 0)) { alert("Tu mazo de Vocabulario DifÃ­cil estÃ¡ vacÃ­o."); return; }
+              if (type === 'norm' && (!userStats.normalVocab || userStats.normalVocab.length === 0)) { alert("Tu mazo de Vocabulario Normal estÃ¡ vacÃ­o."); return; }
+              if (type === 'grammar' && (!userStats.difficultGrammar || userStats.difficultGrammar.length === 0)) { alert("Tu mazo de GramÃ¡tica estÃ¡ vacÃ­o."); return; }
+              setPracticeActive(type); setPracticeIndex(0); setPracticeShowTrans(false);
+          };
+
+          const playPracticeAudio = (text) => {
+              window.speechSynthesis.cancel();
+              const utterDe = new SpeechSynthesisUtterance(text);
+              utterDe.lang = 'de-DE'; utterDe.voice = getVoice('de', 'male'); utterDe.rate = 0.9;
+              window.speechSynthesis.speak(utterDe);
+          };
+
+          const nextPracticeWord = () => {
+              if (practiceShowTrans && window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(true);
+              const list = practiceActive === 'diff' ? userStats.difficultVocab : (practiceActive === 'norm' ? userStats.normalVocab : userStats.difficultGrammar);
+              if (practiceIndex < list.length - 1) { setPracticeIndex(practiceIndex + 1); setPracticeShowTrans(false); saveProgress({ activityByDay: mergeActivityPoints(6) }); } 
+              else {
+                  window.__mullerPlaySfx && window.__mullerPlaySfx('complete');
+                  setCelebrationModal({ title: 'Â¡SesiÃ³n de mazos!', subtitle: '+20 XP Â· +5 monedas', xp: 20, coins: 5 });
+                  saveProgress({ xp: userStats.xp + 20, coins: userStats.coins + 5, activityByDay: mergeActivityPoints(30) });
+                  setPracticeActive(null);
+              }
+          };
+
+          const getArticleVisual = (word) => {
+            if (!word) return null;
+            if (word.startsWith('der ')) return <span className="text-blue-400 mr-2">ðŸ”µ</span>;
+            if (word.startsWith('die ')) return <span className="text-red-400 mr-2">ðŸ”´</span>;
+            if (word.startsWith('das ')) return <span className="text-green-400 mr-2">ðŸŸ¢</span>;
+            return null;
+          };
+
+          const renderHighlightedText = (text, vocabList) => {
+            let htmlText = text;
+            if (artikelSniperMode) { const artRegex = /\b(der|die|das|den|dem|des)\b/gi; htmlText = htmlText.replace(artRegex, `<span class="bg-red-800/40 text-red-200 border-b border-red-500/60 px-2 mx-0.5 rounded-sm font-bold shadow-sm">[ ??? ]</span>`); }
+            if (declinaMode) { const declRegex = /\b(d|ein|kein|mein|dein|sein|ihr|unser|euer)(er|en|em|es|e|as|ie)\b/gi; htmlText = htmlText.replace(declRegex, `$1<span class="text-pink-300 font-mono bg-pink-800/30 border-b border-pink-500/60 px-1 mx-0.5 rounded shadow-sm">[ _ ]</span>`); }
+            if (vocabList && vocabList.length > 0) {
+                const sortedVocab = [...vocabList].sort((a, b) => b.de.length - a.de.length);
+                sortedVocab.forEach(v => {
+                   let searchWord = v.de.replace(/^(der|die|das|sich)\s/i, '').trim();
+                   const safeWord = searchWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                   const regex = new RegExp(`(?![^<]*>)(^|[^a-zÃ¤Ã¶Ã¼ÃŸA-ZÃ„Ã–Ãœáºž])(${safeWord})([^a-zÃ¤Ã¶Ã¼ÃŸA-ZÃ„Ã–Ãœáºž]|$)`, 'gi');
+                   if (lueckentextMode) htmlText = htmlText.replace(regex, `$1<span class="bg-gray-800 text-transparent border-b border-yellow-500/70 rounded px-3 mx-1 select-none" title="${v.es}">[ ??? ]</span>$3`);
+                   else htmlText = htmlText.replace(regex, `$1<span class="bg-amber-500/20 text-amber-100 border-b border-amber-400/60 px-1 mx-0.5 rounded-sm font-bold shadow-sm" title="TraducciÃ³n: ${v.es}">$2</span>$3`);
+                });
+            }
+            GRAMMAR_PATTERNS.forEach(p => { htmlText = htmlText.replace(p.regex, `<span class="bg-cyan-800/40 text-cyan-200 border-b border-cyan-400/60 px-1 mx-0.5 rounded-sm shadow-sm" title="${p.tooltip}">$1</span>`); });
+            if (tempusMode) {
+                Object.keys(TEMPUS_DICT).forEach(verb => {
+                    const safeVerb = verb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(?![^<]*>)\\b(${safeVerb})\\b`, 'gi');
+                    htmlText = htmlText.replace(regex, `<span class="tempus-clickable text-blue-100 font-bold underline decoration-blue-400/70 decoration-2 underline-offset-4 cursor-pointer px-0.5 rounded" data-tempus-verb="$1" title="Toca para ver infinitivo y tiempos">$1</span>`);
+                });
+                const genericInfRegex = /(?![^<]*>)\b([a-zÃ¤Ã¶Ã¼ÃŸ]{4,}(?:en|eln|ern))\b/gi;
+                htmlText = htmlText.replace(genericInfRegex, `<span class="tempus-clickable text-blue-100 font-bold underline decoration-blue-400/70 decoration-2 underline-offset-4 cursor-pointer px-0.5 rounded" data-tempus-verb="$1" title="Toca para ver infinitivo y tiempos">$1</span>`);
+            }
+            const connRegex = new RegExp(`(?![^<]*>)\\b(${CONN_LIST.join('|')})\\b`, 'gi');
+            htmlText = htmlText.replace(connRegex, `<span class="text-purple-300 font-bold underline decoration-purple-500/70 decoration-2 underline-offset-4" title="Conector">$1</span>`);
+            const datRegex = new RegExp(`(?![^<]*>)\\b(${PREP_DAT.join('|')})\\b`, 'gi');
+            htmlText = htmlText.replace(datRegex, `<span class="text-blue-300 font-bold underline decoration-blue-500/70 decoration-2 underline-offset-4" title="PreposiciÃ³n Dativo (EstÃ¡tico)">$1</span>`);
+            const akkRegex = new RegExp(`(?![^<]*>)\\b(${PREP_AKK.join('|')})\\b`, 'gi');
+            htmlText = htmlText.replace(akkRegex, `<span class="text-red-300 font-bold underline decoration-red-500/70 decoration-2 underline-offset-4" title="PreposiciÃ³n Acusativo (Movimiento)">$1</span>`);
+            const wechRegex = new RegExp(`(?![^<]*>)\\b(${PREP_WECHSEL.join('|')})\\b`, 'gi');
+            htmlText = htmlText.replace(wechRegex, `<span class="text-yellow-500/90 font-bold underline decoration-yellow-600/70 decoration-2 underline-offset-4" title="WechselprÃ¤position (Mixta)">$1</span>`);
+            return (
+                <div
+                    className="leading-loose inline"
+                    onClick={(e) => {
+                        if (!tempusMode) return;
+                        const t = e && e.target && e.target.closest ? e.target.closest('[data-tempus-verb]') : null;
+                        if (!t) return;
+                        const picked = t.getAttribute('data-tempus-verb');
+                        const info = resolveTempusVerbInfo(picked);
+                        if (info) setTempusSelectedVerb(info);
+                    }}
+                    dangerouslySetInnerHTML={{ __html: htmlText }}
+                />
+            );
+          };
+
+          const renderDiktatDiff = (original, typed) => {
+              const cleanWord = (w) => w.toLowerCase().replace(/[.,!?]/g, '').trim();
+              const origWords = original.split(/\s+/).filter(w=>w);
+              const typedWords = typed.split(/\s+/).filter(w=>w);
+              return (
+                  <div className="flex flex-wrap gap-2 text-2xl md:text-3xl font-medium justify-center bg-gray-900 p-4 md:p-6 rounded-xl border border-gray-700 leading-loose w-full">
+                      {origWords.map((word, i) => {
+                          const tWord = typedWords[i] || "";
+                          const isCorrect = cleanWord(word) === cleanWord(tWord);
+                          if (isCorrect) return <span key={i} className="text-green-400">{word}</span>;
+                          else return (
+                              <div key={i} className="flex flex-col items-center mx-1">
+                                  <span className="text-red-400 line-through decoration-red-500 text-base md:text-xl opacity-70">{tWord || "___"}</span>
+                                  <span className="text-green-300 border-b border-green-500 font-bold bg-green-900/30 px-1 rounded text-sm md:text-base">{word}</span>
+                              </div>
+                          );
+                      })}
+                  </div>
+              );
+          };
+
+          const exportToAnki = (type) => {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            if (type === 'vocab_diff') {
+                if (!userStats.difficultVocab || userStats.difficultVocab.length === 0) { alert("VacÃ­o."); return; }
+                userStats.difficultVocab.forEach((v) => { csvContent += `"${v.de}","${v.es}<br><small>TELC B1</small>","Dificil"\r\n`; });
+            } else if (type === 'vocab_norm') {
+                if (!userStats.normalVocab || userStats.normalVocab.length === 0) { alert("VacÃ­o."); return; }
+                userStats.normalVocab.forEach((v) => { csvContent += `"${v.de}","${v.es}<br><small>TELC B1</small>","Repaso"\r\n`; });
+            } else {
+                if (!userStats.difficultGrammar || userStats.difficultGrammar.length === 0) { alert("VacÃ­o."); return; }
+                userStats.difficultGrammar.forEach((g) => { csvContent += `"${g.base} (Verbo+Prep)","${g.exampleDe}<br><small>${g.exampleEs}</small>","Dificil"\r\n`; });
+            }
+            const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); 
+            link.setAttribute("download", `Anki_${type}_B1.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+          };
+
+          const exportScriptPDF = () => {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) { alert("Permite las ventanas emergentes para generar el PDF."); return; }
+            const escPdf = (s) => String(s ?? '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const genDate = new Date().toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+            const totalScenes = guionData.length;
+            let htmlContent = `
+                <html>
+                <head>
+                    <title>Guion: ${escPdf(activeScriptTitle)}</title>
+                    <style>
+                        body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1e293b; padding: 28px; line-height: 1.55; max-width: 920px; margin: 0 auto; }
+                        h1 { color: #b91c1c; text-align: center; border-bottom: 3px solid #dc2626; padding-bottom: 12px; font-size: 26px; }
+                        .meta { text-align: center; color: #64748b; margin-bottom: 8px; font-size: 13px; }
+                        .meta strong { color: #475569; }
+                        h2 { color: #1e3a8a; border-bottom: 2px solid #93c5fd; padding-bottom: 5px; margin-top: 36px; font-size: 18px; }
+                        .scene { margin-bottom: 28px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06); page-break-inside: avoid; }
+                        .scene-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9; }
+                        .scene-num { font-size: 12px; font-weight: 800; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; }
+                        .speaker { font-weight: 900; color: #334155; font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; }
+                        .badge-redem { font-size: 11px; background: linear-gradient(90deg,#f97316,#eab308); color: white; padding: 3px 10px; border-radius: 999px; font-weight: 800; }
+                        .block-de { margin-bottom: 14px; }
+                        .label-row { font-size: 11px; font-weight: 800; color: #1e40af; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+                        .label-es { color: #047857; }
+                        .text-de { font-size: 19px; font-weight: 700; margin: 0; color: #0f172a; line-height: 1.45; }
+                        .block-es { background: linear-gradient(90deg, #ecfdf5 0%, #f8fafc 100%); border-left: 4px solid #059669; padding: 12px 14px; border-radius: 0 8px 8px 0; margin-top: 4px; }
+                        .text-es { font-size: 16px; color: #166534; margin: 0; line-height: 1.5; font-style: normal; font-weight: 500; }
+                        .text-es-empty { color: #94a3b8; font-style: italic; font-weight: 400; }
+                        .vocab-box { font-size: 12px; color: #92400e; background: #fffbeb; padding: 8px 12px; border-radius: 6px; margin-top: 12px; font-weight: 600; border: 1px solid #fcd34d; line-height: 1.4; }
+                        .hl-vocab { background-color: #fef08a; border-bottom: 2px solid #eab308; padding: 0 4px; border-radius: 2px; }
+                        .hl-conn { color: #7e22ce; text-decoration: underline; text-decoration-color: #a855f7; text-decoration-thickness: 2px; }
+                        .hl-dat { color: #1d4ed8; text-decoration: underline; text-decoration-color: #3b82f6; text-decoration-thickness: 2px; }
+                        .hl-akk { color: #b91c1c; text-decoration: underline; text-decoration-color: #ef4444; text-decoration-thickness: 2px; }
+                        .hl-wech { color: #d97706; text-decoration: underline; text-decoration-color: #f59e0b; text-decoration-thickness: 2px; }
+                        .hl-verbprep { background-color: #cffafe; border-bottom: 2px solid #06b6d4; padding: 0 4px; border-radius: 2px; color: #0891b2; }
+                        .tempus-tag { font-size: 10px; color: #4338ca; font-family: ui-monospace, monospace; background: #e0e7ff; padding: 2px 6px; border-radius: 4px; border: 1px solid #a5b4fc; margin-left: 4px; font-weight: 500; }
+                        .grammar-summary { background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 28px; page-break-inside: avoid; }
+                        .legend { background: #f1f5f9; padding: 16px 18px; border-radius: 10px; margin-top: 32px; font-size: 12px; color: #475569; border: 1px solid #e2e8f0; page-break-inside: avoid; }
+                        .legend h3 { margin: 0 0 10px 0; font-size: 14px; color: #0f172a; }
+                        .legend ul { margin: 0; padding-left: 18px; }
+                        .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #64748b; }
+                        @media print { body { padding: 16px; } .scene { box-shadow: none; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>ðŸ“œ ${escPdf(activeScriptTitle)}</h1>
+                    <p class="meta"><strong>MÃ¼ller</strong> Â· Entrenador alemÃ¡n TELC Â· ${escPdf(genDate)} Â· ${totalScenes} escena${totalScenes === 1 ? '' : 's'}</p>
+            `;
+            let uniqueGrammarRules = new Set();
+            guionData.forEach((scene, sceneIdx) => {
+                let deText = scene.text;
+                const feedback = generateTutorFeedback(deText);
+                if (feedback && !feedback.includes("Estructura estÃ¡ndar perfecta")) {
+                    feedback.split('\n\n').forEach(f => uniqueGrammarRules.add(f));
+                }
+                if (scene.vocab) {
+                    const sortedVocab = [...scene.vocab].sort((a, b) => b.de.length - a.de.length);
+                    sortedVocab.forEach(v => {
+                        let searchWord = v.de.replace(/^(der|die|das|sich)\s/i, '').trim();
+                        const safeWord = searchWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`(?![^<]*>)(^|[^a-zÃ¤Ã¶Ã¼ÃŸA-ZÃ„Ã–Ãœáºž])(${safeWord})([^a-zÃ¤Ã¶Ã¼ÃŸA-ZÃ„Ã–Ãœáºž]|$)`, 'gi');
+                        deText = deText.replace(regex, `$1<span class="hl-vocab">$2</span>$3`);
+                    });
+                }
+                GRAMMAR_PATTERNS.forEach(p => { deText = deText.replace(p.regex, `<span class="hl-verbprep">$1</span>`); });
+                Object.keys(TEMPUS_DICT).forEach(verb => {
+                    const safeVerb = verb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(`(?![^<]*>)\\b(${safeVerb})\\b`, 'gi');
+                    deText = deText.replace(regex, `$1 <span class="tempus-tag">(${TEMPUS_DICT[verb]})</span>`);
+                });
+                const connRegex = new RegExp(`(?![^<]*>)\\b(${CONN_LIST.join('|')})\\b`, 'gi');
+                deText = deText.replace(connRegex, `<span class="hl-conn">$1</span>`);
+                const datRegex = new RegExp(`(?![^<]*>)\\b(${PREP_DAT.join('|')})\\b`, 'gi');
+                deText = deText.replace(datRegex, `<span class="hl-dat">$1</span>`);
+                const akkRegex = new RegExp(`(?![^<]*>)\\b(${PREP_AKK.join('|')})\\b`, 'gi');
+                deText = deText.replace(akkRegex, `<span class="hl-akk">$1</span>`);
+                const wechRegex = new RegExp(`(?![^<]*>)\\b(${PREP_WECHSEL.join('|')})\\b`, 'gi');
+                deText = deText.replace(wechRegex, `<span class="hl-wech">$1</span>`);
+                const tr = scene.translation && String(scene.translation).trim();
+                const trBlock = tr
+                    ? `<div class="block-es"><div class="label-row label-es">EspaÃ±ol Â· traducciÃ³n</div><p class="text-es">${escPdf(tr)}</p></div>`
+                    : `<div class="block-es"><div class="label-row label-es">EspaÃ±ol Â· traducciÃ³n</div><p class="text-es text-es-empty">(Sin traducciÃ³n en esta lÃ­nea del guion â€” puedes aÃ±adirla en Biblioteca al editar.)</p></div>`;
+                const vocabHtml = scene.vocab && scene.vocab.length > 0
+                    ? `<div class="vocab-box">ðŸ“– Vocabulario: ${scene.vocab.map((v) => `${escPdf(v.de)} â†’ ${escPdf(v.es)}`).join(' Â· ')}</div>`
+                    : '';
+                htmlContent += `
+                    <div class="scene">
+                        <div class="scene-head">
+                            <span class="scene-num">Szene ${sceneIdx + 1} / ${totalScenes}</span>
+                            <span class="speaker">${escPdf(scene.speaker)}</span>
+                            ${scene.isRedemittel ? '<span class="badge-redem">Redemittel</span>' : ''}
+                        </div>
+                        <div class="block-de">
+                            <div class="label-row">Deutsch</div>
+                            <div class="text-de">${deText}</div>
+                        </div>
+                        ${trBlock}
+                        ${vocabHtml}
+                    </div>
+                `;
+            });
+            if (uniqueGrammarRules.size > 0) {
+                htmlContent += `<div class="grammar-summary"><h2>ðŸ§  AnÃ¡lisis Gramatical del Guion</h2><ul>`;
+                uniqueGrammarRules.forEach(rule => { let cleanRule = rule.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); htmlContent += `<li>${cleanRule}</li>`; });
+                htmlContent += `</ul></div>`;
+            }
+            htmlContent += `
+                <div class="legend">
+                    <h3>Leyenda de marcas en el alemÃ¡n</h3>
+                    <ul>
+                        <li><strong>Resaltado amarillo:</strong> Ã­tems del vocabulario de la escena.</li>
+                        <li><strong>Cyan (fondo):</strong> verbos con preposiciÃ³n detectados.</li>
+                        <li><strong>Subrayados de color:</strong> conectores; preposiciones con Dativ / Akkusativ / Wechsel.</li>
+                        <li><strong>Etiquetas moradas (Tempus):</strong> referencia de formas verbales (PrÃ¤t/Perf).</li>
+                    </ul>
+                </div>
+                <div class="footer">MÃ¼ller Â· TELC Â· Â¡Viel Erfolg beim Deutschlernen!</div>
+                <script>window.onload = function() { window.print(); }<\/script></body></html>`;
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+          };
+
+          const exportProgressPDF = () => {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) { alert("Por favor, permite las ventanas emergentes (pop-ups) en tu navegador para generar el PDF."); return; }
+            const htmlContent = `
+                <html><head><title>Mi Resumen de AlemÃ¡n - Profesor MÃ¼ller</title><style>body { font-family: 'Segoe UI', sans-serif; color: #1e293b; padding: 40px; line-height: 1.6; } h1 { color: #2563eb; text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 15px; } h2 { color: #0f172a; margin-top: 40px; } table { width: 100%; border-collapse: collapse; margin-top: 15px; } th, td { border: 1px solid #94a3b8; padding: 12px; } th { background-color: #f1f5f9; } .diff { color: #dc2626; font-weight: bold; } .norm { color: #2563eb; } .grammar-base { color: #0891b2; }</style></head><body>
+                <h1>ðŸ“š Resumen de Estudio - B1/B2</h1>
+                <div><h2>ðŸ”´ Vocabulario DifÃ­cil</h2>${userStats.difficultVocab?.length ? `<table><tr><th>AlemÃ¡n</th><th>EspaÃ±ol</th></tr>${userStats.difficultVocab.map(v => `<tr><td class="diff">${v.de}</td><td>${v.es}</td></tr>`).join('')}</table>` : '<p>VacÃ­o.</p>'}</div>
+                <div><h2>ðŸ”µ Vocabulario Normal</h2>${userStats.normalVocab?.length ? `<table><tr><th>AlemÃ¡n</th><th>EspaÃ±ol</th></tr>${userStats.normalVocab.map(v => `<tr><td class="norm">${v.de}</td><td>${v.es}</td></tr>`).join('')}</table>` : '<p>VacÃ­o.</p>'}</div>
+                <div><h2>ðŸ§  Reglas Gramaticales</h2>${userStats.difficultGrammar?.length ? `<table><tr><th>Regla</th><th>Ejemplo</th><th>TraducciÃ³n</th></tr>${userStats.difficultGrammar.map(g => `<tr><td class="grammar-base">${g.base}</td><td><i>"${g.exampleDe}"</i></td><td>${g.exampleEs}</td></tr>`).join('')}</table>` : '<p>VacÃ­o.</p>'}</div>
+                <script>window.onload = function() { window.print(); }<\/script></body></html>
+            `;
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+          };
+
+          // COLORES DE FONDO SUAVIZADOS (CorrecciÃ³n) + temas UI
+          const getBgColor = () => {
+              if (uiTheme === 'light') {
+                  if (activeTab === 'inicio') return 'bg-slate-100';
+                  if (activeTab === 'ruta') return 'bg-fuchsia-50';
+                  if (activeTab === 'progreso') return 'bg-indigo-100';
+                  if (activeTab === 'guiones') return 'bg-slate-100';
+                  if (activeTab === 'vocabulario') return 'bg-amber-50';
+                  if (activeTab === 'entrenamiento') return 'bg-fuchsia-50';
+                  if (activeTab === 'lexikon') return 'bg-slate-100';
+                  if (activeTab === 'bxbank') return 'bg-slate-100';
+                  if (activeTab === 'storybuilder') return 'bg-indigo-100';
+                  if (activeTab === 'historiaspro') return 'bg-emerald-50';
+                  if (activeTab === 'shadowing') return 'bg-teal-50';
+                  if (activeTab === 'lectura') return 'bg-sky-50';
+                  if (activeTab === 'escritura') return 'bg-stone-100';
+                  if (activeTab === 'telc') return 'bg-slate-100';
+                  if (activeTab === 'comunidad') return 'bg-violet-50';
+                  return 'bg-slate-50';
+              }
+              if (uiTheme === 'hc') return 'bg-black';
+              if (activeTab === 'ruta') return 'bg-fuchsia-950/90';
+              if (activeTab === 'comunidad') return 'bg-violet-950';
+              if (activeTab === 'telc') return 'bg-slate-950';
+              if (activeTab === 'inicio') return 'bg-slate-950';
+              if (activeTab === 'progreso') return 'bg-indigo-950';
+              if (activeTab === 'guiones') return 'bg-slate-900';
+              if (activeTab === 'vocabulario') return 'bg-amber-950/70'; // Suavizado
+              if (activeTab === 'entrenamiento') return 'bg-fuchsia-950/85';
+              if (activeTab === 'lexikon') return 'bg-slate-900';
+              if (activeTab === 'bxbank') return 'bg-slate-900'; // Suavizado
+              if (activeTab === 'storybuilder') return 'bg-indigo-950'; // Suavizado
+              if (activeTab === 'historiaspro') return 'bg-emerald-950/80';
+              if (activeTab === 'shadowing') return 'bg-teal-950/90';
+              if (activeTab === 'lectura') return 'bg-sky-950/90';
+              if (activeTab === 'escritura') return 'bg-stone-950';
+              if (fluesternMode) return 'bg-zinc-900 filter contrast-125 sepia-50'; 
+              if (isReviewing || practiceActive) return 'bg-gray-900'; // Suavizado
+              const speaker = guionData[getActualSceneIndex()]?.speaker;
+              if (speaker === 'Lukas') return 'bg-slate-900';
+              if (speaker === 'Elena' || speaker === 'Anna') return 'bg-slate-800'; // Suavizado
+              if (speaker?.includes('Weber') || speaker === 'Professor') return 'bg-emerald-950';
+              return 'bg-gray-900'; 
+          };

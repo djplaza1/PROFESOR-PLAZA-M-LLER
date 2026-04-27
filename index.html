@@ -773,36 +773,45 @@
     })();
     </script>
 
-    <!-- App completa: Babel.transform con compact:true evita warning 500KB de Babel -->
+    <!-- App partida en 4 chunks (<500KB c/u) para evitar warning de Babel -->
     <script>
       (function() {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'src/app-bundled-from-user-index.jsx', true);
-        xhr.onload = function() {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            var code = xhr.responseText;
-            try {
-              var result = Babel.transform(code, {
-                presets: ['react', 'env'],
-                compact: true,
-                comments: false,
-                minified: true
-              });
-              var script = document.createElement('script');
-              script.type = 'text/javascript';
-              script.textContent = result.code;
-              document.body.appendChild(script);
-            } catch (err) {
-              console.error('Babel transform failed:', err);
+        var CHUNKS = ['src/a-core.jsx', 'src/b-app1.jsx', 'src/b-app2.jsx', 'src/c-extra.jsx'];
+        var idx = 0;
+        function loadNext() {
+          if (idx >= CHUNKS.length) return;
+          var url = CHUNKS[idx];
+          idx++;
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', url, true);
+          xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                var result = Babel.transform(xhr.responseText, {
+                  presets: ['react', 'env'],
+                  compact: true,
+                  comments: false,
+                  minified: true
+                });
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.textContent = result.code;
+                document.body.appendChild(script);
+              } catch(err) {
+                console.error('Babel transform failed for ' + url + ':', err);
+              }
+            } else {
+              console.error('Failed to load ' + url + ':', xhr.status);
             }
-          } else {
-            console.error('Failed to load bundle:', xhr.status);
-          }
-        };
-        xhr.onerror = function() {
-          console.error('Network error loading bundle');
-        };
-        xhr.send();
+            loadNext();
+          };
+          xhr.onerror = function() {
+            console.error('Network error loading ' + url);
+            loadNext();
+          };
+          xhr.send();
+        }
+        loadNext();
       })();
     </script>
 
