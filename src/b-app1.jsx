@@ -25,6 +25,9 @@ const [placementFinished, setPlacementFinished] = useState(false);
           const [rutaTranscript, setRutaTranscript] = useState('');
           const [rutaListening, setRutaListening] = useState(false);
           const [rutaTutorTalking, setRutaTutorTalking] = useState(false);
+          const [rutaPodcastUI, setRutaPodcastUI] = useState(null);
+          const [rutaFillTip, setRutaFillTip] = useState('');
+          const rutaPodcastPlaybackRef = useRef({ cancelled: false, line: 0, ex: null });
           const [readingSource, setReadingSource] = useState('current_story');
           const [readingScriptId, setReadingScriptId] = useState('__current__');
           const [readingTextInput, setReadingTextInput] = useState('');
@@ -1444,18 +1447,38 @@ const [placementFinished, setPlacementFinished] = useState(false);
               const candidates = words.filter((w) => w.length >= 4 && !rutaStopWords.has(w.toLowerCase()));
               return (candidates[0] || words.find((w) => w.length >= 2) || '').trim();
           };
+          const expandGermanAccept = (w) => {
+              const s = String(w || '').trim();
+              if (!s) return [];
+              const low = s.toLowerCase();
+              const out = new Set([s, low, low.charAt(0).toUpperCase() + low.slice(1)]);
+              if (/ä|ö|ü|ß/.test(low)) {
+                  out.add(low.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss'));
+              }
+              return [...out].filter(Boolean);
+          };
+          const buildGapHint = (sentence, answer) => {
+              const a = String(answer || '').trim();
+              const snip = String(sentence).replace(/_____/g, '…').replace(/\s+/g, ' ').trim().slice(0, 96);
+              if (!a) return '';
+              return `Pista alineada con el hueco: ${a.length} letras; encaja en el contexto: «${snip}».`;
+          };
           const makeGapExercise = (sentence, meaningEs, hintBase, fromReview, id) => {
               const answer = chooseGapWord(sentence);
               if (!answer) return null;
               const escaped = answer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
               const prompt = sentence.replace(new RegExp(`\\b${escaped}\\b`), '_____');
+              const contextual = buildGapHint(sentence, answer);
+              const mergedHint = (hintBase && String(hintBase).trim().length > 8) ? `${String(hintBase).trim()} · ${contextual}` : contextual;
               return {
                   id,
                   type: 'fill',
                   prompt,
                   promptEs: String(meaningEs || '').trim(),
                   answer,
-                  hint: hintBase || '',
+                  acceptedAnswers: expandGermanAccept(answer),
+                  hint: mergedHint,
+                  betterFormNote: `En contexto neutro lo más natural es: «${answer}».`,
                   fromReview: !!fromReview
               };
           };
@@ -1631,6 +1654,68 @@ const [placementFinished, setPlacementFinished] = useState(false);
               const reviewSlots = new Set(Array.from({ length: reviewCount }, (_, i) => Math.floor(((i + 1) * total) / (reviewCount + 1))));
               const typeSequence = rutaExerciseTypeByLevel[levelKey] || rutaExerciseTypeByLevel.A2;
 
+              const extractDeClean = (de) => {
+                  let s = String(de || '').split('—')[0].trim();
+                  s = s.replace(/\s*\([^)]*\)\s*$/, '').trim();
+                  return s.replace(/\s+/g, ' ').trim();
+              };
+              const buildRutaLongAudioPlan = (phrasePoolItems, connectorPool, variant) => {
+                  const pool = phrasePoolItems
+                      .map((p) => ({ de: extractDeClean(p.de), es: sanitizeRutaSpanishForUi(p.es || '', extractDeClean(p.de)) }))
+                      .filter((p) => p.de.length > 12);
+                  if (pool.length < 4) return null;
+                  const lines = [];
+                  let totalChars = 0;
+                  const fillerA = ['Interessant', 'Genau', 'Verstehe', 'Also gut', 'Aha', 'Richtig', 'Schön'];
+                  const fillerB = ['Ja', 'Hmm', 'Okay', 'Wirklich', 'Ach so', 'Super', 'Klar'];
+                  const intros = variant === 'story'
+                      ? ['Heute erzählen wir eine kleine Geschichte aus dem Alltag.', 'Die Szene beginnt ganz ruhig.', 'Hör genau zu: es geht um eine typische Situation.']
+                      : ['Willkommen zu einer kurzen Hörübung.', 'Zwei Personen sprechen miteinander.', 'Bleib entspannt und folge dem Gespräch.'];
+                  let idx = 0;
+                  intros.forEach((t, j) => {
+                      lines.push({ speaker: j % 2 === 0 ? 'A' : 'B', text: t });
+                      totalChars += t.length + 4;
+                  });
+                  while (totalChars < 1000 && lines.length < 58) {
+                      if (lines.length % 4 === 1) {
+                          const sp = lines.length % 2 === 0 ? 'A' : 'B';
+                          const tx = (sp === 'A' ? fillerA : fillerB)[lines.length % 7] + '.';
+                          lines.push({ speaker: sp, text: tx });
+                          totalChars += tx.length + 4;
+                          idx++;
+                      }
+                      const p = pool[idx % pool.length];
+                      idx++;
+                      const sp = lines.length % 2 === 0 ? 'A' : 'B';
+                      const body = p.de.replace(/\.$/, '') + '.';
+                      lines.push({ speaker: sp, text: body });
+                      totalChars += body.length + 4;
+                  }
+                  const n = lines.length;
+                  const pos = [Math.max(5, Math.floor(n * 0.22)), Math.max(10, Math.floor(n * 0.48)), Math.max(15, Math.floor(n * 0.68)), Math.max(20, Math.floor(n * 0.88))];
+                  const uniqPos = [...new Set(pos)].filter((x) => x >= 4 && x < n).slice(0, 4);
+                  const checkpoints = uniqPos.map((afterLineIdx, cix) => {
+                      const prevLine = lines[afterLineIdx - 1] || lines[0];
+                      const key = (chooseGapWord(prevLine.text) || 'Zeit').replace(/[.,!?]/g, '');
+                      const d1 = (chooseGapWord(pool[(idx + 1 + cix) % pool.length].de) || connectorPool[0] || 'Wetter').replace(/[.,!?]/g, '');
+                      const d2 = (chooseGapWord(pool[(idx + 2 + cix) % pool.length].de) || connectorPool[2] || 'Arbeit').replace(/[.,!?]/g, '');
+                      const correct = key.length > 2 ? key : 'wichtig';
+                      const opts = [...new Set([correct, d1, d2])].slice(0, 3).sort(() => Math.random() - 0.5);
+                      const stemEs = pool[(idx + cix) % pool.length].es;
+                      const meaningFrag = (stemEs && stemEs.length > 10 && !/[äöüÄÖÜß]{2}/.test(stemEs)) ? stemEs.slice(0, 100) : 'el matiz principal del turno que acabas de oír';
+                      return {
+                          afterLineIdx,
+                          promptEs: `Pregunta sobre lo que acabas de escuchar (español de España). Sobre la intervención de ${prevLine.speaker === 'A' ? 'la primera voz' : 'la segunda voz'}, elige en alemán la opción que mejor encaja. Contexto: ${meaningFrag}.`,
+                          options: opts,
+                          answer: correct,
+                          acceptedAnswers: expandGermanAccept(correct),
+                          hint: `Último intento: la opción modelo tiene ${correct.length} letras y empieza por «${correct.slice(0, 2)}».`,
+                          softNote: `En un examen formal conviene «${correct}».`
+                      };
+                  });
+                  return { lines, checkpoints, approxSeconds: 92 };
+              };
+
               const plan = [];
               for (let i = 0; i < total; i++) {
                   const mode = typeSequence[i % typeSequence.length];
@@ -1657,8 +1742,6 @@ const [placementFinished, setPlacementFinished] = useState(false);
                           id: `${srcLesson.id || lesson.id}-read-${i}`,
                           type: 'read',
                           de: sourceSentence,
-                          es: srcPhrase.es || '',
-                          esDisplay: meaningEs || '',
                           fromReview: useReview
                       });
                   } else if (mode === 'translate_de') {
@@ -1667,16 +1750,19 @@ const [placementFinished, setPlacementFinished] = useState(false);
                           type: 'translate_de',
                           prompt: meaningEs,
                           answer: answerDeClean,
+                          acceptedAnswers: expandGermanAccept(answerDeClean),
                           hint: shouldShowHintForLevel(levelKey, i) ? (srcFill.hint || safeFill.hint || '') : '',
                           fromReview: useReview
                       });
                   } else if (mode === 'translate_es') {
                       if (answerEsClean) {
+                          const esAcc = new Set([answerEsClean, answerEsClean.toLowerCase(), answerEsClean.replace(/^¿/, '').replace(/\?$/, '').trim()]);
                           plan.push({
                               id: `${srcLesson.id || lesson.id}-tr-es-${i}`,
                               type: 'translate_es',
                               promptDe: answerDeClean,
                               answer: answerEsClean,
+                              acceptedAnswers: [...esAcc].filter(Boolean),
                               hint: shouldShowHintForLevel(levelKey, i) ? (srcFill.hint || safeFill.hint || '') : '',
                               fromReview: useReview
                           });
@@ -1701,62 +1787,59 @@ const [placementFinished, setPlacementFinished] = useState(false);
                       if (gap) {
                           plan.push(gap);
                       } else {
+                          const fa = srcFill.answer || safeFill.answer;
+                          const fp = srcFill.prompt || safeFill.prompt;
                           plan.push({
                               id: `${srcLesson.id || lesson.id}-fill-fallback-${i}`,
                               type: 'fill',
-                              prompt: srcFill.prompt || safeFill.prompt,
+                              prompt: fp,
                               promptEs: meaningEs || srcFill.promptEs || safeFill.promptEs || '',
-                              answer: srcFill.answer || safeFill.answer,
-                              hint: shouldShowHintForLevel(levelKey, i) ? (srcFill.hint || safeFill.hint || '') : '',
+                              answer: fa,
+                              acceptedAnswers: expandGermanAccept(fa),
+                              hint: (shouldShowHintForLevel(levelKey, i) ? (srcFill.hint || safeFill.hint || '') : '') || buildGapHint(fp, fa),
+                              betterFormNote: `En examen prioriza: «${fa}».`,
                               fromReview: useReview
                           });
                       }
                   } else {
                       if (mode === 'podcast') {
-                          const left = sourceSentence.replace(/[.?!]$/, '').trim();
-                          const right = phrasePool[(i + 2) % phrasePool.length] || srcPhrase;
-                          const rightSentence = String(right.de || sourceSentence).replace(/[.?!]$/, '').trim();
-                          const conversation = [
-                              `A: ${left}.`,
-                              `B: ${rightSentence}.`,
-                              `A: ${left}, ${connectorPool[i % connectorPool.length]} heute.`
-                          ];
-                          const askedWord = chooseGapWord(conversation[1]) || chooseGapWord(conversation[0]) || 'Thema';
-                          const distractor1 = chooseGapWord(phrasePool[(i + 3) % phrasePool.length] && phrasePool[(i + 3) % phrasePool.length].de) || 'Wetter';
-                          const distractor2 = chooseGapWord(phrasePool[(i + 4) % phrasePool.length] && phrasePool[(i + 4) % phrasePool.length].de) || 'Arbeit';
-                          const options = [...new Set([askedWord, distractor1, distractor2])].slice(0, 3).sort(() => Math.random() - 0.5);
-                          plan.push({
-                              id: `${srcLesson.id || lesson.id}-podcast-${i}`,
-                              type: 'podcast',
-                              title: 'Podcast corto · Dos personas',
-                              transcript: conversation,
-                              prompt: '¿Qué palabra clave acaba de decir la persona B?',
-                              options,
-                              answer: askedWord,
-                              fromReview: useReview
-                          });
+                          const pod = buildRutaLongAudioPlan(phrasePool, connectorPool, 'dialog');
+                          if (pod) {
+                              plan.push({
+                                  id: `${srcLesson.id || lesson.id}-podcast-${i}`,
+                                  type: 'podcast',
+                                  title: 'Podcast Ruta (~90 s) · Pausas y preguntas',
+                                  podcast: pod,
+                                  fromReview: useReview
+                              });
+                          } else {
+                              plan.push({
+                                  id: `${srcLesson.id || lesson.id}-read-podfallback-${i}`,
+                                  type: 'read',
+                                  de: sourceSentence,
+                                  fromReview: useReview
+                              });
+                          }
                           continue;
                       }
                       if (mode === 'audio_story') {
-                          const base = sourceSentence.replace(/[.?!]$/, '').trim();
-                          const connector = connectorPool[i % connectorPool.length];
-                          const storyParts = [
-                              `Situation: ${base}.`,
-                              `Person 1: Ich komme später, ${connector} ich noch arbeite.`,
-                              `Person 2: Kein Problem, wir warten am Eingang.`
-                          ];
-                          const ordered = [storyParts[0], storyParts[1], storyParts[2]];
-                          const shuffled = [...ordered].sort(() => Math.random() - 0.5);
-                          plan.push({
-                              id: `${srcLesson.id || lesson.id}-audio-story-${i}`,
-                              type: 'audio_story',
-                              title: 'Audio story · Ordena la escena',
-                              transcript: ordered,
-                              prompt: 'Ordena la frase principal del diálogo:',
-                              options: shuffled,
-                              answer: ordered[1],
-                              fromReview: useReview
-                          });
+                          const story = buildRutaLongAudioPlan(phrasePool, connectorPool, 'story');
+                          if (story) {
+                              plan.push({
+                                  id: `${srcLesson.id || lesson.id}-audio-story-${i}`,
+                                  type: 'audio_story',
+                                  title: 'Historia oral (~90 s) · Pausas y preguntas',
+                                  podcast: story,
+                                  fromReview: useReview
+                              });
+                          } else {
+                              plan.push({
+                                  id: `${srcLesson.id || lesson.id}-read-storyfallback-${i}`,
+                                  type: 'read',
+                                  de: sourceSentence,
+                                  fromReview: useReview
+                              });
+                          }
                           continue;
                       }
                       if (mode === 'order') {
@@ -1770,6 +1853,7 @@ const [placementFinished, setPlacementFinished] = useState(false);
                               prompt: 'Selecciona el orden correcto de la frase:',
                               options: opts,
                               answer: base,
+                              acceptedAnswers: [base, base.replace(/\s+/g, ' ').trim()],
                               fromReview: useReview
                           });
                           continue;
@@ -1785,6 +1869,8 @@ const [placementFinished, setPlacementFinished] = useState(false);
                               prompt: sentence.replace(connector, '_____'),
                               options,
                               answer: connector,
+                              acceptedAnswers: expandGermanAccept(connector),
+                              hint: `Pista alineada: el hueco enlaza «${core.slice(0, 72)}…» con una conexión lógica al segundo miembro.`,
                               fromReview: useReview
                           });
                           continue;
@@ -1806,6 +1892,8 @@ const [placementFinished, setPlacementFinished] = useState(false);
               if (!lesson) return;
               const plan = buildRutaExercisePlan(levels, levelIdx, lessonIdx, bxEffectiveDatabases);
               if (!plan.length) return;
+              clearRutaPodcastPlayback();
+              setRutaFillTip('');
               setRutaRun({
                   levelIdx,
                   lessonIdx,
@@ -1817,7 +1905,8 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   score: { correct: 0, total: 0, reviewCorrect: 0, reviewTotal: 0 },
                   exerciseAttempts: 0,
                   rutaLastChanceHint: '',
-                  forcedReveal: false
+                  forcedReveal: false,
+                  podcastHadFailure: false
               });
               setRutaFillInput('');
               setRutaTranscript('');
@@ -2021,12 +2110,57 @@ const finishPlacementWithLevel = (finalLevel) => {
               return dist <= tol;
           };
 
+          const checkRutaTranslateExercise = (exercise) => {
+              if (!exercise) return false;
+              const mode = exercise.type === 'translate_de' ? 'de' : 'es';
+              const got = rutaFillInput || '';
+              if (checkRutaTranslateClose(got, exercise.answer, mode)) return true;
+              const bag = Array.isArray(exercise.acceptedAnswers) ? exercise.acceptedAnswers : [];
+              for (let j = 0; j < bag.length; j++) {
+                  if (checkRutaTranslateClose(got, bag[j], mode)) return true;
+              }
+              return false;
+          };
+
+          const checkRutaMcAnswer = (opt, exercise) => {
+              if (!exercise) return { ok: false, soft: false };
+              const o = String(opt || '').trim().toLowerCase().replace(/\s+/g, ' ');
+              const primary = String(exercise.answer || '').trim().toLowerCase().replace(/\s+/g, ' ');
+              const bag = new Set([primary, ...(Array.isArray(exercise.acceptedAnswers) ? exercise.acceptedAnswers.map((x) => String(x).trim().toLowerCase().replace(/\s+/g, ' ')) : [])].filter(Boolean));
+              if (bag.has(o)) return { ok: true, soft: false };
+              for (const c of bag) {
+                  if (!c) continue;
+                  const d = levenshteinDistance(o, c);
+                  const tol = Math.max(1, Math.floor(c.length / 9));
+                  if (d <= tol) return { ok: true, soft: true };
+              }
+              return { ok: false, soft: false };
+          };
+
           const checkRutaFillAnswer = (exercise) => {
               if (!exercise) return false;
               const got = (rutaFillInput || '').trim().toLowerCase().replace(/\s+/g, ' ');
-              const exp = String(exercise.answer || '').trim().toLowerCase();
-              if (got === exp) { window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true); setRutaSpeakErr(''); return true; }
+              const bag = new Set([String(exercise.answer || '').trim().toLowerCase(), ...(Array.isArray(exercise.acceptedAnswers) ? exercise.acceptedAnswers.map((x) => String(x).trim().toLowerCase()) : [])].filter(Boolean));
+              let hit = false;
+              let fuzzy = false;
+              for (const x of bag) {
+                  if (got === x) { hit = true; break; }
+              }
+              if (!hit) {
+                  for (const x of bag) {
+                      if (!x) continue;
+                      const d = levenshteinDistance(got, x);
+                      if (d <= Math.max(1, Math.floor(x.length / 8))) { hit = true; fuzzy = true; break; }
+                  }
+              }
+              if (hit) {
+                  window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(true);
+                  setRutaSpeakErr('');
+                  setRutaFillTip(fuzzy ? (exercise.betterFormNote || `Correcto. En examen prioriza: «${exercise.answer}».`) : '');
+                  return true;
+              }
               window.__mullerNotifyExerciseOutcome && window.__mullerNotifyExerciseOutcome(false);
+              setRutaFillTip('');
               setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Sigue practicando.');
               return false;
           };
@@ -3002,14 +3136,22 @@ const finishPlacementWithLevel = (finalLevel) => {
             return langVoices[0];
           };
 
-          const speakRutaDe = (text) => {
+          const speakRutaDe = (text, opts = {}) => {
               if (!text) return;
               window.speechSynthesis.cancel();
               const u = new SpeechSynthesisUtterance(text);
               u.lang = 'de-DE';
               u.onstart = () => setRutaTutorTalking(true);
-              u.onend = () => setRutaTutorTalking(false);
-              u.onerror = () => setRutaTutorTalking(false);
+              u.onend = () => {
+                  setRutaTutorTalking(false);
+                  if (typeof opts.onEnd === 'function') {
+                      try { opts.onEnd(); } catch (e) {}
+                  }
+              };
+              u.onerror = () => {
+                  setRutaTutorTalking(false);
+                  if (typeof opts.onError === 'function') opts.onError();
+              };
               if (typeof window.__mullerApplyPreferredDeVoice === 'function') window.__mullerApplyPreferredDeVoice(u);
               else {
                   u.voice = rutaMentor === 'tom' ? getVoice('de', 'male') : getVoice('de', 'female');
@@ -3020,6 +3162,82 @@ const finishPlacementWithLevel = (finalLevel) => {
               window.speechSynthesis.speak(u);
           };
 
+          const speakRutaEs = (text, opts = {}) => {
+              if (!text) return;
+              window.speechSynthesis.cancel();
+              const u = new SpeechSynthesisUtterance(text);
+              u.lang = 'es-ES';
+              u.onstart = () => setRutaTutorTalking(true);
+              u.onend = () => {
+                  setRutaTutorTalking(false);
+                  if (typeof opts.onEnd === 'function') {
+                      try { opts.onEnd(); } catch (e) {}
+                  }
+              };
+              u.onerror = () => {
+                  setRutaTutorTalking(false);
+                  if (typeof opts.onError === 'function') opts.onError();
+              };
+              const all = window.speechSynthesis.getVoices();
+              const esList = all.filter((v) => (v.lang || '').toLowerCase().startsWith('es'));
+              const spain = esList.find((v) => /es[-_]es/i.test(v.lang || '')) || esList.find((v) => /España|Spain|Castellano/i.test((v.name || '') + (v.lang || ''))) || getVoice('es', 'female');
+              u.voice = spain || esList[0] || all[0];
+              u.rate = 0.9;
+              u.pitch = 1.02;
+              window.speechSynthesis.speak(u);
+          };
+
+          const clearRutaPodcastPlayback = () => {
+              rutaPodcastPlaybackRef.current = { cancelled: true, line: 0, ex: null };
+              window.speechSynthesis.cancel();
+              setRutaPodcastUI(null);
+          };
+
+          const playRutaPodcastLine = () => {
+              const ctx = rutaPodcastPlaybackRef.current;
+              if (!ctx || !ctx.ex || !ctx.ex.podcast || ctx.cancelled) return;
+              const { lines, checkpoints } = ctx.ex.podcast;
+              const i = ctx.line;
+              if (i >= lines.length) {
+                  setRutaPodcastUI({ phase: 'done' });
+                  setRutaRun((r) => (r ? { ...r, step: 2 } : r));
+                  return;
+              }
+              const line = lines[i];
+              const spoken = `${line.speaker === 'A' ? 'Sprecher A' : 'Sprecher B'}: ${line.text}`;
+              speakRutaDe(spoken, {
+                  onEnd: () => {
+                      if (rutaPodcastPlaybackRef.current.cancelled) return;
+                      const next = i + 1;
+                      const cp = (checkpoints || []).find((c) => c.afterLineIdx === next);
+                      if (cp) {
+                          rutaPodcastPlaybackRef.current.line = next;
+                          setRutaPodcastUI({ phase: 'question', checkpoint: cp });
+                          speakRutaEs(cp.promptEs, {});
+                          return;
+                      }
+                      rutaPodcastPlaybackRef.current.line = next;
+                      setRutaPodcastUI({ phase: 'playing', line: next, checkpoint: null });
+                      setTimeout(() => playRutaPodcastLine(), 160);
+                  }
+              });
+          };
+
+          const beginRutaPodcastFromExercise = (ex) => {
+              if (!ex || !ex.podcast) return;
+              rutaPodcastPlaybackRef.current = { cancelled: false, line: 0, ex };
+              setRutaRun((r) => (r ? { ...r, podcastHadFailure: false, exerciseAttempts: 0, rutaLastChanceHint: '' } : r));
+              setRutaPodcastUI({ phase: 'playing', line: 0, checkpoint: null });
+              playRutaPodcastLine();
+          };
+
+          const resumeRutaPodcastAfterCheckpoint = () => {
+              rutaPodcastPlaybackRef.current.cancelled = false;
+              setRutaRun((r) => (r ? { ...r, exerciseAttempts: 0, rutaLastChanceHint: '' } : r));
+              setRutaPodcastUI({ phase: 'playing', line: rutaPodcastPlaybackRef.current.line, checkpoint: null });
+              setTimeout(() => playRutaPodcastLine(), 120);
+          };
+
           useEffect(() => {
               const ex = rutaRun && Array.isArray(rutaRun.exercisePlan) ? rutaRun.exercisePlan[rutaRun.exerciseIdx || 0] : null;
               if (!ex) {
@@ -3027,7 +3245,8 @@ const finishPlacementWithLevel = (finalLevel) => {
                   setRutaTutorTalking(false);
                   return;
               }
-              const shouldAutoSpeak = (rutaRun.step || 0) === 0 && (ex.type === 'read' || ex.type === 'speak' || ex.type === 'podcast' || ex.type === 'audio_story' || ex.type === 'translate_es');
+              const isLegacyAudio = (ex.type === 'podcast' || ex.type === 'audio_story') && !ex.podcast;
+              const shouldAutoSpeak = (rutaRun.step || 0) === 0 && (ex.type === 'read' || ex.type === 'speak' || ex.type === 'translate_es' || isLegacyAudio);
               if (!shouldAutoSpeak) return;
               const key = `${ex.id}:${rutaRun.step || 0}`;
               if (rutaAutoSpeakRef.current === key) return;
@@ -3036,7 +3255,7 @@ const finishPlacementWithLevel = (finalLevel) => {
                   ? ex.target
                   : ex.type === 'translate_es'
                       ? (ex.promptDe || '')
-                      : (ex.type === 'podcast' || ex.type === 'audio_story')
+                      : isLegacyAudio
                           ? (Array.isArray(ex.transcript) ? ex.transcript.join(' ') : '')
                           : ex.de;
               if (phrase) speakRutaDe(phrase);

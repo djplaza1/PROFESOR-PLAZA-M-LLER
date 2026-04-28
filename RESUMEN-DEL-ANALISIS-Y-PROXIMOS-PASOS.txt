@@ -1,0 +1,313 @@
+================================================================================
+  RESUMEN DEL ANÁLISIS: SUBPESTAÑAS DE HISTORIA DESAPARECIDAS
+  Proyecto: PROFESOR-PLAZA-MULLER (PWA React sin bundler)
+  Fecha: 27/04/2026
+  Último commit: 66073e9 - "fix: normalize umlauts in word tokenizer..."
+================================================================================
+
+ÍNDICE
+  1. ESTRUCTURA ACTUAL DEL PROYECTO
+  2. CÓMO SE CARGA LA APP (Babel + chunks)
+  3. LAS SUBPESTAÑAS PERDIDAS - UBICACIÓN EXACTA
+  4. ESTADO ACTUAL DEL ANÁLISIS
+  5. PROBLEMAS ENCONTRADOS
+  6. LO QUE FALTA POR HACER
+  7. INSTRUCCIONES PARA EL PRÓXIMO CHAT
+
+
+================================================================================
+1. ESTRUCTURA ACTUAL DEL PROYECTO
+================================================================================
+
+  Archivo principal HTML:     index.html
+  Archivo bundle original:     src/app-bundled-from-user-index.jsx  (897 KB, 11462 líneas)
+  Chunks actuales (separados): 
+    - src/a-core.jsx
+    - src/b-app1.jsx
+    - src/b-app2.jsx           (el más grande, contiene toda la sección HISTORIA)
+    - src/c-extra.jsx
+
+  Otros archivos fuente:
+    - src/app-floating.jsx
+    - src/app-init.jsx
+    - src/app-inline.jsx
+
+  Dependencias (cargadas vía CDN en index.html):
+    - React 18, ReactDOM 18 (cdnjs)
+    - Babel standalone (cdnjs) para transpilar JSX en cliente
+    - Lucide React icons (cdnjs)
+    - Recharts (cdnjs)
+    - html2canvas, jspdf (cdnjs)
+
+
+================================================================================
+2. CÓMO SE CARGA LA APP (Babel + chunks)
+================================================================================
+
+  En index.html, líneas 776-820:
+
+    <!-- App partida en 4 chunks (<500KB c/u) para red; se concatenan antes de Babel -->
+    <script>
+      (function() {
+        var CHUNKS = ['src/a-core.jsx', 'src/b-app1.jsx', 'src/b-app2.jsx', 'src/c-extra.jsx'];
+        var idx = 0;
+        var parts = [];
+        function loadNext() {
+          if (idx >= CHUNKS.length) {
+            var fullCode = parts.join('');
+            try {
+              var result = Babel.transform(fullCode, {
+                presets: ['react', 'env'],
+                compact: true,       // <--- minifica todo junto (OCULTA ERRORES)
+                comments: false,
+                minified: true
+              });
+              var script = document.createElement('script');
+              script.type = 'text/javascript';
+              script.textContent = result.code;
+              document.body.appendChild(script);
+            } catch(err) {
+              console.error('Babel transform failed:', err);
+            }
+            return;
+          }
+          var url = CHUNKS[idx];
+          idx++;
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', url, true);
+          xhr.onload = function() { ... };
+          xhr.send();
+        }
+        loadNext();
+      })();
+    </script>
+
+  HISTORIAL DE CAMBIOS RECIENTES (en orden cronológico inverso):
+    commit 66073e9 - fix: normalize umlauts in word tokenizer and dictation
+    commit 4a2e7aa - Fix: concatenate chunks before Babel transform (not compile separately)
+    commit 59bb49a - Split bundle into 4 chunks <500KB
+    commit a474503 - fix: usar Babel.transform con compact:true
+    commit 69a0f30 - Revert "Split bundle into 3 parts"
+    commit 27c6f5b - Split bundle into 3 parts <500KB each
+    commit 5686b33 - perf: quitar 50 script type=babel redundantes
+
+  PROBLEMA CONOCIDO de compact:true:
+    Babel con compact:true + minified:true MINIFICA TODO el código JSX en una sola línea.
+    Si hay algún error de sintaxis, la consola del navegador muestra errores 
+    incomprensibles (línea 1 del script inyectado, sin referencias al código original).
+    Para depurar, se recomienda cambiar temporalmente a:
+      compact: false,
+      comments: true,
+      minified: false
+
+
+================================================================================
+3. LAS SUBPESTAÑAS PERDIDAS - UBICACIÓN EXACTA
+================================================================================
+
+  TODAS las subpestañas existen y están correctamente definidas en:
+    src/b-app2.jsx  (que se concatena como parte del bundle)
+
+  BLOQUE PRINCIPAL: src/b-app2.jsx, líneas 3971-4026
+
+    Línea 3971:  {/* HISTORIA (Main Engine) con botón Ruido */}
+    Línea 3972:  {activeTab === 'historia' && !practiceActive && (
+    ...
+    Línea 4004:  {mode !== 'quiz' && mode !== 'interview' && !podcastMode && (
+                   <div className="absolute top-2 right-2 ...">
+                   ^^^ ESTE ES EL DIV QUE CONTIENE TODOS LOS BOTONES
+
+    Línea 4006:  Botón "Flüstern"     (setFluesternMode)
+    Línea 4007:  Botón "Ruido"        (setNoiseEnabled)
+    Línea 4008:  Botón "Diktat"       (setDiktatMode)
+    Línea 4009:  Botón "Huecos"       (setLueckentextMode)
+    Línea 4010:  Botón "Artículos"    (setArtikelSniperMode)
+    Línea 4011:  Botón "Declinar"     (setDeclinaMode)
+    Línea 4012:  Botón "Tempus"       (setTempusMode)
+    Línea 4013:  Botón "Satzbau"      (setPuzzleMode)
+    Línea 4014:  Botón "Oído"         (setBlindMode)
+    Línea 4015-4024: Select "No mutear" / "Mutear TODOS" / Lukas / Elena / Weber
+    Línea 4025:  </div>   (CIERRE del contenedor de botones)
+    Línea 4026:  )}        (CIERRE del condicional mode !== 'quiz' ...)
+
+    Línea 4298-4330:  {/* REPRODUCTOR CONTROLES INFERIORES */}
+                      {activeTab === 'historia' && mode !== 'quiz' && mode !== 'interview' && !practiceActive && (
+
+  TAMBIÉN existe un bloque DUPLICADO IDÉNTICO en src/b-app2.jsx alrededor de las 
+  líneas 982-985 con un menú desplegable de Opciones Historia.
+
+  La barra de herramientas con las subpestañas está controlada por el condicional:
+    {mode !== 'quiz' && mode !== 'interview' && !podcastMode && (
+
+  Esto significa que:
+    - Si mode === 'quiz'        → NO se ven (correcto, no aplica)
+    - Si mode === 'interview'   → NO se ven (correcto, modo oral B1)
+    - Si podcastMode === true   → NO se ven (correcto, modo podcast)
+    - Si mode === 'dialogue' (default) → SÍ deberían verse
+
+
+================================================================================
+4. ESTADO ACTUAL DEL ANÁLISIS
+================================================================================
+
+  LO QUE YA SE HA VERIFICADO:
+  [x] Las subpestañas existen en src/b-app2.jsx (líneas 4006-4024)
+  [x] El código NO está comentado ni desactivado
+  [x] El código es sintácticamente válido (JSX correcto)
+  [x] El condicional que las rodea es correcto
+  [x] Los chunks se concatenan correctamente (join('') sin separadores)
+  [x] Babel.transform con compact:true procesa el código sin errores
+  [x] Las funciones set*Mode existen (setFluesternMode, setNoiseEnabled, etc.)
+  [x] Los estados (fluesternMode, noiseEnabled, diktatMode, etc.) existen
+  [x] No hay conflictos de fusión entre chunks (b-app1.jsx termina con función,
+      b-app2.jsx empieza con const themeShellClass = ... - no hay corte)
+  [x] Las variables de estado se inicializan correctamente (useState)
+
+  LO QUE NO SE HA PODIDO VERIFICAR (pendiente):
+  [ ] Probar la app en el navegador para ver si realmente se ven o no
+  [ ] Ver el error exacto en la consola del navegador
+  [ ] Verificar si el problema es específico de móvil (responsive) o de escritorio
+
+
+================================================================================
+5. PROBLEMAS ENCONTRADOS
+================================================================================
+
+  A. Babel minifica demasiado (compact: true + minified: true)
+     - Oculta errores de sintaxis, mostrando "line 1" sin contexto
+     - Dificulta la depuración en navegador
+     - Posible causa de errores silenciosos si hay algún problema de sintaxis
+       en los chunks concatenados
+
+  B. El archivo src/app-bundled-from-user-index.jsx (897 KB) es el bundle ORIGINAL
+     pero ya NO se usa en producción. La app actualmente carga los 4 chunks por 
+     separado y los concatena en cliente. app-bundled-from-user-index.jsx es solo 
+     una referencia/backup.
+
+  C. Posibles causas de que las subpestañas NO SE VEAN (sin haber probado en
+     navegador, no se puede confirmar):
+     1. Error de sintaxis silencioso por compact:true que impide que el script
+        se ejecute completamente
+     2. Error en navegadores específicos (ej: Safari, Chrome móvil)
+     3. Problema de CSS (overflow, display, z-index) que las oculta visualmente
+     4. Error en importación de Icon (componente Lucide React)
+
+
+================================================================================
+6. LO QUE FALTA POR HACER
+================================================================================
+
+  PRIORIDAD 1 - PROBAR EN NAVEGADOR:
+    - Abrir la app publicada (https://djplaza1.github.io/PROFESOR-PLAZA-MULLER/)
+    - Hacer clic en "Historia"
+    - Ver si las subpestañas aparecen o no
+    - Abrir consola del navegador (F12) y buscar errores
+    - Si hay error, copiar el mensaje exacto
+
+  PRIORIDAD 2 - SI LAS SUBPESTAÑAS NO APARECEN:
+    - Opción A: Cambiar compact:true a compact:false, minified:false en index.html
+               para ver errores legibles
+    - Opción B: Buscar si el problema es de CSS (overflow:hidden, display:none,
+               position:absolute mal posicionado, z-index negativo)
+    - Opción C: Verificar que todas las importaciones de Icon estén disponibles
+               (Lucide React icons cargados correctamente)
+    - Opción D: Si el script se ejecuta pero con error, el mensaje de error 
+               dirá "Uncaught ..." en la consola
+
+  PRIORIDAD 3 - DEPURACIÓN LOCAL:
+    - Opción: Cargar index.html localmente (con Live Server o similar)
+    - Los chunks se cargan con XHR, puede haber problemas CORS localmente
+    - Si los chunks no se cargan, usar python -m http.server para servir local
+
+  PRIORIDAD 4 - SI TODO ESTÁ BIEN EN CÓDIGO:
+    - Hacer git commit y push (git add -A && git commit -m "fix: restaurar 
+      visibilidad de subpestañas de Historia" && git push origin main)
+    - Esperar a que GitHub Pages actualice
+    - Probar de nuevo en la URL publicada
+
+
+================================================================================
+7. INSTRUCCIONES PARA EL PRÓXIMO CHAT
+================================================================================
+
+  Para continuar este trabajo, sigue estos pasos:
+
+  PASO 1: Abrir la app en navegador
+    URL: https://djplaza1.github.io/PROFESOR-PLAZA-MULLER/
+    Hacer clic en "Historia"
+    Abrir DevTools (F12) → Consola → Buscar errores
+
+  PASO 2: Si hay errores en consola, copiarlos aquí
+
+  PASO 3: Si NO hay errores pero las subpestañas no se ven:
+    - Verificar CSS: buscar overflow:hidden, display:none, position:absolute
+      que pueda estar ocultando el div de herramientas
+    - El div de herramientas está en src/b-app2.jsx línea 4005:
+        <div className="absolute top-2 right-2 flex flex-wrap ...">
+      "absolute" + "top-2 right-2" podría estar fuera del viewport
+      si el contenedor padre no tiene "position:relative"
+
+  PASO 4: Para depurar, cambiar temporalmente en index.html:
+    compact: true  →  compact: false
+    minified: true →  minified: false
+    comments: false →  comments: true
+    Esto hará que Babel transpile sin minificar y se vean los errores 
+    con números de línea legibles.
+
+  PASO 5: Archivos clave para modificar:
+    - Para cambiar opciones de Babel: index.html (líneas 786-791)
+    - Para modificar las subpestañas: src/b-app2.jsx (líneas 4004-4026)
+    - Para cambiar estilos del contenedor: src/b-app2.jsx (línea 4005 className)
+
+  PASO 6: Para hacer commit y push:
+    git add -A
+    git commit -m "fix: ..."
+    git push origin main
+
+  ======================================================================
+  NOTA IMPORTANTE: Las subpestañas EXISTEN en el código fuente. No están
+  comentadas ni eliminadas. Si no se ven en la web, el problema es de:
+    1. Error de ejecución (Babel minificado oculta el error)
+    2. CSS que las oculta visualmente
+    3. Error en carga de dependencias (Lucide icons)
+  ======================================================================
+
+
+================================================================================
+ANEXO A: UBICACIONES EXACTAS EN src/b-app2.jsx
+================================================================================
+
+  SECCIÓN                 LÍNEAS          DESCRIPCIÓN
+  ─────────────────────────────────────────────────────────────────────────────
+  Header tabs             767-770         Título dinámico según activeTab
+  Nav buttons             839-842         Botones "Historia", "Lectura", etc.
+  Opciones menú           982-985         Menú desplegable Opciones Historia
+  Main layout             1567             Div principal con padding condicional
+  HISTORIA (engine)       3971-4026       Bloque principal con las subpestañas
+    ├─ Guion select      3979-4001       Selector de guiones
+    ├─ Subpestañas       4004-4026       Barra de herramientas (la que falta)
+    │  ├─ Flüstern       4006            Botón modo susurro
+    │  ├─ Ruido          4007            Botón ruido de fondo
+    │  ├─ Diktat         4008            Botón dictado
+    │  ├─ Huecos         4009            Botón huecos
+    │  ├─ Artículos      4010            Botón artículos
+    │  ├─ Declinar       4011            Botón declinación
+    │  ├─ Tempus         4012            Botón tiempo verbal
+    │  ├─ Satzbau        4013            Botón puzzle de frases
+    │  ├─ Oído           4014            Botón modo ciego
+    │  └─ No mutear      4015-4024       Select de muteo de personajes
+    ├─ Podcast mode      4028-4033       Indicador modo podcast
+    └─ Interview mode    4035+            Modo entrevista oral B1
+  Player bar             4298-4330       Controles de reproducción inferiores
+
+================================================================================
+ANEXO B: UBICACIONES EXACTAS EN index.html
+================================================================================
+
+  SECCIÓN                 LÍNEAS          DESCRIPCIÓN
+  ─────────────────────────────────────────────────────────────────────────────
+  Babel config            776-820         Carga de chunks + Babel.transform
+  Babel presets           786-791         react, env, compact:true, minified
+  CHUNKS array            779             Lista de archivos a concatenar
+
+================================================================================

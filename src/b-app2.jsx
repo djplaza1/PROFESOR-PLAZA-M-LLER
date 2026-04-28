@@ -3397,11 +3397,36 @@
                                       ? 'Modo intermedio'
                                       : 'Modo avanzado';
                               const RUTA_MAX_ATT = 3;
+                              const handlePodcastCheckpointAnswer = (opt) => {
+                                  const cp = rutaPodcastUI && rutaPodcastUI.checkpoint;
+                                  if (!cp || !ex) return;
+                                  const mockEx = { answer: cp.answer, acceptedAnswers: cp.acceptedAnswers || [] };
+                                  const res = checkRutaMcAnswer(opt, mockEx);
+                                  if (window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(res.ok);
+                                  if (res.ok) {
+                                      setRutaFillTip(res.soft ? (cp.softNote || 'Válido; en examen prioriza la opción modelo.') : '');
+                                      setRutaSpeakErr('');
+                                      resumeRutaPodcastAfterCheckpoint();
+                                      return;
+                                  }
+                                  const attempts = (rutaRun.exerciseAttempts || 0) + 1;
+                                  if (attempts >= RUTA_MAX_ATT) {
+                                      setRutaRun({ ...rutaRun, podcastHadFailure: true, exerciseAttempts: 0, rutaLastChanceHint: '' });
+                                      setRutaSpeakErr(`La opción modelo era: «${cp.answer}». El podcast continúa.`);
+                                      resumeRutaPodcastAfterCheckpoint();
+                                      return;
+                                  }
+                                  const lastHint = attempts === 2 ? (cp.hint || `Último intento: revisa la pregunta y las opciones en alemán.`) : '';
+                                  setRutaRun({ ...rutaRun, exerciseAttempts: attempts, rutaLastChanceHint: lastHint, forcedReveal: false });
+                                  setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Casi — prueba otra vez.');
+                              };
                               const handleOptionAnswer = (opt) => {
                                   if (!ex) return;
-                                  const ok = String(opt || '').trim().toLowerCase() === String(ex.answer || '').trim().toLowerCase();
+                                  const res = checkRutaMcAnswer(opt, ex);
+                                  const ok = res.ok;
                                   if (window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(ok);
                                   if (ok) {
+                                      setRutaFillTip(res.soft ? (ex.softNote || `Tu elección vale; en examen prioriza: «${ex.answer}».`) : '');
                                       setRutaSpeakErr('');
                                       setRutaRun({ ...rutaRun, step: 2, exerciseAttempts: 0, rutaLastChanceHint: '', forcedReveal: false });
                                       return;
@@ -3418,6 +3443,8 @@
                               };
                               const advanceExercise = (wasCorrect) => {
                                   if (!ex) return;
+                                  clearRutaPodcastPlayback();
+                                  setRutaFillTip('');
                                   const nextScore = {
                                       correct: (score.correct || 0) + (wasCorrect ? 1 : 0),
                                       total: (score.total || 0) + 1,
@@ -3447,7 +3474,8 @@
                                       exercisePlan: newPlan,
                                       exerciseAttempts: 0,
                                       rutaLastChanceHint: '',
-                                      forcedReveal: false
+                                      forcedReveal: false,
+                                      podcastHadFailure: false
                                   });
                                   setRutaFillInput('');
                                   setRutaTranscript('');
@@ -3459,7 +3487,7 @@
                                   let ok = false;
                                   if (ex.type === 'fill') ok = checkRutaFillAnswer(ex);
                                   else if (ex.type === 'translate_de' || ex.type === 'translate_es') {
-                                      ok = checkRutaTranslateClose(rutaFillInput, ex.answer, ex.type === 'translate_de' ? 'de' : 'es');
+                                      ok = checkRutaTranslateExercise(ex);
                                       if (ok && window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(true);
                                   }
                                   if (ok) {
@@ -3480,7 +3508,7 @@
                               };
                               return (
                                   <div className="rounded-2xl border border-fuchsia-500/30 bg-black/40 p-5 md:p-8">
-                                      <button type="button" onClick={() => { setRutaRun(null); setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr(''); }} className="text-sm font-bold text-fuchsia-300 mb-4 hover:text-white">← Volver al camino</button>
+                                      <button type="button" onClick={() => { clearRutaPodcastPlayback(); setRutaFillTip(''); setRutaRun(null); setRutaFillInput(''); setRutaTranscript(''); setRutaSpeakErr(''); }} className="text-sm font-bold text-fuchsia-300 mb-4 hover:text-white">← Volver al camino</button>
                                       <h2 className="text-2xl font-black text-white mb-1">{lesson.title}</h2>
                                       <p className="text-xs text-fuchsia-400/90 mb-3">{lv.badge} · {lv.title}</p>
                                       <div className={`mb-4 rounded-xl border border-white/10 bg-gradient-to-r ${panelTone} p-[1px]`}>
@@ -3509,56 +3537,106 @@
                                               {ex.type === 'read' ? (
                                                   <div className="mb-4 rounded-xl border border-white/10 bg-slate-900/60 p-4">
                                                       <p className="text-lg font-bold text-white">{ex.de}</p>
-                                                      {ex.esDisplay ? (
-                                                          <p className="text-sm text-slate-300 mt-2"><span className="text-slate-500 font-bold">Sentido (español de España): </span>{ex.esDisplay}</p>
-                                                      ) : null}
                                                       <button type="button" onClick={() => speakRutaDe(ex.de)} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar</button>
                                                   </div>
                                               ) : ex.type === 'fill' ? (
                                                   <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-4">
                                                       <p className="text-white font-bold mb-3">{ex.prompt}</p>
-                                                      {ex.promptEs ? <p className="text-xs text-emerald-200/85 mb-2"><span className="font-bold text-emerald-300/90">Sentido (español de España): </span>{ex.promptEs}</p> : null}
-                                                      {ex.hint ? <p className="text-xs text-gray-500 mb-2">Pista: {ex.hint}</p> : null}
+                                                      <p className="text-[11px] text-emerald-200/70">Solo alemán aquí. La pista de sentido (español de España) aparece al pasar a escribir la respuesta.</p>
                                                   </div>
                                               ) : ex.type === 'translate_de' ? (
                                                   <div className="mb-4 rounded-xl border border-violet-500/30 bg-violet-950/25 p-4">
                                                       <p className="text-[11px] font-black uppercase tracking-wide text-violet-300 mb-2">Español → alemán</p>
                                                       <p className="text-white text-base leading-relaxed mb-2">{ex.prompt}</p>
                                                       <p className="text-[11px] text-violet-200/80">Escribe en alemán la frase completa equivalente (sin mezclar palabras en español dentro del alemán).</p>
+                                                      <button type="button" onClick={() => speakRutaEs('Escribe en alemán la traducción de lo que ves en pantalla. Las instrucciones están en español de España.', {})} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-violet-200 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Instrucciones (voz español)</button>
                                                   </div>
                                               ) : ex.type === 'translate_es' ? (
                                                   <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-950/25 p-4">
                                                       <p className="text-[11px] font-black uppercase tracking-wide text-amber-300 mb-2">Alemán → español</p>
                                                       <p className="text-lg font-bold text-white mb-2">{ex.promptDe}</p>
                                                       <p className="text-[11px] text-amber-200/85">Escribe en español de España la traducción natural de la frase.</p>
-                                                      <button type="button" onClick={() => speakRutaDe(ex.promptDe)} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-amber-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar alemán</button>
+                                                      <div className="flex flex-wrap gap-2 mt-2">
+                                                          <button type="button" onClick={() => speakRutaDe(ex.promptDe)} className="inline-flex items-center gap-1 text-xs font-bold text-amber-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar alemán</button>
+                                                          <button type="button" onClick={() => speakRutaEs('Escribe tu traducción en español de España, con naturalidad.', {})} className="inline-flex items-center gap-1 text-xs font-bold text-amber-200 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Instrucciones (voz español)</button>
+                                                      </div>
                                                   </div>
                                               ) : ex.type === 'order' || ex.type === 'connector' ? (
                                                   <div className="mb-4 rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-4">
                                                       <p className="text-white font-bold mb-3">{ex.prompt}</p>
                                                   </div>
                                               ) : ex.type === 'podcast' || ex.type === 'audio_story' ? (
-                                                  <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-950/20 p-4">
-                                                      <p className="text-[11px] uppercase tracking-wide text-sky-300 font-black mb-2">{ex.title || 'Audio interactivo'}</p>
-                                                      {Array.isArray(ex.transcript) && ex.transcript.length ? (
-                                                          <div className="space-y-1.5 mb-3">
-                                                              {ex.transcript.slice(0, 3).map((line, idx) => (
-                                                                  <p key={`${ex.id}-line-${idx}`} className="text-sm text-white/90">{line}</p>
-                                                              ))}
-                                                          </div>
-                                                      ) : null}
-                                                      <p className="text-white font-bold mb-2">{ex.prompt}</p>
-                                                      <button type="button" onClick={() => speakRutaDe(Array.isArray(ex.transcript) ? ex.transcript.join(' ') : (ex.prompt || ''))} className="inline-flex items-center gap-1 text-xs font-bold text-sky-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar audio</button>
-                                                  </div>
+                                                  ex.podcast ? (
+                                                      <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-950/20 p-4">
+                                                          <p className="text-[11px] uppercase tracking-wide text-sky-300 font-black mb-2">{ex.title || 'Audio interactivo'}</p>
+                                                          <p className="text-sm text-sky-100/90 mb-2">Diálogo largo en alemán (unos {ex.podcast.approxSeconds || 90} segundos). El audio se pausa solo en las preguntas; las instrucciones y la pregunta se leen en <strong className="text-white">español de España</strong> con voz española.</p>
+                                                          <p className="text-xs text-gray-400 mb-3">{ex.podcast.lines && ex.podcast.lines.length ? `${ex.podcast.lines.length} intervenciones · ${ex.podcast.checkpoints ? ex.podcast.checkpoints.length : 0} preguntas en pausa` : ''}</p>
+                                                          <button type="button" onClick={() => speakRutaEs('Pulsa el botón verde para empezar. Escucharás un podcast en alemán. Cuando suene una pregunta en español, el audio se detiene hasta que respondas.', {})} className="mb-2 inline-flex items-center gap-1 text-xs font-bold text-sky-200 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Cómo funciona (voz español)</button>
+                                                      </div>
+                                                  ) : (
+                                                      <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-950/20 p-4">
+                                                          <p className="text-[11px] uppercase tracking-wide text-sky-300 font-black mb-2">{ex.title || 'Audio interactivo'}</p>
+                                                          {Array.isArray(ex.transcript) && ex.transcript.length ? (
+                                                              <div className="space-y-1.5 mb-3">
+                                                                  {ex.transcript.slice(0, 3).map((line, idx) => (
+                                                                      <p key={`${ex.id}-line-${idx}`} className="text-sm text-white/90">{line}</p>
+                                                                  ))}
+                                                              </div>
+                                                          ) : null}
+                                                          <p className="text-white font-bold mb-2">{ex.prompt}</p>
+                                                          <button type="button" onClick={() => speakRutaDe(Array.isArray(ex.transcript) ? ex.transcript.join(' ') : (ex.prompt || ''))} className="inline-flex items-center gap-1 text-xs font-bold text-sky-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar audio</button>
+                                                      </div>
+                                                  )
                                               ) : (
                                                   <div className="mb-4 rounded-xl border border-rose-500/25 bg-rose-950/20 p-4">
                                                       <p className="text-gray-300 mb-2">Lee en voz alta en alemán:</p>
                                                       <p className="text-xl font-bold text-white leading-snug">{ex.target}</p>
                                                   </div>
                                               )}
-                                              <button type="button" onClick={() => { setRutaRun({ ...rutaRun, step: 1, exerciseAttempts: 0, rutaLastChanceHint: '', forcedReveal: false }); setRutaFillInput(''); setRutaSpeakErr(''); window.__mullerPlaySfx && window.__mullerPlaySfx('tick'); }} className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg">
-                                                  {ex.type === 'read' ? 'Marcar como leído y continuar' : ex.type === 'fill' || ex.type === 'translate_de' || ex.type === 'translate_es' ? 'Ir a respuesta' : ex.type === 'order' || ex.type === 'connector' || ex.type === 'podcast' || ex.type === 'audio_story' ? 'Responder ahora' : 'Ir a validación'}
+                                              <button type="button" onClick={() => {
+                                                  setRutaFillInput('');
+                                                  setRutaSpeakErr('');
+                                                  setRutaFillTip('');
+                                                  if ((ex.type === 'podcast' || ex.type === 'audio_story') && ex.podcast) {
+                                                      setRutaRun({ ...rutaRun, step: 1, exerciseAttempts: 0, rutaLastChanceHint: '', forcedReveal: false });
+                                                      beginRutaPodcastFromExercise(ex);
+                                                  } else {
+                                                      setRutaRun({ ...rutaRun, step: 1, exerciseAttempts: 0, rutaLastChanceHint: '', forcedReveal: false });
+                                                  }
+                                                  window.__mullerPlaySfx && window.__mullerPlaySfx('tick');
+                                              }} className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg">
+                                                  {(ex.type === 'podcast' || ex.type === 'audio_story') && ex.podcast ? `Empezar audio (~${ex.podcast.approxSeconds || 90}s)` : ex.type === 'read' ? 'Marcar como leído y continuar' : ex.type === 'fill' || ex.type === 'translate_de' || ex.type === 'translate_es' ? 'Ir a respuesta' : ex.type === 'order' || ex.type === 'connector' || ex.type === 'podcast' || ex.type === 'audio_story' ? 'Responder ahora' : 'Ir a validación'}
                                               </button>
+                                          </>
+                                      )}
+                                      {st === 1 && ex && (ex.type === 'podcast' || ex.type === 'audio_story') && ex.podcast && (
+                                          <>
+                                              {rutaPodcastUI && rutaPodcastUI.phase === 'question' && rutaPodcastUI.checkpoint ? (
+                                                  <>
+                                                      <p className="text-xs text-amber-200/90 mb-2 font-bold">Audio en pausa · Pregunta</p>
+                                                      <p className="text-white text-sm leading-relaxed mb-3">{rutaPodcastUI.checkpoint.promptEs}</p>
+                                                      <p className="text-[11px] text-gray-500 mb-2">Opciones (alemán):</p>
+                                                      {rutaRun.rutaLastChanceHint ? <p className="text-sm text-amber-200 mb-2 font-bold border border-amber-500/40 rounded-lg px-3 py-2 bg-amber-950/40">{rutaRun.rutaLastChanceHint}</p> : null}
+                                                      <p className="text-[11px] text-gray-500 mb-2">Intentos: {Math.min(RUTA_MAX_ATT, (rutaRun.exerciseAttempts || 0) + 1)} / {RUTA_MAX_ATT}</p>
+                                                      <div className="grid grid-cols-1 gap-2 mb-3">
+                                                          {(rutaPodcastUI.checkpoint.options || []).map((opt, idx) => (
+                                                              <button key={`${ex.id}-cp-${idx}`} type="button" onClick={() => handlePodcastCheckpointAnswer(opt)} className="text-left rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/15 px-4 py-3 text-white font-bold text-sm">
+                                                                  {opt}
+                                                              </button>
+                                                          ))}
+                                                      </div>
+                                                      {rutaSpeakErr ? <p className={`text-sm mb-2 ${rutaSpeakErr.includes('continúa') ? 'text-emerald-200' : 'text-amber-200'}`}>{rutaSpeakErr}</p> : null}
+                                                  </>
+                                              ) : (
+                                                  <div className="mb-4 rounded-xl border border-sky-500/25 bg-sky-950/30 p-4">
+                                                      <p className="text-sky-200 font-bold text-sm mb-1">Reproduciendo podcast…</p>
+                                                      <p className="text-xs text-gray-400">No cierres la pantalla. Las preguntas aparecen solas y el alemán continúa al acertar.</p>
+                                                      {ex.podcast.lines && ex.podcast.lines.length ? (
+                                                          <p className="text-[11px] text-sky-300/80 mt-2">Progreso aproximado: línea {typeof (rutaPodcastUI && rutaPodcastUI.line) === 'number' ? rutaPodcastUI.line + 1 : 1} / {ex.podcast.lines.length}</p>
+                                                      ) : null}
+                                                      <button type="button" onClick={() => { clearRutaPodcastPlayback(); setRutaRun({ ...rutaRun, step: 0, exerciseAttempts: 0, rutaLastChanceHint: '' }); }} className="mt-3 text-xs font-bold text-sky-300 hover:text-white underline">Reiniciar desde el principio</button>
+                                                  </div>
+                                              )}
                                           </>
                                       )}
                                       {st === 1 && ex && (ex.type === 'fill' || ex.type === 'translate_de' || ex.type === 'translate_es') && (
@@ -3587,7 +3665,7 @@
                                               <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Continuar</button>
                                           </>
                                       )}
-                                      {st === 1 && ex && (ex.type === 'order' || ex.type === 'connector' || ex.type === 'podcast' || ex.type === 'audio_story') && (
+                                      {st === 1 && ex && (ex.type === 'order' || ex.type === 'connector' || ((ex.type === 'podcast' || ex.type === 'audio_story') && !ex.podcast)) && (
                                           <>
                                               {(ex.type === 'podcast' || ex.type === 'audio_story') && Array.isArray(ex.transcript) ? (
                                                   <div className="mb-3 rounded-xl border border-sky-500/30 bg-sky-950/20 p-3">
@@ -3659,14 +3737,19 @@
                                               ) : (
                                                   <p className="text-sm text-emerald-200/90">¡Correcto!</p>
                                               )}
-                                              <p className="text-sm text-gray-300">
-                                                  {ex.type === 'speak' ? 'Frase modelo: ' : 'Respuesta correcta: '}
-                                                  <strong className="text-emerald-300">{ex.type === 'speak' ? ex.target : ex.answer}</strong>
-                                              </p>
+                                              {rutaFillTip ? <p className="text-sm text-cyan-200/90 border border-cyan-500/30 rounded-lg px-3 py-2 bg-cyan-950/40">{rutaFillTip}</p> : null}
+                                              {(ex.type === 'podcast' || ex.type === 'audio_story') && ex.podcast ? (
+                                                  <p className="text-sm text-gray-300">Has terminado el audio. {rutaRun.podcastHadFailure ? 'Hubo fallos en alguna pregunta; puedes repetir el ejercicio más adelante.' : 'Buen trabajo con las preguntas en pausa.'}</p>
+                                              ) : (
+                                                  <p className="text-sm text-gray-300">
+                                                      {ex.type === 'speak' ? 'Frase modelo: ' : 'Respuesta correcta: '}
+                                                      <strong className="text-emerald-300">{ex.type === 'speak' ? ex.target : ex.answer}</strong>
+                                                  </p>
+                                              )}
                                               {ex.type === 'speak' && rutaRun.forcedReveal ? (
                                                   <button type="button" onClick={() => speakRutaDe(ex.target)} className="inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar modelo</button>
                                               ) : null}
-                                              <button type="button" onClick={() => advanceExercise(!rutaRun.forcedReveal)} className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 font-black py-3 text-white">{rutaRun.forcedReveal ? 'Seguir (se repetirá este ejercicio al final)' : 'Siguiente ejercicio'}</button>
+                                              <button type="button" onClick={() => advanceExercise(!rutaRun.forcedReveal && !((ex.type === 'podcast' || ex.type === 'audio_story') && ex.podcast && rutaRun.podcastHadFailure))} className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 font-black py-3 text-white">{rutaRun.forcedReveal ? 'Seguir (se repetirá este ejercicio al final)' : 'Siguiente ejercicio'}</button>
                                           </div>
                                       )}
                                   </div>
