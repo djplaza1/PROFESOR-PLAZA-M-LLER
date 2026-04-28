@@ -87,20 +87,27 @@ function RutaPanel(rawProps) {
     return () => clearTimeout(timer);
   }, [avatarSpeaking]);
   /* Componente Avatar */
+  const [avatarErrors, setAvatarErrors] = useState({});
   const RutaAvatar = useCallback(({ size = 80, avatarId, className = '' }) => {
     const av = RUTA_AVATARS.find(a => a.id === avatarId) || currentAvatar;
     const isSpeaking = avatarSpeaking && avatarId === currentAvatarId;
+    const hasError = avatarErrors[av.id];
+    const initials = av.name.split(' ').map(w => w[0]).join('').slice(0, 2);
     return (
       <div className={`relative inline-flex flex-col items-center ${className}`} style={{ width: size, height: size + 20 }}>
-        <div className={`rounded-full overflow-hidden border-2 transition-all duration-300 ${isSpeaking ? 'border-emerald-400 shadow-lg shadow-emerald-500/30 scale-105' : 'border-white/20'}`} style={{ width: size, height: size }}>
-          <img
-            ref={avatarRef}
-            src={av.url}
-            alt={av.name}
-            className={`w-full h-full object-cover transition-all duration-150 ${isSpeaking ? 'animate-ruta-avatar-talk' : ''}`}
-            style={{ filter: isSpeaking ? 'brightness(1.15)' : 'none' }}
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
+        <div className={`rounded-full overflow-hidden border-2 transition-all duration-300 flex items-center justify-center ${isSpeaking ? 'border-emerald-400 shadow-lg shadow-emerald-500/30 scale-105' : 'border-white/20'}`} style={{ width: size, height: size, background: hasError ? av.bg : undefined }}>
+          {hasError ? (
+            <span className="text-white font-black select-none" style={{ fontSize: size * 0.35 }}>{initials}</span>
+          ) : (
+            <img
+              ref={avatarRef}
+              src={av.url}
+              alt={av.name}
+              className={`w-full h-full object-cover transition-all duration-150 ${isSpeaking ? 'animate-ruta-avatar-talk' : ''}`}
+              style={{ filter: isSpeaking ? 'brightness(1.15)' : 'none' }}
+              onError={() => setAvatarErrors(prev => ({ ...prev, [av.id]: true }))}
+            />
+          )}
         </div>
         <p className="text-[10px] font-bold text-white/80 mt-1 truncate max-w-[100px] text-center">{av.name}</p>
         {isSpeaking && (
@@ -112,7 +119,7 @@ function RutaPanel(rawProps) {
         )}
       </div>
     );
-  }, [RUTA_AVATARS, currentAvatar, currentAvatarId, avatarSpeaking]);
+  }, [RUTA_AVATARS, currentAvatar, currentAvatarId, avatarSpeaking, avatarErrors]);
   /* Helper: seleccionar avatar aleatorio y disparar TTS con animación */
   const speakWithAvatar = useCallback((text, avatarId) => {
     if (!text) return;
@@ -426,15 +433,22 @@ function RutaPanel(rawProps) {
                                               <button type="button" onClick={() => runSingleSubmitAction('ruta-to-fill-step', () => { setRutaRun({ ...rutaRun, step: 1 }); setRutaFillInput(''); setRutaSpeakErr(''); window.__mullerPlaySfx && window.__mullerPlaySfx('tick'); })} className="w-full rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 font-black py-3 text-white shadow-lg">Siguiente: huecos</button>
                                           </>
                                       )}
-                                      {st === 1 && lesson.fill && (
+                                      {st === 1 && lesson.fill && (() => {
+                                          const fillAvId = randomExerciseAvatar();
+                                          return (
                                           <>
-                                              <p className="text-white font-bold mb-3">{lesson.fill.prompt}</p>
-                                              {lesson.fill.hint ? <p className="text-xs text-gray-500 mb-2">Pista: {lesson.fill.hint}</p> : null}
+                                              <div className="flex items-start gap-4 mb-4">
+                                                  <RutaAvatar size={56} avatarId={fillAvId} className="flex-shrink-0" />
+                                                  <div className="flex-1">
+                                                      <p className="text-white font-bold mb-3">{lesson.fill.prompt}</p>
+                                                      {lesson.fill.hint ? <p className="text-xs text-gray-500 mb-2">Pista: {lesson.fill.hint}</p> : null}
+                                                  </div>
+                                              </div>
                                               <input value={rutaFillInput} onChange={(e) => setRutaFillInput(e.target.value)} onKeyDown={(e) => handleExerciseEnterSubmit(e, 'ruta-fill-submit', () => { if (checkRutaFillAnswer(lesson)) { setRutaRun({ ...rutaRun, step: 2 }); setRutaTranscript(''); setRutaSpeakErr(''); } })} className="w-full rounded-xl bg-black/50 border border-fuchsia-500/40 px-4 py-3 text-white text-lg mb-3 outline-none focus:border-fuchsia-400" placeholder="Tu respuesta" autoComplete="off" />
                                               {rutaSpeakErr ? <p className="text-amber-200 text-sm mb-2">{rutaSpeakErr}</p> : null}
                                               <button type="button" onClick={() => runSingleSubmitAction('ruta-fill-submit', () => { if (checkRutaFillAnswer(lesson)) { setRutaRun({ ...rutaRun, step: 2 }); setRutaTranscript(''); setRutaSpeakErr(''); } })} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Comprobar y continuar</button>
                                           </>
-                                      )}
+                                      )})()}
                                       {st === 2 && lesson.speak && (() => {
                                           const spAvId = randomExerciseAvatar();
                                           return (
