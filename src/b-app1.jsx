@@ -1913,11 +1913,26 @@ const [placementFinished, setPlacementFinished] = useState(false);
               }
               /* ── Fin inyección bxDb ── */
               /* ── GENERADOR FANTASMA: inyectar frases únicas generadas por nivel ── */
-              const generatedCount = Math.max(60, 120 - phrasePool.length);
+              /* Usar un Set GLOBAL que persista entre lecciones del mismo nivel */
+              if (!window.__RUTA_USED_PHRASES) window.__RUTA_USED_PHRASES = new Set();
+              const globalUsedSet = window.__RUTA_USED_PHRASES;
+              /* Sembrar el globalUsedSet con las frases ya existentes en el pool */
+              phrasePool.forEach(p => globalUsedSet.add(p.de));
+              const generatedCount = Math.max(100, 200 - phrasePool.length);
               if (generatedCount > 0) {
-                  const usedSet = new Set(phrasePool.map(p => p.de));
-                  const generated = generateUniquePhrasesForLevel(levelKey, generatedCount, usedSet);
+                  const generated = generateUniquePhrasesForLevel(levelKey, generatedCount, globalUsedSet);
                   generated.forEach(g => pushUniquePhrase(g.de, g.es, 'generator'));
+                  /* Inyectar frases generadas directamente en lesson.phrases, lesson.fill, lesson.speak */
+                  if (generated.length >= 3) {
+                      lesson.phrases = generated;
+                      lesson.fill = {
+                          prompt: generated[0].de.replace(/\b\w+\b/, '_____'),
+                          promptEs: generated[0].es,
+                          answer: generated[0].de.match(/\b\w+\b/)?.[0] || 'lerne',
+                          hint: 'Completa la frase.'
+                      };
+                      lesson.speak = { target: generated[1].de };
+                  }
               }
               if (phrasePool.length === 0) pushUniquePhrase('Ich lerne Deutsch.', 'Aprendo alemán.', 'fallback');
 

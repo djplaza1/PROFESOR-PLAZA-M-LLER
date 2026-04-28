@@ -3396,30 +3396,37 @@
                                   : (levelVisualKey === 'A2' || levelVisualKey === 'B1')
                                       ? 'Modo intermedio'
                                       : 'Modo avanzado';
-                              const RUTA_MAX_ATT = 3;
-                              const handlePodcastCheckpointAnswer = (opt) => {
-                                  const cp = rutaPodcastUI && rutaPodcastUI.checkpoint;
-                                  if (!cp || !ex) return;
-                                  const mockEx = { answer: cp.answer, acceptedAnswers: cp.acceptedAnswers || [] };
-                                  const res = checkRutaMcAnswer(opt, mockEx);
-                                  if (window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(res.ok);
-                                  if (res.ok) {
-                                      setRutaFillTip(res.soft ? (cp.softNote || 'Válido; en examen prioriza la opción modelo.') : '');
-                                      setRutaSpeakErr('');
-                                      resumeRutaPodcastAfterCheckpoint();
-                                      return;
-                                  }
-                                  const attempts = (rutaRun.exerciseAttempts || 0) + 1;
-                                  if (attempts >= RUTA_MAX_ATT) {
-                                      setRutaRun({ ...rutaRun, podcastHadFailure: true, exerciseAttempts: 0, rutaLastChanceHint: '' });
-                                      setRutaSpeakErr(`La opción modelo era: «${cp.answer}». El podcast continúa.`);
-                                      resumeRutaPodcastAfterCheckpoint();
-                                      return;
-                                  }
-                                  const lastHint = attempts === 3 ? (cp.hint || `Último intento: revisa la pregunta y las opciones en alemán.`) : '';
-                                  setRutaRun({ ...rutaRun, exerciseAttempts: attempts, rutaLastChanceHint: lastHint, forcedReveal: false });
-                                  setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Casi — prueba otra vez.');
-                              };
+                               const RUTA_MAX_ATT = 3;
+                               const [avatarSpeaking, setAvatarSpeaking] = useState(false);
+                               const [currentAvatarId, setCurrentAvatarId] = useState('plaza');
+                               useEffect(() => {
+                                   if (!avatarSpeaking) return;
+                                   const t = setTimeout(() => setAvatarSpeaking(false), 800);
+                                   return () => clearTimeout(t);
+                               }, [avatarSpeaking]);
+                               const handlePodcastCheckpointAnswer = (opt) => {
+                                   const cp = rutaPodcastUI && rutaPodcastUI.checkpoint;
+                                   if (!cp || !ex) return;
+                                   const mockEx = { answer: cp.answer, acceptedAnswers: cp.acceptedAnswers || [] };
+                                   const res = checkRutaMcAnswer(opt, mockEx);
+                                   if (window.__mullerNotifyExerciseOutcome) window.__mullerNotifyExerciseOutcome(res.ok);
+                                   if (res.ok) {
+                                       setRutaFillTip(res.soft ? (cp.softNote || 'Válido; en examen prioriza la opción modelo.') : '');
+                                       setRutaSpeakErr('');
+                                       resumeRutaPodcastAfterCheckpoint();
+                                       return;
+                                   }
+                                   const attempts = (rutaRun.exerciseAttempts || 0) + 1;
+                                   if (attempts >= RUTA_MAX_ATT) {
+                                       setRutaRun({ ...rutaRun, podcastHadFailure: true, exerciseAttempts: 0, rutaLastChanceHint: '' });
+                                       setRutaSpeakErr(`La opción modelo era: «${cp.answer}». El podcast continúa.`);
+                                       resumeRutaPodcastAfterCheckpoint();
+                                       return;
+                                   }
+                                   const lastHint = attempts === 3 ? (cp.hint || `Último intento: revisa la pregunta y las opciones en alemán.`) : '';
+                                   setRutaRun({ ...rutaRun, exerciseAttempts: attempts, rutaLastChanceHint: lastHint, forcedReveal: false });
+                                   setRutaSpeakErr(typeof window.__mullerRandomMotivation === 'function' ? window.__mullerRandomMotivation() : 'Casi — prueba otra vez.');
+                               };
                               const handleOptionAnswer = (opt) => {
                                   if (!ex) return;
                                   const res = checkRutaMcAnswer(opt, ex);
@@ -3531,13 +3538,37 @@
                                           <p className="text-xs text-fuchsia-200 font-bold">Ejercicio {Math.min((exerciseIdx || 0) + 1, Math.max(1, plan.length))} / {Math.max(1, plan.length)} · Precisión {accPct}%</p>
                                           <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${ex && ex.fromReview ? 'bg-amber-900/40 text-amber-200 border-amber-500/35' : 'bg-cyan-900/40 text-cyan-200 border-cyan-500/35'}`}>{reviewLabel}</span>
                                       </div>
-                                      {st === 0 && ex && (
-                                          <>
-                                              <p className="text-sm text-violet-200/90 mb-4 rounded-xl bg-violet-950/50 border border-violet-500/25 p-4 leading-relaxed">{lesson.grammarTip}</p>
+                                       {st === 0 && ex && (
+                                           <>
+                                               {(() => {
+                                                   const avatars = window.__RUTA_AVATARS || [];
+                                                   const avId = typeof window.__randomExerciseAvatar === 'function' ? window.__randomExerciseAvatar() : 'plaza';
+                                                   const av = avatars.find(a => a.id === avId) || avatars[0] || { bg: '#2563eb', fg: '#60a5fa', emoji: '🧑‍🏫', name: 'Plaza' };
+                                                   return (
+                                                       <div className="flex items-start gap-4 mb-4">
+                                                           <div className="relative inline-flex flex-col items-center flex-shrink-0" style={{ width: 56, height: 76 }}>
+                                                               <div className={`rounded-full overflow-hidden border-2 flex items-center justify-center ${avatarSpeaking && currentAvatarId === avId ? 'animate-ruta-avatar-talk border-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.5)]' : 'border-white/20'}`} style={{ width: 56, height: 56, background: `linear-gradient(135deg, ${av.bg}, ${av.fg || av.bg})` }}>
+                                                                   <span className="select-none leading-none" style={{ fontSize: 25 }}>{av.emoji}</span>
+                                                               </div>
+                                                               {avatarSpeaking && currentAvatarId === avId && (
+                                                                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-0.5">
+                                                                       <span className="w-0.5 bg-emerald-400/90 rounded-full h-2 animate-pulse" />
+                                                                       <span className="w-0.5 bg-emerald-400/90 rounded-full h-3 animate-pulse" />
+                                                                       <span className="w-0.5 bg-emerald-400/90 rounded-full h-2.5 animate-pulse" />
+                                                                   </div>
+                                                               )}
+                                                               <p className="text-[10px] font-bold text-white/80 mt-1 truncate max-w-[100px] text-center">{av.name}</p>
+                                                           </div>
+                                                           <div className="flex-1">
+                                                               <p className="text-sm text-violet-200/90 mb-4 rounded-xl bg-violet-950/50 border border-violet-500/25 p-4 leading-relaxed">{lesson.grammarTip}</p>
+                                                           </div>
+                                                       </div>
+                                                   );
+                                               })()}
                                               {ex.type === 'read' ? (
                                                   <div className="mb-4 rounded-xl border border-white/10 bg-slate-900/60 p-4">
                                                       <p className="text-lg font-bold text-white">{ex.de}</p>
-                                                      <button type="button" onClick={() => speakRutaDe(ex.de)} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar</button>
+                                                      <button type="button" onClick={() => { setCurrentAvatarId(avId); setAvatarSpeaking(true); speakRutaDe(ex.de); }} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar</button>
                                                   </div>
                                               ) : ex.type === 'fill' ? (
                                                   <div className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-4">
@@ -3557,7 +3588,7 @@
                                                       <p className="text-lg font-bold text-white mb-2">{ex.promptDe}</p>
                                                       <p className="text-[11px] text-amber-200/85">Escribe en español de España la traducción natural de la frase.</p>
                                                       <div className="flex flex-wrap gap-2 mt-2">
-                                                          <button type="button" onClick={() => speakRutaDe(ex.promptDe)} className="inline-flex items-center gap-1 text-xs font-bold text-amber-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar alemán</button>
+                                                          <button type="button" onClick={() => { setCurrentAvatarId(avId); setAvatarSpeaking(true); speakRutaDe(ex.promptDe); }} className="inline-flex items-center gap-1 text-xs font-bold text-amber-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar alemán</button>
                                                           <button type="button" onClick={() => speakRutaEs('Escribe tu traducción en español de España, con naturalidad.', {})} className="inline-flex items-center gap-1 text-xs font-bold text-amber-200 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Instrucciones (voz español)</button>
                                                       </div>
                                                   </div>
@@ -3584,7 +3615,7 @@
                                                               </div>
                                                           ) : null}
                                                           <p className="text-white font-bold mb-2">{ex.prompt}</p>
-                                                          <button type="button" onClick={() => speakRutaDe(Array.isArray(ex.transcript) ? ex.transcript.join(' ') : (ex.prompt || ''))} className="inline-flex items-center gap-1 text-xs font-bold text-sky-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar audio</button>
+                                                          <button type="button" onClick={() => { setCurrentAvatarId(avId); setAvatarSpeaking(true); speakRutaDe(Array.isArray(ex.transcript) ? ex.transcript.join(' ') : (ex.prompt || '')); }} className="inline-flex items-center gap-1 text-xs font-bold text-sky-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar audio</button>
                                                       </div>
                                                   )
                                               ) : (
@@ -3641,17 +3672,41 @@
                                       )}
                                       {st === 1 && ex && (ex.type === 'fill' || ex.type === 'translate_de' || ex.type === 'translate_es') && (
                                           <>
-                                              {ex.type === 'fill' ? (
-                                                  <p className="text-white font-bold mb-3">{ex.prompt}</p>
-                                              ) : ex.type === 'translate_de' ? (
-                                                  <p className="text-white text-base mb-3 leading-relaxed">{ex.prompt}</p>
-                                              ) : (
-                                                  <>
-                                                      <p className="text-gray-400 text-sm mb-1">Frase en alemán:</p>
-                                                      <p className="text-white font-bold mb-3">{ex.promptDe}</p>
-                                                  </>
-                                              )}
-                                              {ex.type === 'fill' && ex.promptEs ? <p className="text-xs text-emerald-200/85 mb-2"><span className="font-bold text-emerald-300/90">Sentido (español de España): </span>{ex.promptEs}</p> : null}
+                                              {(() => {
+                                                  const avatars = window.__RUTA_AVATARS || [];
+                                                  const avId = typeof window.__randomExerciseAvatar === 'function' ? window.__randomExerciseAvatar() : 'plaza';
+                                                  const av = avatars.find(a => a.id === avId) || avatars[0] || { bg: '#2563eb', fg: '#60a5fa', emoji: '🧑‍🏫', name: 'Plaza' };
+                                                  return (
+                                                      <div className="flex items-start gap-4 mb-4">
+                                                          <div className="relative inline-flex flex-col items-center flex-shrink-0" style={{ width: 56, height: 76 }}>
+                                                              <div className={`rounded-full overflow-hidden border-2 flex items-center justify-center ${avatarSpeaking && currentAvatarId === avId ? 'animate-ruta-avatar-talk border-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.5)]' : 'border-white/20'}`} style={{ width: 56, height: 56, background: `linear-gradient(135deg, ${av.bg}, ${av.fg || av.bg})` }}>
+                                                                  <span className="select-none leading-none" style={{ fontSize: 25 }}>{av.emoji}</span>
+                                                              </div>
+                                                              {avatarSpeaking && currentAvatarId === avId && (
+                                                                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-0.5">
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-3 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2.5 animate-pulse" />
+                                                                  </div>
+                                                              )}
+                                                              <p className="text-[10px] font-bold text-white/80 mt-1 truncate max-w-[100px] text-center">{av.name}</p>
+                                                          </div>
+                                                          <div className="flex-1">
+                                                              {ex.type === 'fill' ? (
+                                                                  <p className="text-white font-bold mb-3">{ex.prompt}</p>
+                                                              ) : ex.type === 'translate_de' ? (
+                                                                  <p className="text-white text-base mb-3 leading-relaxed">{ex.prompt}</p>
+                                                              ) : (
+                                                                  <>
+                                                                      <p className="text-gray-400 text-sm mb-1">Frase en alemán:</p>
+                                                                      <p className="text-white font-bold mb-3">{ex.promptDe}</p>
+                                                                  </>
+                                                              )}
+                                                              {ex.type === 'fill' && ex.promptEs ? <p className="text-xs text-emerald-200/85 mb-2"><span className="font-bold text-emerald-300/90">Sentido (español de España): </span>{ex.promptEs}</p> : null}
+                                                          </div>
+                                                      </div>
+                                                  );
+                                              })()}
                                               {rutaRun.rutaLastChanceHint ? <p className="text-sm text-amber-200 mb-2 font-bold border border-amber-500/40 rounded-lg px-3 py-2 bg-amber-950/40">{rutaRun.rutaLastChanceHint}</p> : null}
                                               <input value={rutaFillInput} onChange={(e) => setRutaFillInput(e.target.value)} onKeyDown={(e) => handleExerciseEnterSubmit(e, 'ruta-fill-submit', () => { submitRutaTypedExercise(); })} className="w-full rounded-xl bg-black/50 border border-fuchsia-500/40 px-4 py-3 text-white text-lg mb-3 outline-none focus:border-fuchsia-400" placeholder={ex.type === 'translate_es' ? 'Escribe en español' : 'Escribe en alemán'} autoComplete="off" />
                                               {rutaSpeakErr ? <p className="text-amber-200 text-sm mb-2">{rutaSpeakErr}</p> : null}
@@ -3661,17 +3716,66 @@
                                       )}
                                       {st === 1 && ex && ex.type === 'read' && (
                                           <>
+                                              {(() => {
+                                                  const avatars = window.__RUTA_AVATARS || [];
+                                                  const avId = typeof window.__randomExerciseAvatar === 'function' ? window.__randomExerciseAvatar() : 'plaza';
+                                                  const av = avatars.find(a => a.id === avId) || avatars[0] || { bg: '#2563eb', fg: '#60a5fa', emoji: '🧑‍🏫', name: 'Plaza' };
+                                                  return (
+                                                      <div className="flex items-start gap-4 mb-4">
+                                                          <div className="relative inline-flex flex-col items-center flex-shrink-0" style={{ width: 56, height: 76 }}>
+                                                              <div className={`rounded-full overflow-hidden border-2 flex items-center justify-center ${avatarSpeaking && currentAvatarId === avId ? 'animate-ruta-avatar-talk border-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.5)]' : 'border-white/20'}`} style={{ width: 56, height: 56, background: `linear-gradient(135deg, ${av.bg}, ${av.fg || av.bg})` }}>
+                                                                  <span className="select-none leading-none" style={{ fontSize: 25 }}>{av.emoji}</span>
+                                                              </div>
+                                                              {avatarSpeaking && currentAvatarId === avId && (
+                                                                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-0.5">
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-3 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2.5 animate-pulse" />
+                                                                  </div>
+                                                              )}
+                                                              <p className="text-[10px] font-bold text-white/80 mt-1 truncate max-w-[100px] text-center">{av.name}</p>
+                                                          </div>
+                                                          <div className="flex-1">
+                                                              <p className="text-gray-300 text-sm mb-2">Marca como leído para continuar:</p>
+                                                          </div>
+                                                      </div>
+                                                  );
+                                              })()}
                                               <button type="button" onClick={() => advanceExercise(true)} className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black py-3 text-white">Continuar</button>
                                           </>
                                       )}
                                       {st === 1 && ex && (ex.type === 'order' || ex.type === 'connector' || ((ex.type === 'podcast' || ex.type === 'audio_story') && !ex.podcast)) && (
                                           <>
-                                              {(ex.type === 'podcast' || ex.type === 'audio_story') && Array.isArray(ex.transcript) ? (
-                                                  <div className="mb-3 rounded-xl border border-sky-500/30 bg-sky-950/20 p-3">
-                                                      <p className="text-[11px] text-sky-300 font-black mb-1">Escucha y responde sobre la marcha</p>
-                                                      <p className="text-sm text-white">{ex.prompt}</p>
-                                                  </div>
-                                              ) : null}
+                                              {(() => {
+                                                  const avatars = window.__RUTA_AVATARS || [];
+                                                  const avId = typeof window.__randomExerciseAvatar === 'function' ? window.__randomExerciseAvatar() : 'plaza';
+                                                  const av = avatars.find(a => a.id === avId) || avatars[0] || { bg: '#2563eb', fg: '#60a5fa', emoji: '🧑‍🏫', name: 'Plaza' };
+                                                  return (
+                                                      <div className="flex items-start gap-4 mb-4">
+                                                          <div className="relative inline-flex flex-col items-center flex-shrink-0" style={{ width: 56, height: 76 }}>
+                                                              <div className={`rounded-full overflow-hidden border-2 flex items-center justify-center ${avatarSpeaking && currentAvatarId === avId ? 'animate-ruta-avatar-talk border-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.5)]' : 'border-white/20'}`} style={{ width: 56, height: 56, background: `linear-gradient(135deg, ${av.bg}, ${av.fg || av.bg})` }}>
+                                                                  <span className="select-none leading-none" style={{ fontSize: 25 }}>{av.emoji}</span>
+                                                              </div>
+                                                              {avatarSpeaking && currentAvatarId === avId && (
+                                                                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-0.5">
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-3 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2.5 animate-pulse" />
+                                                                  </div>
+                                                              )}
+                                                              <p className="text-[10px] font-bold text-white/80 mt-1 truncate max-w-[100px] text-center">{av.name}</p>
+                                                          </div>
+                                                          <div className="flex-1">
+                                                              {(ex.type === 'podcast' || ex.type === 'audio_story') && Array.isArray(ex.transcript) ? (
+                                                                  <div className="mb-3 rounded-xl border border-sky-500/30 bg-sky-950/20 p-3">
+                                                                      <p className="text-[11px] text-sky-300 font-black mb-1">Escucha y responde sobre la marcha</p>
+                                                                      <p className="text-sm text-white">{ex.prompt}</p>
+                                                                  </div>
+                                                              ) : null}
+                                                          </div>
+                                                      </div>
+                                                  );
+                                              })()}
                                               {rutaRun.rutaLastChanceHint ? <p className="text-sm text-amber-200 mb-2 font-bold border border-amber-500/40 rounded-lg px-3 py-2 bg-amber-950/40">{rutaRun.rutaLastChanceHint}</p> : null}
                                               <p className="text-[11px] text-gray-500 mb-2">Intentos: {Math.min(RUTA_MAX_ATT, (rutaRun.exerciseAttempts || 0) + 1)} / {RUTA_MAX_ATT}</p>
                                               <div className="grid grid-cols-1 gap-2 mb-3">
@@ -3686,10 +3790,34 @@
                                       )}
                                       {st === 1 && ex && ex.type === 'speak' && (
                                           <>
-                                              <p className="text-gray-300 mb-2">Lee en voz alta en alemán:</p>
-                                              <p className="text-xl font-bold text-white mb-4 leading-snug">{ex.target}</p>
+                                              {(() => {
+                                                  const avatars = window.__RUTA_AVATARS || [];
+                                                  const avId = typeof window.__randomExerciseAvatar === 'function' ? window.__randomExerciseAvatar() : 'plaza';
+                                                  const av = avatars.find(a => a.id === avId) || avatars[0] || { bg: '#2563eb', fg: '#60a5fa', emoji: '🧑‍🏫', name: 'Plaza' };
+                                                  return (
+                                                      <div className="flex items-start gap-4 mb-4">
+                                                          <div className="relative inline-flex flex-col items-center flex-shrink-0" style={{ width: 56, height: 76 }}>
+                                                              <div className={`rounded-full overflow-hidden border-2 flex items-center justify-center ${avatarSpeaking && currentAvatarId === avId ? 'animate-ruta-avatar-talk border-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.5)]' : 'border-white/20'}`} style={{ width: 56, height: 56, background: `linear-gradient(135deg, ${av.bg}, ${av.fg || av.bg})` }}>
+                                                                  <span className="select-none leading-none" style={{ fontSize: 25 }}>{av.emoji}</span>
+                                                              </div>
+                                                              {avatarSpeaking && currentAvatarId === avId && (
+                                                                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-0.5">
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-3 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2.5 animate-pulse" />
+                                                                  </div>
+                                                              )}
+                                                              <p className="text-[10px] font-bold text-white/80 mt-1 truncate max-w-[100px] text-center">{av.name}</p>
+                                                          </div>
+                                                          <div className="flex-1">
+                                                              <p className="text-gray-300 mb-2">Lee en voz alta en alemán:</p>
+                                                              <p className="text-xl font-bold text-white mb-4 leading-snug">{ex.target}</p>
+                                                          </div>
+                                                      </div>
+                                                  );
+                                              })()}
                                               <div className="flex flex-wrap gap-2 mb-4">
-                                                  <button type="button" onClick={() => speakRutaDe(ex.target)} className="rounded-xl bg-slate-800 border border-white/15 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">Escuchar modelo</button>
+                                                  <button type="button" onClick={() => { setCurrentAvatarId(avId); setAvatarSpeaking(true); speakRutaDe(ex.target); }} className="rounded-xl bg-slate-800 border border-white/15 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">Escuchar modelo</button>
                                                   <button type="button" disabled={rutaListening} onClick={startRutaListen} className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-500 disabled:opacity-50">{rutaListening ? 'Escuchando⬦' : 'Grabar'}</button>
                                               </div>
                                               {rutaTranscript ? <p className="text-sm text-emerald-200/90 mb-2">Detectado: {rutaTranscript}</p> : null}
@@ -3731,11 +3859,35 @@
                                       )}
                                       {st === 2 && ex && (ex.type === 'fill' || ex.type === 'translate_de' || ex.type === 'translate_es' || ex.type === 'order' || ex.type === 'connector' || ex.type === 'podcast' || ex.type === 'audio_story' || ex.type === 'speak') && (
                                           <div className="space-y-3">
-                                              {rutaRun.forcedReveal ? (
-                                                  <p className="text-sm text-amber-200">Has agotado los {RUTA_MAX_ATT} intentos. Esta es la solución:</p>
-                                              ) : (
-                                                  <p className="text-sm text-emerald-200/90">¡Correcto!</p>
-                                              )}
+                                              {(() => {
+                                                  const avatars = window.__RUTA_AVATARS || [];
+                                                  const avId = typeof window.__randomExerciseAvatar === 'function' ? window.__randomExerciseAvatar() : 'plaza';
+                                                  const av = avatars.find(a => a.id === avId) || avatars[0] || { bg: '#2563eb', fg: '#60a5fa', emoji: '🧑‍🏫', name: 'Plaza' };
+                                                  return (
+                                                      <div className="flex items-start gap-4 mb-4">
+                                                          <div className="relative inline-flex flex-col items-center flex-shrink-0" style={{ width: 56, height: 76 }}>
+                                                              <div className={`rounded-full overflow-hidden border-2 flex items-center justify-center ${avatarSpeaking && currentAvatarId === avId ? 'animate-ruta-avatar-talk border-fuchsia-400 shadow-[0_0_18px_rgba(217,70,239,0.5)]' : 'border-white/20'}`} style={{ width: 56, height: 56, background: `linear-gradient(135deg, ${av.bg}, ${av.fg || av.bg})` }}>
+                                                                  <span className="select-none leading-none" style={{ fontSize: 25 }}>{av.emoji}</span>
+                                                              </div>
+                                                              {avatarSpeaking && currentAvatarId === avId && (
+                                                                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-end gap-0.5">
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-3 animate-pulse" />
+                                                                      <span className="w-0.5 bg-emerald-400/90 rounded-full h-2.5 animate-pulse" />
+                                                                  </div>
+                                                              )}
+                                                              <p className="text-[10px] font-bold text-white/80 mt-1 truncate max-w-[100px] text-center">{av.name}</p>
+                                                          </div>
+                                                          <div className="flex-1">
+                                                              {rutaRun.forcedReveal ? (
+                                                                  <p className="text-sm text-amber-200">Has agotado los {RUTA_MAX_ATT} intentos. Esta es la solución:</p>
+                                                              ) : (
+                                                                  <p className="text-sm text-emerald-200/90">¡Correcto!</p>
+                                                              )}
+                                                          </div>
+                                                      </div>
+                                                  );
+                                              })()}
                                               {rutaFillTip ? <p className="text-sm text-cyan-200/90 border border-cyan-500/30 rounded-lg px-3 py-2 bg-cyan-950/40">{rutaFillTip}</p> : null}
                                               {(ex.type === 'podcast' || ex.type === 'audio_story') && ex.podcast ? (
                                                   <p className="text-sm text-gray-300">Has terminado el audio. {rutaRun.podcastHadFailure ? 'Hubo fallos en alguna pregunta; puedes repetir el ejercicio más adelante.' : 'Buen trabajo con las preguntas en pausa.'}</p>
@@ -3746,7 +3898,7 @@
                                                   </p>
                                               )}
                                               {ex.type === 'speak' && rutaRun.forcedReveal ? (
-                                                  <button type="button" onClick={() => speakRutaDe(ex.target)} className="inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar modelo</button>
+                                                  <button type="button" onClick={() => { setCurrentAvatarId(avId); setAvatarSpeaking(true); speakRutaDe(ex.target); }} className="inline-flex items-center gap-1 text-xs font-bold text-fuchsia-300 hover:text-white"><Icon name="volume-2" className="w-4 h-4" /> Escuchar modelo</button>
                                               ) : null}
                                               <button type="button" onClick={() => advanceExercise(!rutaRun.forcedReveal && !((ex.type === 'podcast' || ex.type === 'audio_story') && ex.podcast && rutaRun.podcastHadFailure))} className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 font-black py-3 text-white">{rutaRun.forcedReveal ? 'Seguir (se repetirá este ejercicio al final)' : 'Siguiente ejercicio'}</button>
                                           </div>
