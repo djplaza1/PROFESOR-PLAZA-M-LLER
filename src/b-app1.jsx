@@ -1500,7 +1500,175 @@ const [placementFinished, setPlacementFinished] = useState(false);
               return { de: fullDe, es: fullEs, conj, person };
           };
 
+          /* ── GENERADOR PROGRAMÁTICO DE CONJUGACIONES (RUTA) ── */
+          /* Genera frases únicas para cada nivel usando patrones de conjugación */
+          const RUTA_VERB_PATTERNS = {
+              /* Verbos modales + auxiliares (irregulares) */
+              modal: [
+                  { inf: 'können', es: 'poder', pr: { i: 'kann', d: 'kannst', e: 'kann', w: 'können', i2: 'könnt', s: 'können' }, pt: { i: 'konnte', d: 'konntest', e: 'konnte', w: 'konnten', i2: 'konntet', s: 'konnten' }, pp: 'gekonnt' },
+                  { inf: 'müssen', es: 'tener que', pr: { i: 'muss', d: 'musst', e: 'muss', w: 'müssen', i2: 'müsst', s: 'müssen' }, pt: { i: 'musste', d: 'musstest', e: 'musste', w: 'mussten', i2: 'musstet', s: 'mussten' }, pp: 'gemusst' },
+                  { inf: 'dürfen', es: 'poder (permiso)', pr: { i: 'darf', d: 'darfst', e: 'darf', w: 'dürfen', i2: 'dürft', s: 'dürfen' }, pt: { i: 'durfte', d: 'durftest', e: 'durfte', w: 'durften', i2: 'durftet', s: 'durften' }, pp: 'gedurft' },
+                  { inf: 'wollen', es: 'querer', pr: { i: 'will', d: 'willst', e: 'will', w: 'wollen', i2: 'wollt', s: 'wollen' }, pt: { i: 'wollte', d: 'wolltest', e: 'wollte', w: 'wollten', i2: 'wolltet', s: 'wollten' }, pp: 'gewollt' },
+                  { inf: 'sollen', es: 'deber', pr: { i: 'soll', d: 'sollst', e: 'soll', w: 'sollen', i2: 'sollt', s: 'sollen' }, pt: { i: 'sollte', d: 'solltest', e: 'sollte', w: 'sollten', i2: 'solltet', s: 'sollten' }, pp: 'gesollt' },
+                  { inf: 'mögen', es: 'gustar', pr: { i: 'mag', d: 'magst', e: 'mag', w: 'mögen', i2: 'mögt', s: 'mögen' }, pt: { i: 'mochte', d: 'mochtest', e: 'mochte', w: 'mochten', i2: 'mochtet', s: 'mochten' }, pp: 'gemocht' }
+              ],
+              /* Verbos regulares con prefijos separables */
+              trennbar: [
+                  { inf: 'aufstehen', es: 'levantarse', stamm: 'steh', prEnd: 'e/st/t/en/t/en', pp: 'aufgestanden' },
+                  { inf: 'einkaufen', es: 'comprar', stamm: 'kauf', prEnd: 'e/st/t/en/t/en', pp: 'eingekauft' },
+                  { inf: 'mitkommen', es: 'acompañar', stamm: 'komm', prEnd: 'e/st/t/en/t/en', pp: 'mitgekommen' },
+                  { inf: 'anfangen', es: 'empezar', stamm: 'fang', prEnd: 'e/st/t/en/t/en', pp: 'angefangen' },
+                  { inf: 'ausgehen', es: 'salir', stamm: 'geh', prEnd: 'e/st/t/en/t/en', pp: 'ausgegangen' },
+                  { inf: 'vorbereiten', es: 'preparar', stamm: 'bereit', prEnd: 'e/est/t/en/t/en', pp: 'vorbereitet' },
+                  { inf: 'zuhören', es: 'escuchar', stamm: 'hör', prEnd: 'e/st/t/en/t/en', pp: 'zugehört' },
+                  { inf: 'fernsehen', es: 'ver TV', stamm: 'seh', prEnd: 'e/st/t/en/t/en', pp: 'ferngesehen' },
+                  { inf: 'stattfinden', es: 'tener lugar', stamm: 'find', prEnd: 'e/st/t/en/t/en', pp: 'stattgefunden' },
+                  { inf: 'teilnehmen', es: 'participar', stamm: 'nehm', prEnd: 'e/st/t/en/t/en', pp: 'teilgenommen' }
+              ],
+              /* Verbos con preposición fija */
+              prep: [
+                  { inf: 'denken an', es: 'pensar en', pr: { i: 'denke', d: 'denkst', e: 'denkt', w: 'denken', i2: 'denkt', s: 'denken' }, pp: 'gedacht' },
+                  { inf: 'warten auf', es: 'esperar', pr: { i: 'warte', d: 'wartest', e: 'wartet', w: 'warten', i2: 'wartet', s: 'warten' }, pp: 'gewartet' },
+                  { inf: 'sich freuen auf', es: 'alegrarse por', pr: { i: 'freue', d: 'freust', e: 'freut', w: 'freuen', i2: 'freut', s: 'freuen' }, pp: 'gefreut' },
+                  { inf: 'sich kümmern um', es: 'ocuparse de', pr: { i: 'kümmere', d: 'kümmerst', e: 'kümmert', w: 'kümmern', i2: 'kümmert', s: 'kümmern' }, pp: 'gekümmert' },
+                  { inf: 'sich interessieren für', es: 'interesarse por', pr: { i: 'interessiere', d: 'interessierst', e: 'interessiert', w: 'interessieren', i2: 'interessiert', s: 'interessieren' }, pp: 'interessiert' },
+                  { inf: 'glauben an', es: 'creer en', pr: { i: 'glaube', d: 'glaubst', e: 'glaubt', w: 'glauben', i2: 'glaubt', s: 'glauben' }, pp: 'geglaubt' },
+                  { inf: 'sich erinnern an', es: 'recordar', pr: { i: 'erinnere', d: 'erinnerst', e: 'erinnert', w: 'erinnern', i2: 'erinnert', s: 'erinnern' }, pp: 'erinnert' },
+                  { inf: 'bestehen auf', es: 'insistir en', pr: { i: 'bestehe', d: 'bestehst', e: 'besteht', w: 'bestehen', i2: 'besteht', s: 'bestehen' }, pp: 'bestanden' }
+              ],
+              /* Verbos irregulares con cambio vocálico */
+              stark: [
+                  { inf: 'sprechen', es: 'hablar', pr: { i: 'spreche', d: 'sprichst', e: 'spricht', w: 'sprechen', i2: 'sprecht', s: 'sprechen' }, pt: { i: 'sprach', d: 'sprachst', e: 'sprach', w: 'sprachen', i2: 'spracht', s: 'sprachen' }, pp: 'gesprochen' },
+                  { inf: 'sehen', es: 'ver', pr: { i: 'sehe', d: 'siehst', e: 'sieht', w: 'sehen', i2: 'seht', s: 'sehen' }, pt: { i: 'sah', d: 'sahst', e: 'sah', w: 'sahen', i2: 'saht', s: 'sahen' }, pp: 'gesehen' },
+                  { inf: 'essen', es: 'comer', pr: { i: 'esse', d: 'isst', e: 'isst', w: 'essen', i2: 'esst', s: 'essen' }, pt: { i: 'aß', d: 'aßest', e: 'aß', w: 'aßen', i2: 'aßt', s: 'aßen' }, pp: 'gegessen' },
+                  { inf: 'geben', es: 'dar', pr: { i: 'gebe', d: 'gibst', e: 'gibt', w: 'geben', i2: 'gebt', s: 'geben' }, pt: { i: 'gab', d: 'gabst', e: 'gab', w: 'gaben', i2: 'gabt', s: 'gaben' }, pp: 'gegeben' },
+                  { inf: 'nehmen', es: 'tomar', pr: { i: 'nehme', d: 'nimmst', e: 'nimmt', w: 'nehmen', i2: 'nehmt', s: 'nehmen' }, pt: { i: 'nahm', d: 'nahmst', e: 'nahm', w: 'nahmen', i2: 'nahmt', s: 'nahmen' }, pp: 'genommen' },
+                  { inf: 'fahren', es: 'conducir', pr: { i: 'fahre', d: 'fährst', e: 'fährt', w: 'fahren', i2: 'fahrt', s: 'fahren' }, pt: { i: 'fuhr', d: 'fuhrst', e: 'fuhr', w: 'fuhren', i2: 'fuhrt', s: 'fuhren' }, pp: 'gefahren' },
+                  { inf: 'schlafen', es: 'dormir', pr: { i: 'schlafe', d: 'schläfst', e: 'schläft', w: 'schlafen', i2: 'schlaft', s: 'schlafen' }, pt: { i: 'schlief', d: 'schliefst', e: 'schlief', w: 'schliefen', i2: 'schlieft', s: 'schliefen' }, pp: 'geschlafen' },
+                  { inf: 'laufen', es: 'correr', pr: { i: 'laufe', d: 'läufst', e: 'läuft', w: 'laufen', i2: 'lauft', s: 'laufen' }, pt: { i: 'lief', d: 'liefst', e: 'lief', w: 'liefen', i2: 'lieft', s: 'liefen' }, pp: 'gelaufen' },
+                  { inf: 'lesen', es: 'leer', pr: { i: 'lese', d: 'liest', e: 'liest', w: 'lesen', i2: 'lest', s: 'lesen' }, pt: { i: 'las', d: 'lasest', e: 'las', w: 'lasen', i2: 'last', s: 'lasen' }, pp: 'gelesen' },
+                  { inf: 'schreiben', es: 'escribir', pr: { i: 'schreibe', d: 'schreibst', e: 'schreibt', w: 'schreiben', i2: 'schreibt', s: 'schreiben' }, pt: { i: 'schrieb', d: 'schriebst', e: 'schrieb', w: 'schrieben', i2: 'schriebt', s: 'schrieben' }, pp: 'geschrieben' },
+                  { inf: 'finden', es: 'encontrar', pr: { i: 'finde', d: 'findest', e: 'findet', w: 'finden', i2: 'findet', s: 'finden' }, pt: { i: 'fand', d: 'fandest', e: 'fand', w: 'fanden', i2: 'fandet', s: 'fanden' }, pp: 'gefunden' },
+                  { inf: 'helfen', es: 'ayudar', pr: { i: 'helfe', d: 'hilfst', e: 'hilft', w: 'helfen', i2: 'helft', s: 'helfen' }, pt: { i: 'half', d: 'halfst', e: 'half', w: 'halfen', i2: 'halft', s: 'halfen' }, pp: 'geholfen' },
+                  { inf: 'treffen', es: 'quedar', pr: { i: 'treffe', d: 'triffst', e: 'trifft', w: 'treffen', i2: 'trefft', s: 'treffen' }, pt: { i: 'traf', d: 'trafst', e: 'traf', w: 'trafen', i2: 'traft', s: 'trafen' }, pp: 'getroffen' },
+                  { inf: 'tragen', es: 'llevar', pr: { i: 'trage', d: 'trägst', e: 'trägt', w: 'tragen', i2: 'tragt', s: 'tragen' }, pt: { i: 'trug', d: 'trugst', e: 'trug', w: 'trugen', i2: 'trugt', s: 'trugen' }, pp: 'getragen' },
+                  { inf: 'halten', es: 'sostener', pr: { i: 'halte', d: 'hältst', e: 'hält', w: 'halten', i2: 'haltet', s: 'halten' }, pt: { i: 'hielt', d: 'hieltest', e: 'hielt', w: 'hielten', i2: 'hieltet', s: 'hielten' }, pp: 'gehalten' }
+              ],
+              /* Verbos regulares comunes */
+              regular: [
+                  { inf: 'lernen', es: 'aprender', stamm: 'lern' }, { inf: 'arbeiten', es: 'trabajar', stamm: 'arbeit' },
+                  { inf: 'spielen', es: 'jugar', stamm: 'spiel' }, { inf: 'wohnen', es: 'vivir', stamm: 'wohn' },
+                  { inf: 'kochen', es: 'cocinar', stamm: 'koch' }, { inf: 'reisen', es: 'viajar', stamm: 'reis' },
+                  { inf: 'tanzen', es: 'bailar', stamm: 'tanz' }, { inf: 'malen', es: 'pintar', stamm: 'mal' },
+                  { inf: 'bauen', es: 'construir', stamm: 'bau' }, { inf: 'putzen', es: 'limpiar', stamm: 'putz' },
+                  { inf: 'hören', es: 'oír', stamm: 'hör' }, { inf: 'sagen', es: 'decir', stamm: 'sag' },
+                  { inf: 'machen', es: 'hacer', stamm: 'mach' }, { inf: 'kaufen', es: 'comprar', stamm: 'kauf' },
+                  { inf: 'brauchen', es: 'necesitar', stamm: 'brauch' }, { inf: 'zeigen', es: 'mostrar', stamm: 'zeig' },
+                  { inf: 'fragen', es: 'preguntar', stamm: 'frag' }, { inf: 'antworten', es: 'responder', stamm: 'antwort' },
+                  { inf: 'wünschen', es: 'desear', stamm: 'wünsch' }, { inf: 'feiern', es: 'celebrar', stamm: 'feier' },
+                  { inf: 'lachen', es: 'reír', stamm: 'lach' }, { inf: 'weinen', es: 'llorar', stamm: 'wein' },
+                  { inf: 'öffnen', es: 'abrir', stamm: 'öffn' }, { inf: 'schließen', es: 'cerrar', stamm: 'schließ' }
+              ]
+          };
+          /* Conjuga un verbo regular dado su raíz y persona */
+          const conjugateRegular = (stamm, person) => {
+              if (person === 'ich') return stamm + 'e';
+              if (person === 'du') return stamm + (stamm.endsWith('t') ? 'est' : 'st');
+              if (person === 'er_sie_es') return stamm + (stamm.endsWith('t') ? 'et' : 't');
+              if (person === 'wir') return stamm + 'en';
+              if (person === 'ihr') return stamm + (stamm.endsWith('t') ? 'et' : 't');
+              return stamm + 'en';
+          };
+          /* Conjuga un verbo separable (prefijo + verbo) */
+          const conjugateTrennbar = (inf, stamm, person) => {
+              const [prefix, ...rest] = inf.split(/(?<=^[a-zäöü]+)(?=[A-Z])/);
+              const verbPart = rest.join('') || stamm;
+              const conj = conjugateRegular(verbPart, person);
+              return prefix ? `${conj} ${prefix}` : conj;
+          };
+          /* Genera una frase única a partir de un verbo y contexto */
+          const generateUniqueVerbPhrase = (verb, person, tense, adverb, nounPhrase) => {
+              const persons = ['ich', 'du', 'er_sie_es', 'wir', 'ihr', 'sie_Sie'];
+              const p = person || persons[Math.floor(Math.random() * persons.length)];
+              const subj = p === 'ich' ? 'Ich' : p === 'du' ? 'Du' : p === 'er_sie_es' ? 'Er' : p === 'wir' ? 'Wir' : p === 'ihr' ? 'Ihr' : 'Sie';
+              const adv = adverb || '';
+              const noun = nounPhrase || '';
+              let conj = '';
+              let es = verb.es || '';
+              if (verb.pr) {
+                  conj = verb.pr[p] || verb.pr.i || '';
+              } else if (verb.stamm) {
+                  conj = conjugateRegular(verb.stamm, p);
+              }
+              if (!conj) return null;
+              let de = '';
+              if (verb.inf && verb.inf.includes(' ')) {
+                  /* Verbo con preposición fija: "denken an" */
+                  const [v, prep] = verb.inf.split(' ');
+                  de = adv ? `${subj} ${conj} ${adv} ${prep} ${noun}.` : `${subj} ${conj} ${prep} ${noun}.`;
+              } else if (verb.inf && verb.inf.match(/^(auf|ein|mit|an|aus|vor|zu|fern|statt|teil)/)) {
+                  /* Verbo separable */
+                  const conjSep = conjugateTrennbar(verb.inf, verb.stamm || verb.inf.replace(/^(auf|ein|mit|an|aus|vor|zu|fern|statt|teil)/, ''), p);
+                  de = adv ? `${subj} ${conjSep} ${adv} ${noun}.` : `${subj} ${conjSep} ${noun}.`;
+              } else {
+                  de = adv ? `${subj} ${conj} ${adv} ${noun}.` : `${subj} ${conj} ${noun}.`;
+              }
+              de = de.replace(/\s+/g, ' ').trim();
+              const personEs = { ich: 'yo', du: 'tú', er_sie_es: 'él/ella', wir: 'nosotros', ihr: 'vosotros', sie_Sie: 'ellos/Ud.' }[p] || p;
+              const fullEs = es ? `${es} (${personEs})` : `(forma verbal: ${personEs})`;
+              return { de, es: fullEs, conj, person: p, verb: verb.inf || '' };
+          };
+          /* Banco de adverbios y complementos por nivel */
+          const RUTA_ADVERB_BANK = {
+              A0: ['heute', 'jetzt', 'hier', 'dort', 'auch', 'sehr'],
+              A1: ['heute', 'jetzt', 'hier', 'dort', 'auch', 'sehr', 'oft', 'manchmal', 'immer', 'gern', 'viel', 'schon'],
+              A2: ['heute', 'oft', 'manchmal', 'immer', 'gern', 'viel', 'schon', 'gestern', 'morgen', 'bald', 'endlich', 'regelmäßig', 'täglich', 'selten'],
+              B1: ['gestern', 'morgen', 'bald', 'endlich', 'regelmäßig', 'täglich', 'selten', 'vorher', 'nachher', 'deshalb', 'trotzdem', 'allerdings', 'außerdem', 'jedenfalls'],
+              B2: ['vorher', 'nachher', 'deshalb', 'trotzdem', 'allerdings', 'außerdem', 'jedenfalls', 'inzwischen', 'mittlerweile', 'keinesfalls', 'dementsprechend', 'folglich'],
+              C1: ['inzwischen', 'mittlerweile', 'keinesfalls', 'dementsprechend', 'folglich', 'nichtsdestotrotz', 'insofern', 'demzufolge', 'wohingegen', 'gleichermaßen']
+          };
+          /* Banco de sustantivos/complementos por nivel */
+          const RUTA_NOUN_BANK = {
+              A0: ['das Buch', 'der Stift', 'die Tasche', 'das Heft', 'der Tisch', 'die Lampe'],
+              A1: ['einen Kaffee', 'das Wasser', 'den Hund', 'die Musik', 'das Haus', 'die Arbeit', 'die Schule', 'den Film'],
+              A2: ['den Zug', 'die Fahrkarte', 'das Formular', 'die Wohnung', 'den Termin', 'die Rechnung', 'den Urlaub', 'die Prüfung'],
+              B1: ['das Projekt', 'die Entscheidung', 'den Vertrag', 'die Bewerbung', 'das Meeting', 'die Erfahrung', 'den Fortschritt', 'die Lösung'],
+              B2: ['die Maßnahme', 'den Bericht', 'die Analyse', 'die Strategie', 'die Entwicklung', 'die Verhandlung', 'die Zusammenarbeit', 'den Prozess'],
+              C1: ['die Reform', 'die These', 'die Argumentation', 'die Differenzierung', 'die Evaluation', 'die Implementierung', 'die Korrelation', 'die Spezifikation']
+          };
+          /* Genera N frases únicas para un nivel dado */
+          const generateUniquePhrasesForLevel = (levelKey, count, usedSet) => {
+              const phrases = [];
+              const lk = levelKey === 'A0' ? 'A0' : levelKey === 'A1' ? 'A1' : levelKey === 'A2' ? 'A2' : levelKey === 'B1' ? 'B1' : levelKey === 'B2' ? 'B2' : 'C1';
+              const adverbs = RUTA_ADVERB_BANK[lk] || RUTA_ADVERB_BANK.A2;
+              const nouns = RUTA_NOUN_BANK[lk] || RUTA_NOUN_BANK.A2;
+              const persons = ['ich', 'du', 'er_sie_es', 'wir', 'ihr', 'sie_Sie'];
+              const verbCategories = lk === 'A0' || lk === 'A1' ? ['regular', 'modal'] : lk === 'A2' ? ['regular', 'modal', 'trennbar'] : lk === 'B1' ? ['regular', 'modal', 'trennbar', 'stark', 'prep'] : ['regular', 'modal', 'trennbar', 'stark', 'prep'];
+              const allVerbs = [];
+              verbCategories.forEach(cat => {
+                  const list = RUTA_VERB_PATTERNS[cat] || [];
+                  list.forEach(v => allVerbs.push({ ...v, cat }));
+              });
+              if (!allVerbs.length) return phrases;
+              let attempts = 0;
+              const maxAttempts = count * 10;
+              while (phrases.length < count && attempts < maxAttempts) {
+                  attempts++;
+                  const v = allVerbs[Math.floor(Math.random() * allVerbs.length)];
+                  const p = persons[Math.floor(Math.random() * persons.length)];
+                  const adv = adverbs[Math.floor(Math.random() * adverbs.length)];
+                  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+                  const result = generateUniqueVerbPhrase(v, p, 'praesens', adv, noun);
+                  if (result && result.de && !usedSet.has(result.de)) {
+                      usedSet.add(result.de);
+                      phrases.push({ de: result.de, es: result.es, source: 'generator' });
+                  }
+              }
+              return phrases;
+          };
+
           const buildRutaExercisePlan = useCallback((levels, levelIdx, lessonIdx, bxDb) => {
+
               const lv = levels && levels[levelIdx];
               const lesson = lv && lv.lessons && lv.lessons[lessonIdx];
               if (!lesson) return [];
@@ -1646,6 +1814,13 @@ const [placementFinished, setPlacementFinished] = useState(false);
                   }
               }
               /* ── Fin inyección bxDb ── */
+              /* ── GENERADOR FANTASMA: inyectar frases únicas generadas por nivel ── */
+              const generatedCount = Math.max(60, 120 - phrasePool.length);
+              if (generatedCount > 0) {
+                  const usedSet = new Set(phrasePool.map(p => p.de));
+                  const generated = generateUniquePhrasesForLevel(levelKey, generatedCount, usedSet);
+                  generated.forEach(g => pushUniquePhrase(g.de, g.es, 'generator'));
+              }
               if (phrasePool.length === 0) pushUniquePhrase('Ich lerne Deutsch.', 'Aprendo alemán.', 'fallback');
 
               const total = RUTA_SECTION_EXERCISES;
