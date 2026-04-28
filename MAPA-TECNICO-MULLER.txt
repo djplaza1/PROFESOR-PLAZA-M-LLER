@@ -376,6 +376,7 @@ c-extra.jsx (cargado 4º)
 
 [2026-04-28] | buildRutaLongAudioPlan | Problema: Los ejercicios de podcast/audio_story generaban conversaciones sin sentido (frases sueltas sin conexión), checkpoints repetitivos (solo mc_word), y opciones de respuesta con guiones/rayas vacías. | Solución: Rediseñado buildRutaLongAudioPlan con 8 escenas temáticas (STORY_SCENES) que contienen conversaciones fluidas con sentido narrativo real (parque, café, cine, viajes, compras, trabajo, restaurante, escuela). Cada escena tiene 4-7 intercambios con vocabulario variado. Los checkpoints ahora son 4 tipos diferentes (mc_word, mc_question, fill, true_false) que rotan. Todas las opciones tienen contenido válido con relleno de fallback asegurado. Se extrae vocabulario de b1-b2-database.json para enriquecer los diálogos. | Líneas: ~1503+ (dentro de buildRutaExercisePlan) | Estado: OK
 
+[2026-04-28] | buildRutaLongAudioPlan (true_false) | Problema: Los checkpoints true_false solo tenían 2 opciones ("Richtig", "Falsch"), pero el usuario requiere que TODOS los checkpoints tengan 3 opciones siempre. | Solución: Añadida tercera opción "Nicht klar" a todos los checkpoints true_false. Ahora el array de opciones es ['Richtig', 'Falsch', 'Nicht klar'] en lugar de ['Richtig', 'Falsch']. | Líneas: ~1890-1905 (dentro de buildRutaLongAudioPlan) | Estado: OK
 ================================================================================
 FIN DEL MAPA TÉCNICO
 ================================================================================
