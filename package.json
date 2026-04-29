@@ -1,0 +1,26 @@
+{
+  "name": "profesor-plaza-muller-git",
+  "version": "1.0.0",
+  "description": "",
+  "main": "gen-verbs-compact.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/djplaza1/PROFESOR-PLAZA-MULLER.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/djplaza1/PROFESOR-PLAZA-MULLER/issues"
+  },
+  "homepage": "https://github.com/djplaza1/PROFESOR-PLAZA-MULLER#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.28.6",
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-react": "^7.28.5"
+  }
+}
