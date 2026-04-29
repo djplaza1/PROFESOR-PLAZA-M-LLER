@@ -3,7 +3,6 @@ const babel = require("@babel/core");
 
 const CHUNKS = [
   "src/a-core.jsx",
-  "src/hooks/useLectura.js",
   "src/features/ruta/ruta-panel.jsx",
   "src/b-app1.jsx",
   "src/b-app2.jsx",

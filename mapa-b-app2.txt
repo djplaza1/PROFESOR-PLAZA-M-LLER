@@ -1,0 +1,200 @@
+﻿1: const themeShellClass = uiTheme === 'light' ? 'muller-theme-light' : uiTheme === 'hc' ? 'muller-theme-hc' : '';
+3: const currentPracticeList = practiceActive === 'diff' ? userStats.difficultVocab : (practiceActive === 'norm' ? userStats.normalVocab : userStats.difficultGrammar);
+4: const currentPracticeItem = currentPracticeList ? currentPracticeList[practiceIndex] : null;
+7: const TabletWritingCanvas = ({ padKey, grid, strokeW, compareTarget, onOcrCompared, snapshotData, snapshotPadKey, onSnapshotChange, backgroundImageData = '' }) => {
+8: const wrapRef = useRef(null);
+9: const canvasRef = useRef(null);
+10: const ctxRef = useRef(null);
+11: const drawingRef = useRef(false);
+12: const movedRef = useRef(false);
+13: const lastPtRef = useRef({ x: 0, y: 0 });
+14: const undoStackRef = useRef([]);
+15: const sizeRef = useRef({ w: 400, h: 400 });
+16: const strokeWRef = useRef(strokeW);
+18: const [writingTool, setWritingTool] = useState('pen');
+19: const [penColor, setPenColor] = useState('#f1f5f9');
+20: const [eraserW, setEraserW] = useState(18);
+21: const [hlPreset, setHlPreset] = useState('yellow');
+22: const [hlWidth, setHlWidth] = useState(24);
+23: const [ocrLoading, setOcrLoading] = useState(false);
+24: const [ocrText, setOcrText] = useState('');
+25: const [ocrHint, setOcrHint] = useState('');
+26: const [ocrErr, setOcrErr] = useState('');
+27: const [ocrComparePct, setOcrComparePct] = useState(null);
+28: const [canUndo, setCanUndo] = useState(false);
+29: const currentHlPathRef = useRef([]);
+30: const strokeBaseRef = useRef(null);
+32: const HL_MAP = useMemo(() => ({
+41: const layoutCanvas = useCallback(() => {
+42: const canvas = canvasRef.current;
+43: const wrap = wrapRef.current;
+45: const w = wrap.clientWidth;
+46: const h = Math.max(360, Math.min(680, Math.floor((typeof window !== 'undefined' ? window.innerHeight : 700) * 0.52)));
+47: const dpr = window.devicePixelRatio || 1;
+53: const ctx = canvas.getContext('2d');
+65: const canvas = canvasRef.current;
+66: const ctx = ctxRef.current;
+68: let cancelled = false;
+69: const drawSnapshot = () => {
+71: const img = new Image();
+80: const bg = new Image();
+93: const getPos = (e) => {
+94: const canvas = canvasRef.current;
+96: const rect = canvas.getBoundingClientRect();
+97: let cx = e.clientX;
+98: let cy = e.clientY;
+104: const applyStrokeStyle = (ctx, tool) => {
+126: const drawSegment = (ctx, x0, y0, x1, y1, tool) => {
+131: const o = 12;
+142: const stampDot = (ctx, x, y, tool) => {
+171: const pushUndoBeforeStroke = () => {
+172: const canvas = canvasRef.current;
+173: const ctx = ctxRef.current;
+176: const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+183: const undoLastStroke = () => {
+184: const canvas = canvasRef.current;
+185: const ctx = ctxRef.current;
+187: const snap = undoStackRef.current.pop();
+197: const startDraw = (e) => {
+199: const ctx = ctxRef.current;
+205: const p = getPos(e);
+208: const canvas = canvasRef.current;
+213: const moveDraw = (e) => {
+216: const ctx = ctxRef.current;
+217: const p = getPos(e);
+218: const lx = lastPtRef.current.x;
+219: const ly = lastPtRef.current.y;
+228: const pts = currentHlPathRef.current;
+238: const endDraw = (e) => {
+241: const p = lastPtRef.current;
+254: const clearPad = () => {
+255: const ctx = ctxRef.current;
+256: const { w, h } = sizeRef.current;
+260: const bg = new Image();
+270: const savePng = () => {
+271: const canvas = canvasRef.current;
+273: const link = document.createElement('a');
+279: const canvasToBlackOnWhite = (source) => {
+280: const w = source.width;
+281: const h = source.height;
+282: const tmp = document.createElement('canvas');
+285: const sctx = source.getContext('2d');
+286: const tctx = tmp.getContext('2d');
+287: const img = sctx.getImageData(0, 0, w, h);
+288: const d = img.data;
+289: const out = tctx.createImageData(w, h);
+290: const o = out.data;
+292: const a = d[i + 3];
+293: const v = a > 40 ? 0 : 255;
+303: const runHandwritingOcr = async () => {
+308: const source = canvasRef.current;
+315: let worker;
+317: const bw = canvasToBlackOnWhite(source);
+325: const { data: { text } } = await worker.recognize(bw);
+328: const t = (text || '').replace(/\s+\n/g, '\n').trim();
+330: let computedPct = null;
+332: const a = normalizeGermanSpeechText(compareTarget);
+333: const b = normalizeGermanSpeechText(t);
+335: const dist = levenshteinDistance(a, b);
+336: const maxL = Math.max(a.length, b.length, 1);
+360: const canvasCursor = writingTool === 'eraser' ? 'cell' : writingTool === 'highlighter' ? 'copy' : 'crosshair';
+487: const HandwritingPad = ({ onClose }) => {
+488: const canvasRef = useRef(null);
+489: const [isDrawing, setIsDrawing] = useState(false);
+490: const [ctx, setCtx] = useState(null);
+492: const canvas = canvasRef.current;
+494: const context = canvas.getContext('2d');
+500: const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+506: const startDrawing = (e) => { e.preventDefault(); setIsDrawing(true); const { offsetX, offsetY } = getCoordinates(e); ctx.beginPath(); ctx.moveTo(offsetX, offsetY); };
+507: const draw = (e) => { e.preventDefault(); if (!isDrawing) return; const { offsetX, offsetY } = getCoordinates(e); ctx.lineTo(offsetX, offsetY); ctx.stroke(); };
+508: const stopDrawing = () => { setIsDrawing(false); };
+509: const getCoordinates = (e) => {
+510: const canvas = canvasRef.current;
+511: const rect = canvas.getBoundingClientRect();
+512: let clientX, clientY;
+517: const clearCanvas = () => { ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); };
+518: const saveDrawing = () => {
+519: const canvas = canvasRef.current;
+520: const image = canvas.toDataURL('image/png');
+521: const link = document.createElement('a');
+541: const writingScriptOptions = useMemo(() => {
+542: const out = [];
+546: const rows = JSON.parse(s.data || '[]');
+547: const count = Array.isArray(rows) ? rows.filter((r) => r && typeof r.text === 'string' && r.text.trim()).length : 0;
+557: const writingDictationPool = useMemo(() => {
+558: const fromScenes = (scenes, originLabel) => {
+573: const rows = fromScenes(guionData, activeScriptTitle || 'Historia actual');
+577: const rows = [];
+580: const scenes = JSON.parse(s.data || '[]');
+587: const sid = String(writingDictScriptId || '');
+588: const picked = (savedScripts || []).find((s) => String(s.id) === sid);
+591: const scenes = JSON.parse(picked.data || '[]');
+592: const rows = fromScenes(scenes, picked.title || 'Guion guardado');
+601: const writingCompareTarget = useMemo(() => {
+614: const getSelfCheckItems = useCallback(() => {
+615: const items = [
+625: const runTelcWritingCoach = useCallback((rawText, task) => {
+626: const text = String(rawText || '').trim();
+631: const t = text;
+632: const low = normalizeGermanSpeechText(t);
+633: const words = low.split(/\s+/).filter(Boolean);
+634: const sentences = t.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+635: const connectors = ['weil', 'deshalb', 'außerdem', 'denn', 'damit', 'trotzdem', 'obwohl', 'zuerst', 'danach', 'zum schluss', 'daher', 'allerdings'];
+636: const formalMarkers = ['sehr geehrte', 'mit freundlichen grüßen', 'ich möchte', 'hiermit', 'vielen dank', 'bitte'];
+637: const informalMarkers = ['liebe', 'hallo', 'viele grüße', 'bis bald'];
+638: const hasFormal = formalMarkers.some((x) => low.includes(x));
+639: const hasInformal = informalMarkers.some((x) => low.includes(x));
+640: const connectorHits = connectors.filter((x) => low.includes(x)).length;
+641: const scoreTask = Math.max(0, Math.min(5, Math.round((words.length >= 65 ? 3 : words.length >= 40 ? 2 : 1) + (task && Array.isArray(task.checklist) ? Math.min(2, task.checklist.filter((c) => low.inclu
+642: const scoreRegister = Math.max(0, Math.min(5, hasFormal ? 5 : hasInformal ? 3 : 2));
+643: const scoreCohesion = Math.max(0, Math.min(5, Math.round((sentences.length >= 4 ? 2 : 1) + Math.min(3, connectorHits))));
+644: const umlautHits = (t.match(/[äöüß]/gi) || []).length;
+645: const punctHits = (t.match(/[.,!?]/g) || []).length;
+646: const scoreGrammar = Math.max(0, Math.min(5, Math.round((punctHits >= 3 ? 2 : 1) + (umlautHits >= 2 ? 1 : 0) + (words.length >= 50 ? 2 : words.length >= 30 ? 1 : 0))));
+647: const total = scoreTask + scoreRegister + scoreCohesion + scoreGrammar;
+648: const max = 20;
+649: const pct = Math.round((total / max) * 100);
+650: const suggestion = [
+667: const runTelcCoachFromCurrentInput = useCallback(() => {
+669: const task = WRITING_TELC_TASKS[writingTelcIdx % WRITING_TELC_TASKS.length];
+670: const sourceText = writingTelcInputMode === 'keyboard' ? writingTelcTypedText : writingTelcLastOcrText;
+678: const persistDailyPatch = (patch) => {
+679: const k = 'muller_daily_v1_' + new Date().toISOString().slice(0, 10);
+681: const next = { ...prev, ...patch };
+686: const claimDailyStamp = (key) => {
+692: const finishOnboarding = () => {
+698: const sortedDeVoices = useMemo(() => {
+705: const sortedEsVoices = useMemo(() => {
+712: const healthSnapshot = useMemo(() => {
+713: const listeningBusy = !!(isListening || rutaListening || readingListening);
+714: let micOk = false;
+718: let voiceCount = 0;
+724: const savedScriptsCount = Array.isArray(savedScripts) ? savedScripts.length : 0;
+725: const storyScenesCount = Array.isArray(guionData) ? guionData.length : 0;
+726: const micLabel = micOk
+729: const ok = micOk && voiceCount > 0 && (savedScriptsCount > 0 || storyScenesCount > 0);
+741: const oralLeftSec = (mode === 'interview' && oralDeadline)
+745: const activeSectionMeta = useMemo(() => {
+746: const map = {
+766: const activeModeBadge = useMemo(() => {
+779: const activeSectionHint = useMemo(() => {
+780: const h = {
+946: const el = document.getElementById('muller-backup-file-input');
+1106: const nextName = String(profileNameDraft || '').trim();
+1111: const client = mullerGetSupabaseClient();
+1113: const { error: e1 } = await client.auth.updateUser({ data: { display_name: nextName } });
+1115: const { error: e2 } = await client.from('profiles').upsert({ id: supabaseUser.id, display_name: nextName, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+1119: const map = mullerAccountsLoad(); const em = unifiedAuth.email;
+1132: const client = mullerGetSupabaseClient();
+1150: const errMap = { CRYPTO_UNAVAILABLE: 'Necesitas https o localhost para registrar con cifrado seguro.', EMAIL_INVALID: 'Introduce un email válido.', PASS_SHORT: 'La contraseña debe tener al menos 6 car
+1152: const client = mullerGetSupabaseClient();
+1154: const em = authEmail.trim();
+1156: const dn = (authDisplayName || userStats.username || 'Estudiante').trim();
+1157: const { data, error } = await client.auth.signUp({ email: em, password: authPassword, options: { data: { display_name: dn } } });
+1162: const { data, error } = await client.auth.signInWithPassword({ email: em, password: authPassword });
+1259: const obSteps = [
+1266: const ob = obSteps[onboardingStep - 1];
+1326: const selected = customVocabLessons.filter((l) => mixLessonSelection[l.id]);
+1328: let words = [];
+1331: const diffWords = words.filter((w) => w.diff === 1);
+1332: const final = mullerSortVocabBySrs([...words, ...diffWords], mullerGetVocabSrsMap());
